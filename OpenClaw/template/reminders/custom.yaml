@@ -1,0 +1,23 @@
+# 自定义提醒场景（复制此文件后按需修改）
+# 本文件为示例配置，更多字段可参考 ../template-cron.zh.yaml 按需覆盖。
+templateRef: "../template-cron.zh.yaml"
+
+variables:
+  JOB_NAME: "【定时提醒】 - {{CUSTOM_SCENE_NAME}}"
+  DESCRIPTION: "{{CUSTOM_DESCRIPTION}}"
+
+  SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"
+  WINDOW_START: "{{CUSTOM_WINDOW_START}}"
+  WINDOW_END: "{{CUSTOM_WINDOW_END}}"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-{{CUSTOM_SCENE_KEY}}.txt"
+
+  SCENE_NAME: "{{CUSTOM_SCENE_NAME}}"
+  EMOJI: "{{CUSTOM_EMOJI}}"
+  PERSONA_ROLE: "{{CUSTOM_PERSONA_ROLE}}"
+  TONE: "{{CUSTOM_TONE}}"
+  REMARK: "{{CUSTOM_REMARK}}"  # 提醒消息中可附带的额外内容
+
+  # 可按需覆盖默认值，例如：
+  # DELIVERY_MODE: "announce"
+  # CHANNEL: "telegram"
+  # TO: "-1001234567890"

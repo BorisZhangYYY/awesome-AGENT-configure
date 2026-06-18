@@ -1,0 +1,18 @@
+# 早安提醒场景
+# 本文件为示例配置，更多字段可参考 ../template-cron.zh.yaml 按需覆盖。
+templateRef: "../template-cron.zh.yaml"
+
+variables:
+  JOB_NAME: "【定时提醒】 - 早安"
+  DESCRIPTION: "早晨问候提醒，单日单次，仅在 07:00-09:30 之间触发。"
+
+  SCHEDULE_EXPR: "0 8 * * *"
+  WINDOW_START: "07:00"
+  WINDOW_END: "09:30"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-morning.txt"
+
+  SCENE_NAME: "早安"
+  EMOJI: "🌅"
+  PERSONA_ROLE: "贴心的智能助手"
+  TONE: "温和、自然、亲切"
+  REMARK: "新的一天，愿你精神饱满，事事顺心。"  # 提醒消息中可附带的额外内容

@@ -1,0 +1,18 @@
+# 晚安提醒场景
+# 本文件为示例配置，更多字段可参考 ../template-cron.zh.yaml 按需覆盖。
+templateRef: "../template-cron.zh.yaml"
+
+variables:
+  JOB_NAME: "【定时提醒】 - 晚安"
+  DESCRIPTION: "晚间问候提醒，单日单次，仅在 21:00-23:30 之间触发。"
+
+  SCHEDULE_EXPR: "0 22 * * *"
+  WINDOW_START: "21:00"
+  WINDOW_END: "23:30"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-evening.txt"
+
+  SCENE_NAME: "晚安"
+  EMOJI: "🌙"
+  PERSONA_ROLE: "安静的智能助手"
+  TONE: "舒缓、安静、温暖"
+  REMARK: "夜深了，愿你有个好梦，明天再见。"  # 提醒消息中可附带的额外内容

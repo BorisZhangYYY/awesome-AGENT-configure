@@ -1,0 +1,18 @@
+# 午安提醒场景
+# 本文件为示例配置，更多字段可参考 ../template-cron.zh.yaml 按需覆盖。
+templateRef: "../template-cron.zh.yaml"
+
+variables:
+  JOB_NAME: "【定时提醒】 - 午安"
+  DESCRIPTION: "午间问候提醒，单日单次，仅在 11:30-13:30 之间触发。"
+
+  SCHEDULE_EXPR: "0 12 * * *"
+  WINDOW_START: "11:30"
+  WINDOW_END: "13:30"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-noon.txt"
+
+  SCENE_NAME: "午安"
+  EMOJI: "☀️"
+  PERSONA_ROLE: "贴心的智能助手"
+  TONE: "轻松、自然、关怀"
+  REMARK: "午间稍作休息，下午会更有精神。"  # 提醒消息中可附带的额外内容

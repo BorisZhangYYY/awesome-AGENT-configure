@@ -1,0 +1,135 @@
+# 通用 OpenClaw Cron 任务模板
+# 本文件包含 OpenClaw 官方 CLI 参数映射、以及模板层 Harness 扩展。
+# 标注为【非官方】的字段不是 OpenClaw 原生参数，由本模板用 Prompt 工具调用实现。
+# 场景文件（如 reminders/morning.yaml）只需提供 variables；未提供的变量由生成器使用默认值填充。
+
+name: "{{JOB_NAME}}"
+category: "{{CATEGORY}}"
+description: "{{DESCRIPTION}}"
+
+# Agent 任务载荷（二选一）
+# --message：isolated / current / session:<id> 模式下的任务提示文本
+# --system-event：main 模式下的系统事件文本
+message: "{{MESSAGE}}"
+systemEvent: "{{SYSTEM_EVENT}}"
+
+# 调度配置
+# OpenClaw 支持三种计划类型：at（一次性） | every（固定间隔） | cron（定时表达式）
+schedule:
+  type: "{{SCHEDULE_TYPE}}"     # at | every | cron
+  expr: "{{SCHEDULE_EXPR}}"     # cron 表达式 / 相对时间 / 间隔
+  timezone: "{{TIMEZONE}}"      # --tz，可选；不带时区时 at 视为 UTC
+
+# 时间窗口保护【非官方】
+# OpenClaw 原生不支持时间窗口，本模板在 Prompt 中通过 exec date 自行检查。
+timeWindow:
+  enabled: {{TIME_WINDOW_ENABLED}}
+  start: "{{WINDOW_START}}"
+  end: "{{WINDOW_END}}"
+  timezone: "{{TIMEZONE}}"
+  action: "{{WINDOW_OUT_ACTION}}"  # NO_REPLY | continue
+
+# 单日/单次去重【非官方】
+# OpenClaw 原生不支持去重，本模板在 Prompt 中通过 read/write 文件自行实现。
+deduplication:
+  enabled: {{DEDUP_ENABLED}}
+  stateFile: "{{DEDUP_STATE_FILE}}"
+
+# 人设/身份配置【非官方】
+# OpenClaw 原生通过 workspace 下的 bootstrap 文件注入人设（SOUL.md / IDENTITY.md 等）。
+# 本模板提供一层显式配置，方便场景文件决定使用内联角色还是引用外部人设文件。
+persona:
+  mode: "{{PERSONA_MODE}}"      # inline | file
+  file: "{{PERSONA_FILE}}"      # 外部人设文件路径，如 ~/.openclaw/workspace/SOUL.md 或 IDENTITY.md
+  role: "{{PERSONA_ROLE}}"      # inline 模式下的角色描述；file 模式下可留空
+
+# 投递配置
+delivery:
+  mode: "{{DELIVERY_MODE}}"     # announce | webhook | none
+  channel: "{{CHANNEL}}"        # --channel；具体平台如 telegram | slack | discord | whatsapp | mattermost | signal | imessage | ...
+                                # 特殊值：last 表示使用最近/当前会话的渠道（非具体平台）
+  to: "{{TO}}"                  # --to；接收目标：群聊 ID、私聊 ID 或频道名；部分平台需特殊格式（如 Telegram: -100xxx:topic:123）
+  threadId: {{THREAD_ID}}       # --thread-id；Telegram forum topic ID
+  webhookUrl: "{{WEBHOOK_URL}}" # --webhook；webhook 模式必填
+  bestEffort: {{BEST_EFFORT}}   # --best-effort-deliver / --no-best-effort-deliver；为 true 时投递失败不会导致整个 cron 作业失败
+  failureDestination: "{{FAILURE_DESTINATION}}"  # 【非官方】失败通知投递目标
+
+# 会话配置
+session:
+  target: "{{SESSION_TARGET}}"  # --session；main | isolated | current | session:<id>
+  persistentId: "{{PERSISTENT_ID}}"  # target = "session:<id>" 时填写具体会话 ID
+  timeoutSeconds: {{TIMEOUT_SECONDS}}  # --timeout-seconds
+
+# Agent 执行上下文
+context:
+  # --light-context：为 true 时跳过 workspace bootstrap 文件注入，节省 Token
+  lightContext: {{LIGHT_CONTEXT}}
+
+# Agent 配置
+agent:
+  agentId: "{{AGENT_ID}}"       # --agent，绑定特定 agent
+  model: "{{MODEL}}"            # --model，模型覆盖，如 claude-sonnet-4-6
+  thinking: "{{THINKING}}"      # --thinking，思考级别覆盖，如 off | low | medium | high
+  tools: "{{TOOLS}}"            # --tools，限制作业可用工具，如 "exec,read"
+
+# 命令模式（与 message 二选一）
+# 启用后不会启动 agent turn，直接执行脚本，零 Token 消耗
+command:
+  enabled: {{COMMAND_ENABLED}}  # 【非官方】是否启用命令模式；为 true 时渲染 --command
+  script: "{{COMMAND_SCRIPT}}"  # --command
+  cwd: "{{COMMAND_CWD}}"        # --command-cwd
+  argv: {{COMMAND_ARGV}}        # --command-argv
+  input: "{{COMMAND_INPUT}}"    # --command-input
+  env: {{COMMAND_ENV}}          # --command-env
+  noOutputTimeoutSeconds: {{COMMAND_NO_OUTPUT_TIMEOUT}}  # --no-output-timeout-seconds
+  outputMaxBytes: {{COMMAND_OUTPUT_MAX_BYTES}}           # --output-max-bytes
+
+# 一次性/实验性选项
+advanced:
+  disabled: {{DISABLED}}        # --disabled，创建后默认禁用
+  deleteAfterRun: {{DELETE_AFTER_RUN}}  # --delete-after-run，运行成功后自动删除
+  keepAfterRun: {{KEEP_AFTER_RUN}}      # --keep-after-run，运行成功后保留作业
+  wake: "{{WAKE}}"              # --wake；now | next-heartbeat
+  exact: {{EXACT}}              # --exact，强制精确计时，禁止自动错开
+  stagger: "{{STAGGER}}"        # --stagger，显式错开窗口，如 "30s"
+
+# Agent Prompt 模板
+# 最终会通过 --message 传递给 OpenClaw
+# {{PERSONA_PROMPT}} 由生成器根据 persona 配置渲染：
+# - 若 persona.file 非空：渲染为 "请基于 {{PERSONA_FILE}} 中定义的人设。"
+# - 否则（inline 模式）：渲染为 "你是一个{{PERSONA_ROLE}}。"
+template: |
+  {{PERSONA_PROMPT}}
+
+  你负责在合适的时间给主人送上提醒。
+
+  **本次提醒场景**
+  - 场景：{{SCENE_NAME}}
+  - 当前时间：{{TIME_NOW}}
+  - 今日日期：{{DATE_TODAY}} {{WEEKDAY}}
+
+  **时间窗口验证（必须执行）【非官方】**
+  用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M`，获取当前本地时间。
+  将结果解析为 HH:MM 格式：
+  - 如果当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间：继续执行
+  - 否则：立即输出 `NO_REPLY`，结束运行
+
+  **去重检查（必须执行）【非官方】**
+  读取文件 {{DEDUP_STATE_FILE}}。
+  如果文件中已存在今天的日期 {{DATE_TODAY}}，立即输出 `NO_REPLY`，结束运行。
+
+  **问候规则**
+  - 语气：{{TONE}}
+  - 长度：2-3 句话，不要长篇大论
+  - 必须包含：当前时间、今天日期、星期几
+  - 可附带：{{REMARK}}
+
+  **输出示例**
+  ```
+  {{EMOJI}} {{SCENE_NAME}}！
+  现在是 {{TIME_NOW}}，{{DATE_TODAY}} {{WEEKDAY}}。
+  {{REMARK}}
+  ```
+
+  **执行后（如果发送了消息）【非官方】**
+  用 write 工具将 "{{DATE_TODAY}}" 写入 {{DEDUP_STATE_FILE}}，确保今天不再重复发送。
