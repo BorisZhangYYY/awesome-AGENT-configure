@@ -3,13 +3,18 @@
 templateRef: "../template-cron.zh.yaml"
 
 variables:
-  JOB_NAME: "【定时提醒】 - 晚安"
+  JOB_NAME: "【AAC-提醒】晚安"
   DESCRIPTION: "晚间问候提醒，单日单次，仅在 21:00-23:30 之间触发。"
 
   SCHEDULE_EXPR: "0 22 * * *"
   WINDOW_START: "21:00"
   WINDOW_END: "23:30"
   DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-evening.txt"
+
+  # 提醒类任务关闭思考，节省 Token
+  THINKING: "off"
+  # 提醒类任务需要准时触发，禁用自动 stagger
+  EXACT: "true"
 
   SCENE_NAME: "晚安"
   EMOJI: "🌙"

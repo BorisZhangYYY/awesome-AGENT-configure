@@ -1,0 +1,86 @@
+# OpenClaw 官方 CLI 参数映射表
+# 本文件记录 template-cron.zh.yaml 中的字段如何映射到 openclaw cron create 的命令行参数。
+# 键为模板字段路径，值为对应的命令行参数；null 表示位置参数或需要特殊处理。
+
+official:
+  # 基础信息
+  name: --name
+  message: --message
+  systemEvent: --system-event
+
+  # 调度配置
+  schedule.timezone: --tz
+
+  # 投递配置
+  delivery.channel: --channel
+  delivery.to: --to
+  delivery.threadId: --thread-id
+  delivery.webhookUrl: --webhook
+
+  # 会话配置
+  session.target: --session
+  session.persistentId: --session
+  session.timeoutSeconds: --timeout-seconds
+
+  # Agent 配置
+  agent.agentId: --agent
+  agent.model: --model
+  agent.thinking: --thinking
+  agent.tools: --tools
+
+  # 命令模式
+  command.script: --command
+  command.cwd: --command-cwd
+  command.argv: --command-argv
+  command.input: --command-input
+  command.env: --command-env
+  command.noOutputTimeoutSeconds: --no-output-timeout-seconds
+  command.outputMaxBytes: --output-max-bytes
+
+  # 一次性/实验性选项
+  advanced.wake: --wake
+  advanced.stagger: --stagger
+
+# 需要特殊处理的官方参数
+# 这些字段不能简单按 "flag value" 渲染，需要根据值的内容做分支或拼接。
+special:
+  schedule.expr:
+    type: positional
+    note: cron 表达式 / 固定间隔 / 相对时间，作为 openclaw cron create 的第一个位置参数
+
+  delivery.mode:
+    type: enum_flag
+    values:
+      announce: --announce
+      webhook: --webhook
+      none: null
+
+  delivery.bestEffort:
+    type: boolean_flag
+    true_flag: --best-effort-deliver
+    false_flag: --no-best-effort-deliver
+
+  context.lightContext:
+    type: boolean_flag
+    true_flag: --light-context
+    false_flag: --no-light-context
+
+  advanced.disabled:
+    type: boolean_flag
+    true_flag: --disabled
+    false_flag: null
+
+  advanced.deleteAfterRun:
+    type: boolean_flag
+    true_flag: --delete-after-run
+    false_flag: null
+
+  advanced.keepAfterRun:
+    type: boolean_flag
+    true_flag: --keep-after-run
+    false_flag: null
+
+  advanced.exact:
+    type: boolean_flag
+    true_flag: --exact
+    false_flag: null

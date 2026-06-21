@@ -3,13 +3,18 @@
 templateRef: "../template-cron.zh.yaml"
 
 variables:
-  JOB_NAME: "【定时提醒】 - {{CUSTOM_SCENE_NAME}}"
+  JOB_NAME: "【AAC-提醒】{{CUSTOM_SCENE_NAME}}"
   DESCRIPTION: "{{CUSTOM_DESCRIPTION}}"
 
   SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"
   WINDOW_START: "{{CUSTOM_WINDOW_START}}"
   WINDOW_END: "{{CUSTOM_WINDOW_END}}"
   DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-{{CUSTOM_SCENE_KEY}}.txt"
+
+  # 提醒类任务关闭思考，节省 Token
+  THINKING: "off"
+  # 提醒类任务需要准时触发，禁用自动 stagger
+  EXACT: "true"
 
   SCENE_NAME: "{{CUSTOM_SCENE_NAME}}"
   EMOJI: "{{CUSTOM_EMOJI}}"

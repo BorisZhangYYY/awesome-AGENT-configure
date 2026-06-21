@@ -2,14 +2,24 @@
 # 本文件包含 OpenClaw 官方 CLI 参数映射、以及模板层 Harness 扩展。
 # 标注为【非官方】的字段不是 OpenClaw 原生参数，由本模板用 Prompt 工具调用实现。
 # 场景文件（如 reminders/morning.yaml）只需提供 variables；未提供的变量由生成器使用默认值填充。
+#
+# ⚠️ 为什么需要时间窗口和去重？
+# OpenClaw cron 在 gateway 重启或 session 重建时，会补发所有错过的任务。
+# 若不设时间窗口，早安/午安/晚安会在开机瞬间同时触发（开机堆叠）。
+# 若不去重，同一任务可能在一日内重复执行多次。
+# 时间窗口和去重是本模板的核心 Harness 防护机制，不是冗余。
+#
+# 内置变量：
+#   {{WORKSPACE}} - OpenClaw 工作区目录，默认 ~/.openclaw/workspace，由生成器注入
 
 name: "{{JOB_NAME}}"
 category: "{{CATEGORY}}"
 description: "{{DESCRIPTION}}"
 
-# Agent 任务载荷（二选一）
+# Agent 任务载荷（与 command 二选一）
 # --message：isolated / current / session:<id> 模式下的任务提示文本
 # --system-event：main 模式下的系统事件文本
+# message 由下方 template 渲染后填充；如未配置 template，则直接使用本字段内容
 message: "{{MESSAGE}}"
 systemEvent: "{{SYSTEM_EVENT}}"
 
@@ -22,17 +32,17 @@ schedule:
 
 # 时间窗口保护【非官方】
 # OpenClaw 原生不支持时间窗口，本模板在 Prompt 中通过 exec date 自行检查。
+# 时区统一使用 schedule.timezone，不在 timeWindow 中重复配置。
 timeWindow:
-  enabled: {{TIME_WINDOW_ENABLED}}
+  enabled: "{{TIME_WINDOW_ENABLED}}"
   start: "{{WINDOW_START}}"
   end: "{{WINDOW_END}}"
-  timezone: "{{TIMEZONE}}"
   action: "{{WINDOW_OUT_ACTION}}"  # NO_REPLY | continue
 
 # 单日/单次去重【非官方】
 # OpenClaw 原生不支持去重，本模板在 Prompt 中通过 read/write 文件自行实现。
 deduplication:
-  enabled: {{DEDUP_ENABLED}}
+  enabled: "{{DEDUP_ENABLED}}"
   stateFile: "{{DEDUP_STATE_FILE}}"
 
 # 人设/身份配置【非官方】
@@ -49,21 +59,21 @@ delivery:
   channel: "{{CHANNEL}}"        # --channel；具体平台如 telegram | slack | discord | whatsapp | mattermost | signal | imessage | ...
                                 # 特殊值：last 表示使用最近/当前会话的渠道（非具体平台）
   to: "{{TO}}"                  # --to；接收目标：群聊 ID、私聊 ID 或频道名；部分平台需特殊格式（如 Telegram: -100xxx:topic:123）
-  threadId: {{THREAD_ID}}       # --thread-id；Telegram forum topic ID
+  threadId: "{{THREAD_ID}}"       # --thread-id；Telegram forum topic ID
   webhookUrl: "{{WEBHOOK_URL}}" # --webhook；webhook 模式必填
-  bestEffort: {{BEST_EFFORT}}   # --best-effort-deliver / --no-best-effort-deliver；为 true 时投递失败不会导致整个 cron 作业失败
+  bestEffort: "{{BEST_EFFORT}}"   # --best-effort-deliver / --no-best-effort-deliver；为 true 时投递失败不会导致整个 cron 作业失败
   failureDestination: "{{FAILURE_DESTINATION}}"  # 【非官方】失败通知投递目标
 
 # 会话配置
 session:
   target: "{{SESSION_TARGET}}"  # --session；main | isolated | current | session:<id>
   persistentId: "{{PERSISTENT_ID}}"  # target = "session:<id>" 时填写具体会话 ID
-  timeoutSeconds: {{TIMEOUT_SECONDS}}  # --timeout-seconds
+  timeoutSeconds: "{{TIMEOUT_SECONDS}}"  # --timeout-seconds
 
 # Agent 执行上下文
 context:
   # --light-context：为 true 时跳过 workspace bootstrap 文件注入，节省 Token
-  lightContext: {{LIGHT_CONTEXT}}
+  lightContext: "{{LIGHT_CONTEXT}}"
 
 # Agent 配置
 agent:
@@ -73,28 +83,30 @@ agent:
   tools: "{{TOOLS}}"            # --tools，限制作业可用工具，如 "exec,read"
 
 # 命令模式（与 message 二选一）
-# 启用后不会启动 agent turn，直接执行脚本，零 Token 消耗
+# OpenClaw 原生语义：只要存在 --command 参数即启用命令模式
+# 模板层规则：command.script 非空时渲染 --command，否则不渲染
 command:
-  enabled: {{COMMAND_ENABLED}}  # 【非官方】是否启用命令模式；为 true 时渲染 --command
-  script: "{{COMMAND_SCRIPT}}"  # --command
+  script: "{{COMMAND_SCRIPT}}"  # --command；非空时启用命令模式
   cwd: "{{COMMAND_CWD}}"        # --command-cwd
-  argv: {{COMMAND_ARGV}}        # --command-argv
+  argv: "{{COMMAND_ARGV}}"        # --command-argv
   input: "{{COMMAND_INPUT}}"    # --command-input
-  env: {{COMMAND_ENV}}          # --command-env
-  noOutputTimeoutSeconds: {{COMMAND_NO_OUTPUT_TIMEOUT}}  # --no-output-timeout-seconds
-  outputMaxBytes: {{COMMAND_OUTPUT_MAX_BYTES}}           # --output-max-bytes
+  env: "{{COMMAND_ENV}}"          # --command-env
+  noOutputTimeoutSeconds: "{{COMMAND_NO_OUTPUT_TIMEOUT}}"  # --no-output-timeout-seconds
+  outputMaxBytes: "{{COMMAND_OUTPUT_MAX_BYTES}}"           # --output-max-bytes
 
 # 一次性/实验性选项
 advanced:
-  disabled: {{DISABLED}}        # --disabled，创建后默认禁用
-  deleteAfterRun: {{DELETE_AFTER_RUN}}  # --delete-after-run，运行成功后自动删除
-  keepAfterRun: {{KEEP_AFTER_RUN}}      # --keep-after-run，运行成功后保留作业
+  disabled: "{{DISABLED}}"        # --disabled，创建后默认禁用
+  deleteAfterRun: "{{DELETE_AFTER_RUN}}"  # --delete-after-run，运行成功后自动删除
+  keepAfterRun: "{{KEEP_AFTER_RUN}}"      # --keep-after-run，运行成功后保留作业
   wake: "{{WAKE}}"              # --wake；now | next-heartbeat
-  exact: {{EXACT}}              # --exact，强制精确计时，禁止自动错开
+  exact: "{{EXACT}}"              # --exact，强制精确计时，禁止自动错开
   stagger: "{{STAGGER}}"        # --stagger，显式错开窗口，如 "30s"
 
-# Agent Prompt 模板
-# 最终会通过 --message 传递给 OpenClaw
+# Agent 提示词模板【非官方】
+# 用于生成 message 的内容，避免每个场景重复书写通用 Harness/Loop 约束。
+# 生成器会用场景变量渲染本模板，结果填入 message 后作为 --message 传递给 OpenClaw。
+# 如未配置本模板，则直接使用 message 字段内容。
 # {{PERSONA_PROMPT}} 由生成器根据 persona 配置渲染：
 # - 若 persona.file 非空：渲染为 "请基于 {{PERSONA_FILE}} 中定义的人设。"
 # - 否则（inline 模式）：渲染为 "你是一个{{PERSONA_ROLE}}。"
@@ -103,20 +115,22 @@ template: |
 
   你负责在合适的时间给主人送上提醒。
 
-  **本次提醒场景**
-  - 场景：{{SCENE_NAME}}
-  - 当前时间：{{TIME_NOW}}
-  - 今日日期：{{DATE_TODAY}} {{WEEKDAY}}
-
-  **时间窗口验证（必须执行）【非官方】**
-  用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M`，获取当前本地时间。
+  **【防护机制 1：时间窗口】防止开机堆叠时非时段任务误触发【非官方】**
+  OpenClaw 在 gateway 重启或 session 重建时会补发错过的任务。
+  即使 cron 表达式命中，也必须检查当前时间是否落在有效窗口内，否则输出 `NO_REPLY`。
+  执行：用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M`，获取当前本地时间。
   将结果解析为 HH:MM 格式：
   - 如果当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间：继续执行
   - 否则：立即输出 `NO_REPLY`，结束运行
 
-  **去重检查（必须执行）【非官方】**
-  读取文件 {{DEDUP_STATE_FILE}}。
-  如果文件中已存在今天的日期 {{DATE_TODAY}}，立即输出 `NO_REPLY`，结束运行。
+  **【防护机制 2：单日去重】防止开机堆叠时同一任务重复触发【非官方】**
+  读取状态文件 {{DEDUP_STATE_FILE}}。
+  若文件中已存在今天的日期 {{DATE_TODAY}}，立即输出 `NO_REPLY`，结束运行。
+
+  **本次提醒场景**
+  - 场景：{{SCENE_NAME}}
+  - 当前时间：{{TIME_NOW}}
+  - 今日日期：{{DATE_TODAY}} {{WEEKDAY}}
 
   **问候规则**
   - 语气：{{TONE}}

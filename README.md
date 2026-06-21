@@ -8,18 +8,68 @@
 
 ## 支持的模版
 
-- OpenClaw：
-- Hermes：
-- Claude Code：
+- **OpenClaw**：通用 cron 模板 + 提醒类场景 + 生成器脚本
+- Hermes：待补充
+- Claude Code：待补充
 
 > 如果你有更多的实用模板，或者是发现了项目中的一些错误与问题，欢迎在 PR 中补充，我会在审核后将其合并入代码库。
 
-## 项目框架
-
-
 ## 使用方法
 
+### 1. 生成 cron 命令
 
+以早安提醒为例：
 
+```bash
+python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml
+```
 
+输出示例：
 
+```bash
+openclaw \
+  cron \
+  create \
+  '0 8 * * *' \
+  --message \
+  '...' \
+  --name \
+  '【定时提醒】 - 早安' \
+  --tz \
+  Asia/Shanghai \
+  --announce \
+  --best-effort-deliver \
+  --session \
+  isolated \
+  --timeout-seconds \
+  300 \
+  --no-light-context \
+  --thinking \
+  off \
+  --exact
+```
+
+### 2. JSON 输出
+
+如果需要程序化调用，可输出 JSON 数组：
+
+```bash
+python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml --json
+```
+
+### 3. 自定义场景
+
+复制 `OpenClaw/template/reminders/custom.yaml`，修改 `variables` 中的值即可。
+
+## 设计原则
+
+- **官方参数映射为 `--` 命令行参数**：如 `--message`、`--command`、`--thinking`
+- **非官方扩展通过 Prompt 实现 Harness/Loop**：如时间窗口、去重、人设配置
+- **模板化复用**：通用约束写在 `template-cron.zh.yaml`，场景文件只填变量
+- **简约脚本**：`build-cron.py` 只做 YAML → CLI 的翻译，不嵌入业务逻辑
+
+## 链接
+
+- OpenClaw 官方文档：https://docs.openclaw.ai/
+- Hermes 官方文档：
+- Claude Code 官方文档：

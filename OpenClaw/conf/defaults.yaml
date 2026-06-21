@@ -1,0 +1,26 @@
+# 模板变量默认值
+# 变量名与 OpenClaw/template/template-cron.zh.yaml 中的占位符保持一致。
+# 场景文件提供的变量会覆盖本文件中的默认值。
+
+# ===== 官方参数默认值 =====
+SCHEDULE_TYPE: cron
+TIMEZONE: Asia/Shanghai
+SESSION_TARGET: isolated
+DELIVERY_MODE: announce
+BEST_EFFORT: "true"
+LIGHT_CONTEXT: "false"
+DISABLED: "false"
+DELETE_AFTER_RUN: "false"
+KEEP_AFTER_RUN: "false"
+EXACT: "false"
+TIMEOUT_SECONDS: "300"
+
+# 模型能力默认值，默认关闭 thinking 以节省 Token
+THINKING: "off"
+
+# ===== 非官方扩展默认值 =====
+TIME_WINDOW_ENABLED: "true"
+WINDOW_OUT_ACTION: NO_REPLY
+DEDUP_ENABLED: "true"
+PERSONA_MODE: inline
+WORKSPACE: ~/.openclaw/workspace
