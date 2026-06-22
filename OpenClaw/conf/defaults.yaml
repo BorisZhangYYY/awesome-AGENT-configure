@@ -5,7 +5,6 @@
 # ===== 官方参数默认值 =====
 SCHEDULE_TYPE: cron
 TIMEZONE: Asia/Shanghai
-SESSION_TARGET: isolated
 DELIVERY_MODE: announce
 BEST_EFFORT: "true"
 LIGHT_CONTEXT: "false"

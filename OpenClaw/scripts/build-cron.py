@@ -44,7 +44,7 @@ def main():
     variables["PERSONA_PROMPT"] = build_persona_prompt(template, variables)
 
     # 渲染 message
-    message = render_template(template, variables)
+    message = render_template(template, scene, variables)
     variables["MESSAGE"] = message
 
     cmd = build_command(scene, template, variables, flags)
@@ -95,9 +95,13 @@ def build_variables(defaults, template, scene):
     return variables
 
 
-def render_template(template, variables):
-    """渲染 template 字段，未提供值的占位符保持原样（由运行时 AGENT 处理）。"""
-    template_str = template.get("template", "")
+def render_template(template, scene, variables):
+    """渲染 template 字段。
+
+    优先使用场景 YAML 中直接定义的 template，未定义则使用模板文件中的 template。
+    未提供值的占位符保持原样（由运行时 AGENT 处理）。
+    """
+    template_str = scene.get("template") or template.get("template", "")
     if not template_str:
         # 未配置 template，直接使用 message 字段内容
         return variables.get("MESSAGE", "")
@@ -119,7 +123,9 @@ def build_persona_prompt(template, variables):
 
     if mode == "file" and persona_file:
         return f"请基于 {persona_file} 中定义的人设。"
-    return f"你是一个{persona_role}。"
+    if persona_role:
+        return f"你是一个{persona_role}。"
+    return ""
 
 
 def build_command(scene, template, variables, flags):
@@ -176,12 +182,15 @@ def build_command(scene, template, variables, flags):
     add_flag(cmd, "delivery.webhookUrl", variables.get("WEBHOOK_URL", ""), flags)
 
     # 会话
-    session_target = variables.get("SESSION_TARGET", "")
-    if session_target == "session:<id>":
-        persistent_id = variables.get("PERSISTENT_ID", "")
+    session_target = str(variables.get("SESSION_TARGET", "")).strip()
+    persistent_id = str(variables.get("PERSISTENT_ID", "")).strip()
+    # 优先级：SESSION_TARGET 显式值（含 session:xxx）> PERSISTENT_ID 自动拼接 > 默认 isolated
+    if not session_target.startswith("session:") and not session_target:
         if persistent_id:
-            add_flag(cmd, "session.persistentId", f"session:{persistent_id}", flags)
-    else:
+            session_target = f"session:{persistent_id}"
+        else:
+            session_target = "isolated"
+    if session_target:
         add_flag(cmd, "session.target", session_target, flags)
     add_flag(cmd, "session.timeoutSeconds", variables.get("TIMEOUT_SECONDS", ""), flags)
 
@@ -210,8 +219,11 @@ def add_flag(cmd, field_path, value, flags):
     if is_empty(value):
         return
     flag = flags.get("official", {}).get(field_path)
-    if flag:
-        cmd.extend([flag, str(value)])
+    if not flag:
+        return
+    if isinstance(value, (list, dict)):
+        value = json.dumps(value, ensure_ascii=False)
+    cmd.extend([flag, str(value)])
 
 
 def add_special_delivery(cmd, variables, flags):
@@ -253,10 +265,12 @@ def parse_bool(value):
 
 
 def is_empty(value):
-    """判断值是否为空（0 不算空）。"""
+    """判断值是否为空（0 不算空；空列表/空字典视为空）。"""
     if value is None:
         return True
-    if isinstance(value, str) and value == "":
+    if isinstance(value, str) and value.strip() == "":
+        return True
+    if isinstance(value, (list, dict)) and not value:
         return True
     return False
 

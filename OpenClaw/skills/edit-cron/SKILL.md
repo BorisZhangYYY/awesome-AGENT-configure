@@ -30,7 +30,8 @@ metadata:
 本 skill 只适用于**已按本项目规范创建**的任务，即存在对应的场景 YAML 文件：
 
 ```bash
-~/.openclaw/workspace/awesome-AGENT-configure/cron/
+$AAC_WORKSPACE/cron/
+# 默认 AAC_WORKSPACE = ~/.openclaw/workspace/awesome-AGENT-configure
 ```
 
 如果任务不是通过本项目创建的（没有对应 YAML），建议改用 `migrate-cron` skill。
@@ -64,7 +65,8 @@ openclaw cron list
 根据任务名，在以下目录查找对应的 YAML 文件：
 
 ```bash
-~/.openclaw/workspace/awesome-AGENT-configure/cron/
+$AAC_WORKSPACE/cron/
+# 默认 AAC_WORKSPACE = ~/.openclaw/workspace/awesome-AGENT-configure
 ```
 
 文件名可能是：
@@ -106,36 +108,102 @@ openclaw cron list
 
 ### 6. 修改场景 YAML
 
+场景 YAML 位于运行时工作区（与项目源码分离）：
+
+```bash
+export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
+# YAML 文件路径：$AAC_WORKSPACE/cron/<job-name>.yaml
+```
+
 根据用户要求修改 YAML 文件中的变量值。
 
 如果用户要修改的是分类相关的推荐配置（如从提醒类改成巡检类），需要参考 `OpenClaw/skills/SKILL-GUIDE.md` 调整整组参数。
+
+### 6.5 定位项目仓库（`AAC_REPO`）
+
+按照 `OpenClaw/skills/SKILL-GUIDE.md` 中“五、项目路径与运行时路径分离”的方法设置 `AAC_REPO`：
+
+```bash
+export AAC_REPO=$(python3 - <<'PY'
+import os, sys
+
+def locate_repo():
+    # 1. 环境变量 AAC_REPO（用户显式设置，例如 /mnt/d/Study_Project/awesome-AGENT-configure）
+    env = os.environ.get("AAC_REPO")
+    if env and os.path.isfile(os.path.join(env, "OpenClaw/scripts/build-cron.py")):
+        return env
+    # 2. 当前工作目录
+    cwd = os.getcwd()
+    if os.path.isfile(os.path.join(cwd, "OpenClaw/scripts/build-cron.py")):
+        return cwd
+    # 3. 在 $HOME 下有限深度搜索
+    home = os.path.expanduser("~")
+    for root, dirs, _ in os.walk(home):
+        if "awesome-AGENT-configure" in dirs:
+            p = os.path.join(root, "awesome-AGENT-configure")
+            if os.path.isfile(os.path.join(p, "OpenClaw/scripts/build-cron.py")):
+                return p
+        if root.count(os.sep) - home.count(os.sep) >= 4:
+            del dirs[:]
+    return ""
+
+path = locate_repo()
+if not path:
+    print("ERROR: 未找到 awesome-AGENT-configure 项目路径，请先设置 AAC_REPO 环境变量", file=sys.stderr)
+    sys.exit(1)
+print(path)
+PY
+)
+```
+
+如果定位失败，停止执行并提示用户设置 `AAC_REPO` 环境变量。
 
 ### 7. 重新生成 OpenClaw 命令
 
 运行：
 
 ```bash
-python3 /path/to/awesome-AGENT-configure/OpenClaw/scripts/build-cron.py ~/.openclaw/workspace/awesome-AGENT-configure/cron/<job-name>.yaml
+export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
+python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
+  "$AAC_WORKSPACE/cron/<job-name>.yaml"
 ```
 
-### 8. 展示变更并请求确认
+得到 `openclaw cron create` 命令，用于审阅完整配置。
+
+### 8. 选择更新方式并请求确认
+
+OpenClaw 提供 `openclaw cron edit <job-id>` 来 patch 已有任务，**job ID 不变**。`edit` 支持 `--message`、`--cron`、`--name`、`--session`、`--thinking`、`--tools`、`--model`、`--tz`、`--announce`、`--no-deliver` 等常见字段，完整映射参见 `OpenClaw/skills/SKILL-GUIDE.md` 中的“四、`openclaw cron edit` 支持矩阵”。
+
+- **Agent 模式任务**：优先使用 `openclaw cron edit <job-id>`，仅 patch 变更字段。
+- **命令模式任务**：当前 `edit` 不支持 `--command`、`-command-argv` 等命令相关字段，只能先删除旧任务再创建新任务，job ID 会改变。
 
 向用户展示：
+
 - 修改前后的关键差异
-- 新生成的 `openclaw cron create` 命令
+- 将使用的更新方式（`edit` 还是 `delete+create`）
+- 对应的命令
 
 询问：
 
-> 以上为更新后的配置。确认后我将删除旧任务并创建新任务（OpenClaw 更新任务通常需要重新创建）。
+> 以上为更新后的配置。确认后我将执行更新。
 
 ### 9. 执行更新
 
-用户确认后，执行以下操作：
+#### 方式 A：Agent 模式且字段可被 `edit` 支持
+
+```bash
+openclaw cron edit <job-id> \
+  --message "..." \
+  --cron "..." \
+  ...
+```
+
+#### 方式 B：命令模式或 `edit` 不支持相关字段
 
 1. 删除旧任务：
 
 ```bash
-openclaw cron delete --id <old-job-id>
+openclaw cron rm <job-id>
 ```
 
 2. 创建新任务：
@@ -144,13 +212,16 @@ openclaw cron delete --id <old-job-id>
 openclaw cron create ...
 ```
 
-3. 验证：
+验证：
 
 ```bash
 openclaw cron list
 ```
 
-并告知用户更新结果。
+并告知用户更新结果：
+
+- 使用 `edit` 时，job ID 不变。
+- 使用 delete+create 时，job ID 改变，旧运行历史不再关联。
 
 ## 关键原则
 
@@ -158,6 +229,6 @@ openclaw cron list
 - **先展示再修改**：让用户清楚当前配置
 - **明确变更差异**：修改前后对比展示
 - **删除旧任务前必须确认**：这是破坏性操作
-- **保留 YAML 文件**：修改后的 YAML 继续保存在 `~/.openclaw/workspace/awesome-AGENT-configure/cron/`
+- **保留 YAML 文件**：修改后的 YAML 继续保存在 `$AAC_WORKSPACE/cron/`（默认 `~/.openclaw/workspace/awesome-AGENT-configure/cron/`）
 - **编辑后名称仍保持 AAC 格式**：如修改分类，需同步更新 `【AAC-分类】` 前缀
 

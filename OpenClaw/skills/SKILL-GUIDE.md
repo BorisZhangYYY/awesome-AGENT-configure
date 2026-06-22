@@ -200,3 +200,135 @@
 整个 Prompt 的模板源。场景变量会替换其中的 `{{XXX}}` 占位符。
 
 ---
+
+## 四、`openclaw cron edit` 支持矩阵
+
+OpenClaw 官方 CLI **没有 `cron update` 子命令**，更新已有任务应使用：
+
+```bash
+openclaw cron edit <job-id> [选项]
+```
+
+`edit` 是 patch 语义：只修改指定的字段，未指定的字段保持原样，且 **job ID 不变**。
+
+### 4.1 常用 `edit` 选项与模板变量对应
+
+| 模板变量 | `edit` 选项 | 说明 |
+|----------|-------------|------|
+| `JOB_NAME` | `--name` | 修改任务名 |
+| `SCHEDULE_EXPR`（cron 类型） | `--cron` | 修改 cron 表达式 |
+| `TIMEZONE` | `--tz` | 修改时区 |
+| `MESSAGE` | `--message` | 修改 Agent 模式提示词 |
+| `SYSTEM_EVENT` | `--system-event` | 修改 systemEvent 载荷 |
+| `SESSION_TARGET` | `--session` | 修改会话目标 |
+| `MODEL` | `--model` | 修改模型覆盖 |
+| `THINKING` | `--thinking` | 修改思考级别 |
+| `TOOLS` | `--tools` | 修改工具白名单 |
+| `DELIVERY_MODE: announce` | `--announce` | 启用 runner 兜底投递 |
+| `DELIVERY_MODE: none` | `--no-deliver` | 禁用 runner 兜底投递 |
+| `BEST_EFFORT: true` | `--best-effort-deliver` | 投递失败不导致任务失败 |
+| `BEST_EFFORT: false` | `--no-best-effort-deliver` | 投递失败导致任务失败 |
+| `LIGHT_CONTEXT: true` | `--light-context` | 轻量 bootstrap |
+| `LIGHT_CONTEXT: false` | `--no-light-context` | 完整 bootstrap |
+| `EXACT: true` | `--exact` | 禁用 stagger |
+| `TIMEOUT_SECONDS` | `--timeout-seconds` | Agent 任务超时 |
+| `CHANNEL` | `--channel` | 投递渠道 |
+| `TO` | `--to` | 投递目标 |
+| `STAGGER` | `--stagger` | 显式错峰窗口 |
+
+### 4.2 哪些情况不能直接 `edit`
+
+根据官方 CLI 帮助（`openclaw cron edit --help`），当前 `edit` **不支持** `--command`、`-command-argv`、`-command-cwd` 等命令模式字段。因此：
+
+- **Agent 模式任务**：优先使用 `openclaw cron edit`，保留 job ID。
+- **命令模式任务**：只能先 `openclaw cron rm <id>` 再 `openclaw cron create ...`，job ID 会改变。
+
+### 4.3 `edit` 使用示例
+
+```bash
+# 修改消息和 cron 表达式，job ID 不变
+openclaw cron edit abc123 \
+  --message "新的提示词" \
+  --cron "0 7 * * *" \
+  --tz Asia/Shanghai
+```
+
+---
+
+## 五、项目路径与运行时路径分离
+
+本项目坚持“源码/模板”与“运行时配置”完全分离：
+
+- **项目源码**（模板、脚本、skill 文档）在版本控制仓库中，位置由用户决定，例如 `/mnt/d/Study_Project/awesome-AGENT-configure`。
+- **运行时配置**（生成的场景 YAML、状态文件）放到 OpenClaw workspace：`~/.openclaw/workspace/awesome-AGENT-configure/cron/`。
+
+因此 skill 执行时需要区分两个路径：
+
+| 变量 | 含义 | 示例 |
+|------|------|------|
+| `AAC_REPO` | 项目仓库根目录 | `/mnt/d/Study_Project/awesome-AGENT-configure` |
+| `AAC_WORKSPACE` | 运行时配置根目录 | `~/.openclaw/workspace/awesome-AGENT-configure` |
+
+### 5.1 定位项目仓库（`AAC_REPO`）
+
+所有 skill 中不再使用 `/path/to/awesome-AGENT-configure` 占位符。AGENT 在执行涉及项目脚本的步骤前，应先定位项目根目录并保存到 `AAC_REPO`。
+
+```bash
+export AAC_REPO=$(python3 - <<'PY'
+import os, sys
+
+def locate_repo():
+    # 1. 环境变量 AAC_REPO（用户显式设置，例如 /mnt/d/Study_Project/awesome-AGENT-configure）
+    env = os.environ.get("AAC_REPO")
+    if env and os.path.isfile(os.path.join(env, "OpenClaw/scripts/build-cron.py")):
+        return env
+    # 2. 当前工作目录
+    cwd = os.getcwd()
+    if os.path.isfile(os.path.join(cwd, "OpenClaw/scripts/build-cron.py")):
+        return cwd
+    # 3. 在 $HOME 下有限深度搜索
+    home = os.path.expanduser("~")
+    for root, dirs, _ in os.walk(home):
+        if "awesome-AGENT-configure" in dirs:
+            p = os.path.join(root, "awesome-AGENT-configure")
+            if os.path.isfile(os.path.join(p, "OpenClaw/scripts/build-cron.py")):
+                return p
+        if root.count(os.sep) - home.count(os.sep) >= 4:
+            del dirs[:]
+    return ""
+
+path = locate_repo()
+if not path:
+    print("ERROR: 未找到 awesome-AGENT-configure 项目路径，请先设置 AAC_REPO 环境变量", file=sys.stderr)
+    sys.exit(1)
+print(path)
+PY
+)
+```
+
+定位优先级：
+
+1. 环境变量 `AAC_REPO`。
+2. 当前工作目录（如果它就是项目根目录）。
+3. `$HOME` 下前 4 层中名为 `awesome-AGENT-configure` 且包含 `OpenClaw/scripts/build-cron.py` 的目录。
+
+### 5.2 运行时路径（`AAC_WORKSPACE`）
+
+运行时生成的 YAML 和状态文件统一放在 OpenClaw workspace，与项目源码分离：
+
+```bash
+AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
+mkdir -p "$AAC_WORKSPACE/cron"
+```
+
+### 5.3 使用方式
+
+```bash
+# 渲染生成命令
+python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
+  "$AAC_WORKSPACE/cron/init-<job-name>.yaml"
+```
+
+如果 `AAC_REPO` 定位失败，应停止执行并提示用户设置 `AAC_REPO` 环境变量。
+
+---

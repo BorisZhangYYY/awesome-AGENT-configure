@@ -106,20 +106,63 @@ variables:
 
 ### 5. 生成场景 YAML 文件
 
-将收集到的变量写入用户工作区：
+将收集到的变量写入运行时工作区（与项目源码分离）：
 
 ```bash
-~/.openclaw/workspace/awesome-AGENT-configure/cron/init-<job-name>.yaml
+export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
+mkdir -p "$AAC_WORKSPACE/cron"
+# YAML 文件路径：$AAC_WORKSPACE/cron/init-<job-name>.yaml
 ```
 
 文件内容基于 `OpenClaw/template/reminders/custom.yaml` 或未来其他分类模板。
+
+### 5.5 定位项目仓库（`AAC_REPO`）
+
+按照 `OpenClaw/skills/SKILL-GUIDE.md` 中“五、项目路径与运行时路径分离”的方法设置 `AAC_REPO`：
+
+```bash
+export AAC_REPO=$(python3 - <<'PY'
+import os, sys
+
+def locate_repo():
+    # 1. 环境变量 AAC_REPO（用户显式设置，例如 /mnt/d/Study_Project/awesome-AGENT-configure）
+    env = os.environ.get("AAC_REPO")
+    if env and os.path.isfile(os.path.join(env, "OpenClaw/scripts/build-cron.py")):
+        return env
+    # 2. 当前工作目录
+    cwd = os.getcwd()
+    if os.path.isfile(os.path.join(cwd, "OpenClaw/scripts/build-cron.py")):
+        return cwd
+    # 3. 在 $HOME 下有限深度搜索
+    home = os.path.expanduser("~")
+    for root, dirs, _ in os.walk(home):
+        if "awesome-AGENT-configure" in dirs:
+            p = os.path.join(root, "awesome-AGENT-configure")
+            if os.path.isfile(os.path.join(p, "OpenClaw/scripts/build-cron.py")):
+                return p
+        if root.count(os.sep) - home.count(os.sep) >= 4:
+            del dirs[:]
+    return ""
+
+path = locate_repo()
+if not path:
+    print("ERROR: 未找到 awesome-AGENT-configure 项目路径，请先设置 AAC_REPO 环境变量", file=sys.stderr)
+    sys.exit(1)
+print(path)
+PY
+)
+```
+
+如果定位失败，停止执行并提示用户设置 `AAC_REPO` 环境变量。
 
 ### 6. 生成 OpenClaw 命令
 
 运行：
 
 ```bash
-python3 /path/to/awesome-AGENT-configure/OpenClaw/scripts/build-cron.py ~/.openclaw/workspace/awesome-AGENT-configure/cron/init-<job-name>.yaml
+export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
+python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
+  "$AAC_WORKSPACE/cron/init-<job-name>.yaml"
 ```
 
 ### 7. 向用户展示并请求确认

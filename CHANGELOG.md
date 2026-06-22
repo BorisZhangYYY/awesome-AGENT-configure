@@ -11,12 +11,21 @@
 - 新增 `OpenClaw/conf/defaults.yaml`，管理官方参数与非官方扩展的默认变量值。
 - 新增 `docs/OpenClaw/design-rationale.md`，解释开机堆叠问题与时间窗口、去重的必要性。
 - 新增 `docs/OpenClaw/skill-creator.md`，记录 OpenClaw Skill 创建方式调研结果。
+- 新增 `OpenClaw/skills/SKILL-GUIDE.md` 中“`openclaw cron edit` 支持矩阵”与“项目路径自动定位”章节，为 skill 执行提供统一参考。
+- 新增 `OpenClaw/template/check/docker.yaml` Docker 容器/Compose 巡检场景，基于 `template-cron.zh.yaml` 并通过场景级 `template` 字段直接覆盖提示词。
+- `OpenClaw/scripts/build-cron.py` 支持场景 YAML 通过顶层 `template` 字段覆盖模板文件的提示词。
 - 新增 `OpenClaw/skills/init-cron/SKILL.md`，引导用户从零创建定时任务。
 - 新增 `OpenClaw/skills/migrate-cron/SKILL.md`，帮助用户改造已有定时任务。
 - `OpenClaw/template/template-cron.zh.yaml` 顶部注释增加 `{{WORKSPACE}}` 内置变量说明。
 
 ### Changed
 
+- `OpenClaw/conf/defaults.yaml`：移除 `SESSION_TARGET: isolated` 默认值，改为在 `build-cron.py` 中按 `SESSION_TARGET > PERSISTENT_ID > isolated` 的优先级自动推断，避免 `PERSISTENT_ID` 被默认值覆盖。
+- `OpenClaw/skills/init-cron/SKILL.md`、`OpenClaw/skills/migrate-cron/SKILL.md`、`OpenClaw/skills/edit-cron/SKILL.md`：
+  - 不再使用 `/path/to/awesome-AGENT-configure` 占位符，统一按 `SKILL-GUIDE.md` 中的方法自动定位项目仓库（`AAC_REPO`）。
+  - 明确区分项目仓库（`AAC_REPO`）与运行时配置目录（`AAC_WORKSPACE`，默认 `~/.openclaw/workspace/awesome-AGENT-configure`），二者完全分离。
+  - `edit-cron` 更新流程改为优先使用 `openclaw cron edit <id>`（保留 job ID），仅在命令模式等 `edit` 不支持的场景下回退到 delete+create。
+- `.gitignore`：增加 `__pycache__/`、`*.pyc`、`*.pyo` 忽略规则。
 - `OpenClaw/template/template-cron.zh.yaml`：
   - 删除 `command.enabled`，遵循 OpenClaw 原生语义，`command.script` 非空时自动启用命令模式。
   - 删除 `timeWindow.timezone`，统一使用 `schedule.timezone`。
@@ -31,6 +40,15 @@
 
 ### Fixed
 
+- 修复 `OpenClaw/scripts/build-cron.py` 中 `session:<id>` 持久会话逻辑：
+  - 支持 `SESSION_TARGET: "session:my-id"` 直接生效。
+  - 当仅提供 `PERSISTENT_ID` 时自动生成 `session:<id>`。
+- 修复 `OpenClaw/scripts/build-cron.py` 对空列表/字典的处理：
+  - `COMMAND_ARGV: []` / `{}` 不再渲染为字符串 `"[]"` / `"{}"`。
+  - 非空列表/字典自动序列化为 JSON 字符串后传给 CLI。
+- 修复 `build_persona_prompt` 在 `PERSONA_ROLE` 为空时生成病句“你是一个。”的问题，现在返回空字符串。
+- 修复 `OpenClaw/conf/flags.yaml` 中 `delivery.mode: none` 不渲染任何 flag 的问题，改为渲染 `--no-deliver`。
+- 修复 `OpenClaw/template/template-cron.zh.yaml` 中 `session:<id>` 注释与占位符混淆的问题。
 - 修复 `OpenClaw/template/template-cron.zh.yaml` 中部分 `{{XXX}}` 占位符未加引号导致的 YAML 解析错误。
 
 ## [0.0.0] - 2026-06-21

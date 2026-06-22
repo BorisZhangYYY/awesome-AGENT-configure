@@ -19,7 +19,8 @@ official:
 
   # 会话配置
   session.target: --session
-  session.persistentId: --session
+  # 持久会话 ID 已合并到 session.target 处理，不再单独映射，避免重复 --session
+  # session.persistentId: --session
   session.timeoutSeconds: --timeout-seconds
 
   # Agent 配置
@@ -53,7 +54,8 @@ special:
     values:
       announce: --announce
       webhook: --webhook
-      none: null
+      # OpenClaw 默认投递模式通常不是 none，必须显式禁用投递
+      none: --no-deliver
 
   delivery.bestEffort:
     type: boolean_flag

@@ -66,8 +66,8 @@ delivery:
 
 # 会话配置
 session:
-  target: "{{SESSION_TARGET}}"  # --session；main | isolated | current | session:<id>
-  persistentId: "{{PERSISTENT_ID}}"  # target = "session:<id>" 时填写具体会话 ID
+  target: "{{SESSION_TARGET}}"  # --session；main | isolated | current | session:<具体ID>
+  persistentId: "{{PERSISTENT_ID}}"  # 仅填写 ID 即可，生成器会自动拼成 session:<ID>
   timeoutSeconds: "{{TIMEOUT_SECONDS}}"  # --timeout-seconds
 
 # Agent 执行上下文
