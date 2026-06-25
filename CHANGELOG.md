@@ -6,6 +6,7 @@
 
 ### Added
 
+- 新增 `AI-ProjConf/zh_CN/` 通用项目初始化模板目录，提供 `README.md`、`TODO.md`、`AGENT.md`、`CLAUDE.md`、`CHANGELOG.md` 的 example 模板。
 - 新增 `OpenClaw/scripts/build-cron.py` 脚本，支持从场景 YAML 渲染生成 `openclaw cron create` 命令。
 - 新增 `OpenClaw/conf/flags.yaml`，集中管理 OpenClaw 官方 CLI 参数映射及 boolean/enum 等特殊参数规则。
 - 新增 `OpenClaw/conf/defaults.yaml`，管理官方参数与非官方扩展的默认变量值。
@@ -35,6 +36,8 @@
   - template 内将时间窗口和去重提炼为独立的【防护机制】结构性注释。
 - `OpenClaw/conf/defaults.yaml`：增加 `THINKING: "off"` 默认值。
 - `OpenClaw/template/reminders/*.yaml`：所有提醒场景增加 `THINKING: "off"` 和 `EXACT: "true"`。
+- `README.md`：重构为目录导航结构，新增安装与依赖、项目结构、贡献指南等章节，修正章节标题笔误。
+- `TODO.md`：精简为“待实现 / 已完成”两栏，按 P0~P3 优先级分组，删除历史已决策条目。
 - `README.md`：补充项目结构、使用方法、设计原则和开机堆叠问题说明。
 - `TODO.md`：关闭 `#3`/`#4`/`#7`/`#8`/`#10`。 
 
