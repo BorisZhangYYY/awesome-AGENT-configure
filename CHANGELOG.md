@@ -43,6 +43,9 @@
 
 ### Fixed
 
+- 修正 `README.md` 项目结构中对 `AI-ProjConf/` 的描述，移除已删除的 `STATE` 引用。
+- 删除 `AI-ProjConf/zh_CN/README.md.example` 中指向未提交 `CONTRIBUTING.md` 的“贡献指南”章节。
+- 重命名 `AI-ProjConf/zh_CN/CHANGLOG.md.example` 为 `CHANGELOG.md.example`，修正拼写错误。
 - 修复 `OpenClaw/scripts/build-cron.py` 中 `session:<id>` 持久会话逻辑：
   - 支持 `SESSION_TARGET: "session:my-id"` 直接生效。
   - 当仅提供 `PERSISTENT_ID` 时自动生成 `session:<id>`。
