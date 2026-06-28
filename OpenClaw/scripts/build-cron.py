@@ -13,6 +13,7 @@ import json
 import re
 import shlex
 import sys
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -40,6 +41,13 @@ def main():
     template = load_template(scene, scene_path)
 
     variables = build_variables(defaults, template, scene)
+
+    # 注入运行时相关变量；若场景 YAML 已显式定义，优先使用场景值
+    now = datetime.now()
+    weekday_cn = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][now.weekday()]
+    variables.setdefault("DATE_TODAY", now.strftime("%Y-%m-%d"))
+    variables.setdefault("TIME_NOW", now.strftime("%H:%M"))
+    variables.setdefault("WEEKDAY", weekday_cn)
 
     # 根据 persona 配置注入 {{PERSONA_PROMPT}}
     variables["PERSONA_PROMPT"] = build_persona_prompt(template, variables)
@@ -96,10 +104,35 @@ def build_variables(defaults, template, scene):
     return variables
 
 
+def resolve_variables(variables, max_depth=5):
+    """递归展开变量值中的嵌套占位符，返回完全展开后的新字典。
+
+    对变量值中的嵌套占位符（如 DEDUP_STATE_FILE: "{{WORKSPACE}}/..."）进行预展开，
+    避免在 template 替换阶段对同一文本多次扫描，同时降低误替换值中字面量 `{{}}` 的风险。
+    """
+    resolved = {k: str(v) if v is not None else "" for k, v in variables.items()}
+    for _ in range(max_depth):
+        changed = False
+        new_resolved = {}
+        for key, value in resolved.items():
+            new_value = value
+            for other_key, other_value in resolved.items():
+                placeholder = "{{" + other_key + "}}"
+                if placeholder in new_value:
+                    new_value = new_value.replace(placeholder, other_value)
+                    changed = True
+            new_resolved[key] = new_value
+        resolved = new_resolved
+        if not changed:
+            break
+    return resolved
+
+
 def render_template(template, scene, variables):
     """渲染 template 字段。
 
     优先使用场景 YAML 中直接定义的 template，未定义则使用模板文件中的 template。
+    变量值中的嵌套占位符会先被预展开，然后对 template 进行一次性统一替换。
     未提供值的占位符保持原样（由运行时 AGENT 处理）。
     """
     template_str = scene.get("template") or template.get("template", "")
@@ -107,17 +140,15 @@ def render_template(template, scene, variables):
         # 未配置 template，直接使用 message 字段内容
         return variables.get("MESSAGE", "")
 
+    # 先完全展开所有变量值中的嵌套占位符
+    resolved = resolve_variables(variables)
+
+    # 统一单轮替换 template 中的占位符
     result = template_str
-    max_passes = 5  # 防止循环引用导致死循环
-    for _ in range(max_passes):
-        changed = False
-        for key, value in variables.items():
-            placeholder = "{{" + key + "}}"
-            if placeholder in result:
-                result = result.replace(placeholder, str(value))
-                changed = True
-        if not changed:
-            break
+    for key, value in resolved.items():
+        placeholder = "{{" + key + "}}"
+        result = result.replace(placeholder, str(value))
+
     return result
 
 

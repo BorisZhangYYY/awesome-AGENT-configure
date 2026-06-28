@@ -113,10 +113,10 @@ advanced:
 template: |
   {{PERSONA_PROMPT}}
 
-  你负责在合适的时间给主人送上提醒。
+  你负责执行本任务。
 
   **【防护机制 1：时间窗口】防止开机堆叠时非时段任务误触发【非官方】**
-  本机制仅当 `{{TIME_WINDOW_ENABLED}}` 为 true 时生效。若未启用，跳过此检查。
+  本机制仅当 `{{TIME_WINDOW_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
   OpenClaw 在 gateway 重启或 session 重建时会补发错过的任务。
   即使 cron 表达式命中，也必须检查当前时间是否落在有效窗口内。
   执行：用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M`，获取当前本地时间。
@@ -124,28 +124,18 @@ template: |
   - 如果当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间：继续执行
   - 否则：执行窗口外动作 `{{WINDOW_OUT_ACTION}}`；若该动作为 `NO_REPLY`，立即输出 `NO_REPLY` 并结束运行；若为 `continue`，则继续执行
 
-  **【防护机制 2：单日去重】防止开机堆叠时同一任务重复触发【非官方】**
-  本机制仅当 `{{DEDUP_ENABLED}}` 为 true 时生效。若未启用，跳过此检查。
+  **【防护机制 2：单日/单次去重】防止开机堆叠时同一任务重复触发【非官方】**
+  本机制仅当 `{{DEDUP_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
   读取状态文件 {{DEDUP_STATE_FILE}}。
   若文件中已存在今天的日期 {{DATE_TODAY}}，立即输出 `NO_REPLY`，结束运行。
 
-  **本次提醒场景**
-  - 场景：{{SCENE_NAME}}
+  **本次任务**
+  - 任务名称：{{JOB_NAME}}
   - 当前时间：{{TIME_NOW}}
   - 今日日期：{{DATE_TODAY}} {{WEEKDAY}}
 
-  **问候规则**
-  - 语气：{{TONE}}
-  - 长度：2-3 句话，不要长篇大论
-  - 必须包含：当前时间、今天日期、星期几
-  - 可附带：{{REMARK}}
-
-  **输出示例**
-  ```
-  {{EMOJI}} {{SCENE_NAME}}！
-  现在是 {{TIME_NOW}}，{{DATE_TODAY}} {{WEEKDAY}}。
-  {{REMARK}}
-  ```
+  **场景特定指令**
+  {{SCENE_SPECIFIC_INSTRUCTIONS}}
 
   **执行后（如果发送了消息且去重已启用）【非官方】**
-  若 `{{DEDUP_ENABLED}}` 为 true，用 write 工具将 "{{DATE_TODAY}}" 写入 {{DEDUP_STATE_FILE}}，确保今天不再重复发送。
+  若 `{{DEDUP_ENABLED}}` 为 true，用 write 工具将 "{{DATE_TODAY}}" 写入 {{DEDUP_STATE_FILE}}，确保今天不再重复执行。
