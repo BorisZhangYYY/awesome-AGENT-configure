@@ -10,6 +10,7 @@
 
 import argparse
 import json
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -107,10 +108,16 @@ def render_template(template, scene, variables):
         return variables.get("MESSAGE", "")
 
     result = template_str
-    for key, value in variables.items():
-        placeholder = "{{" + key + "}}"
-        if placeholder in result:
-            result = result.replace(placeholder, str(value))
+    max_passes = 5  # 防止循环引用导致死循环
+    for _ in range(max_passes):
+        changed = False
+        for key, value in variables.items():
+            placeholder = "{{" + key + "}}"
+            if placeholder in result:
+                result = result.replace(placeholder, str(value))
+                changed = True
+        if not changed:
+            break
     return result
 
 
@@ -119,7 +126,13 @@ def build_persona_prompt(template, variables):
     persona = template.get("persona", {})
     mode = str(variables.get("PERSONA_MODE", persona.get("mode", "inline"))).lower()
     persona_file = variables.get("PERSONA_FILE", persona.get("file", ""))
-    persona_role = variables.get("PERSONA_ROLE", persona.get("role", ""))
+    persona_role = variables.get("PERSONA_ROLE", "")
+    # 场景未定义 PERSONA_ROLE 时，尝试从模板 persona.role 读取
+    # 但需过滤包含未解析占位符（如 "{{PERSONA_ROLE}}"）的字符串，避免泄漏到输出
+    if not persona_role:
+        raw_role = persona.get("role", "")
+        if raw_role and not re.search(r"\{\{.*?\}\}", raw_role):
+            persona_role = raw_role
 
     if mode == "file" and persona_file:
         return f"请基于 {persona_file} 中定义的人设。"

@@ -1,0 +1,175 @@
+# 工作区整理巡检场景
+# 本任务每日读取工作区规范文件和历史巡检报告，对照实际文件布局，
+# 将不符合规范的文件按主题归位，移动后验证脚本可执行性。
+# 若工作区已整洁则静默（NO_REPLY），有变动时汇报并持久化报告。
+#
+# 使用方式：
+#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/checks/workspace-check.yaml
+templateRef: "../template-cron.zh.yaml"
+
+variables:
+  JOB_NAME: "【AAC-巡检】工作区整理"
+  CATEGORY: "巡检"
+  DESCRIPTION: "每日按工作区规范整理文件，按主题分类归位，验证脚本可执行性"
+
+  SCHEDULE_EXPR: "0 23 * * *"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "22:00"
+  WINDOW_END: "23:59"
+
+  DELIVERY_MODE: "announce"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+  LIGHT_CONTEXT: "true"
+  THINKING: "medium"
+  TOOLS: "exec,read,write"
+  EXACT: "false"
+  TIMEOUT_SECONDS: "300"
+
+  DEDUP_ENABLED: "true"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/check-workspace.txt"
+
+template: |
+  你负责每日检查并整理 AGENT 工作区，确保文件布局符合当前规范。
+
+  **【防护机制 1：时间窗口】防止开机堆叠时非时段任务误触发【非官方】**
+  用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M` 获取当前本地时间。
+  - 若当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间，继续执行。
+  - 否则输出 `NO_REPLY` 并结束。
+
+  **【防护机制 2：单日去重】防止开机堆叠重复执行【非官方】**
+  本机制仅当 `{{DEDUP_ENABLED}}` 为 true 时生效。若未启用，跳过此检查。
+  读取 `{{DEDUP_STATE_FILE}}`。若文件中已存在今天的日期，输出 `NO_REPLY` 并结束。
+
+  **巡检任务**：{{JOB_NAME}}
+  **工作区路径**：`{{WORKSPACE}}`
+  **报告目录**：`{{WORKSPACE}}/docs/reports/workspace-check/`
+
+  ---
+
+  ## 步骤 1：阅读历史报告
+
+  列出最近 3 天的报告文件（若存在）：
+  ```bash
+  ls -t {{WORKSPACE}}/docs/reports/workspace-check/ 2>/dev/null | head -3
+  ```
+  用 read 读取这些报告，了解：
+  - 上次移动了哪些文件、归入了哪个主题目录
+  - 上次发现了哪些需要人工处理的问题（路径引用、规范缺失等）
+  - 是否存在持续未解决的问题
+
+  若报告目录不存在或为空，视为首次巡检。
+
+  ## 步骤 2：读取工作区规范
+
+  用 read 工具读取以下文件（若不存在则跳过）：
+  - `{{WORKSPACE}}/SOUL.md` → 目录结构规范
+  - `{{WORKSPACE}}/AGENTS.md` → 文件行为规范（trash vs rm 等）
+
+  从规范中提取**当前生效的目录约定**，作为本次整理的依据。
+  若两个文件都未定义任何目录结构规范，输出提示并结束：
+  > ℹ️ 当前工作区未定义目录结构规范。建议在 SOUL.md 中补充后本任务才能生效。
+
+  ## 步骤 3：扫描工作区
+
+  列出根目录下所有非隐藏内容：
+  ```bash
+  ls -1F {{WORKSPACE}}/
+  ```
+
+  对每个散落在根目录（不在任何子目录中）的非核心文件，**读取其内容**判断主题归属：
+
+  **核心文件白名单**（不移动，保持在根目录）：
+  SOUL.md / AGENTS.md / IDENTITY.md / USER.md / MEMORY.md / TOOLS.md / HEARTBEAT.md / CLAUDE.md / README.md
+
+  **分类原则**：按文件主题（做什么）分类，而非按文件类型（是什么格式）分类。
+
+  | 文件主题 | 目标目录 | 说明 |
+  |----------|----------|------|
+  | 某个技术/业务主题的笔记、分析、方案 | `docs/<主题名>/` | 如 `docs/OpenClaw/`、`docs/Docker/` |
+  | 属于 MEMORY.md 或 TOOLS.md 的引用/附录 | `docs/references/<主题名>/` | **仅限** MEMORY/TOOLS 明确引用的详细文档 |
+  | 某主题的脚本/工具 | `scripts/<主题名>/` | 如 `scripts/deploy/`、`scripts/backup/` |
+  | 用户自己的图片、音频、字体等资源 | `assets/<类型>/` | 如 `assets/images/`、`assets/fonts/`，与 avatars/ 区分 |
+  | OpenClaw 自身的头像/形象资源 | `avatars/` | IDENTITY.md 引用的头像等，与用户 assets 区分 |
+
+  **主题名命名规范**：
+  - 使用英文短名，kebab-case（如 `docker-health`、`data-export`）
+  - 优先复用已存在的主题目录（如已有 `docs/OpenClaw/`，新的 OpenClaw 相关文档也归入）
+  - 如果没有对应主题目录，新建
+
+  ## 步骤 4：执行整理
+
+  原则：
+  - 只移动不删除（AGENTS.md：`trash > rm`）
+  - 目标目录不存在则 `mkdir -p`
+  - 隐藏文件/目录不触碰
+  - `.state/` 下文件不触碰
+  - 核心文件白名单内不移动
+
+  用 exec 移动：
+  ```bash
+  mv {{WORKSPACE}}/<文件名> {{WORKSPACE}}/<目标目录>/
+  ```
+
+  ## 步骤 5：脚本移动后验证
+
+  对每个移动的脚本文件（`.py` / `.sh` / `.js` / `.ts`），在新位置执行：
+
+  1. **语法检查**：
+     - `.py`：`python3 -c "import ast; ast.parse(open('<新路径>').read()); print('OK')"`
+     - `.sh`：`bash -n <新路径>`
+  2. **路径引用检测**：用 read 检查脚本内容中是否硬编码了旧路径。搜索模式：
+     - 旧目录名（如移动前的父目录名）
+     - 相对路径引用（`../`、`./`）
+     - `sys.path`、`source`、`import` 等涉及路径的关键字
+  3. 若发现旧路径引用，**不自动修改**，在报告中列出：
+     ```
+     ⚠️ <脚本名> 中有 N 处可能引用旧位置，需人工检查：
+       - 第 X 行：import xxx from '../old-location/...'
+       - 第 Y 行：source /旧路径/config
+     ```
+
+  ## 步骤 6：写入巡检报告
+
+  报告路径：`{{WORKSPACE}}/docs/reports/workspace-check/{{DATE_TODAY}}.md`
+
+  ```markdown
+  # 【AAC-巡检】工作区整理 — {{DATE_TODAY}} {{TIME_NOW}}
+
+  ## 摘要
+  - 整理结果：（无需整理 / 移动了 X 个文件）
+  - 一句话：
+
+  ## 详情
+  （如有移动）
+  | 文件 | 原位置 | 新位置 | 主题 | 验证结果 |
+  |------|--------|--------|------|----------|
+  | xxx.py | 根目录 | scripts/deploy/ | 部署工具 | ✅ 语法通过，无路径问题 |
+  | yyy.md | 根目录 | docs/Docker/ | Docker 笔记 | — |
+
+  （如有脚本路径问题）
+  ### ⚠️ 需人工检查
+  - `scripts/deploy/deploy.sh`：第 12 行硬编码 `/旧路径/config`，需确认
+
+  ## 历史对比
+  （对比最近一次报告）
+  - 上次整理的 X 个文件，本次仍在原位，状态正常。
+  ```
+
+  若无需移动，报告仅保留摘要行：
+  > 🧹 工作区整理检查完毕，当前文件布局符合规范。
+
+  ## 步骤 7：清理 30 天前的旧报告
+
+  ```bash
+  find {{WORKSPACE}}/docs/reports/workspace-check/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
+  ```
+  `{{WORKSPACE}}/.trash/` 目录不存在则先 `mkdir -p`。
+
+  ---
+
+  **汇总结果**：
+  - 若无需整理（工作区已整洁）：输出 `NO_REPLY`，不发送任何消息。
+  - 若有变动（移动了文件）：将步骤 6 报告的「详情」部分发送。
+
+  **执行后**：若 `{{DEDUP_ENABLED}}` 为 true，用 write 将今天的日期写入 `{{DEDUP_STATE_FILE}}`。

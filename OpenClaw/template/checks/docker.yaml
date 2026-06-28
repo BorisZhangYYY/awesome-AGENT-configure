@@ -1,0 +1,137 @@
+# Docker 容器/Compose 巡检场景
+# 本任务检查 Docker 容器运行状态、健康状态与近期日志，结合历史报告区分主动停用与异常。
+# 若全部正常则静默（NO_REPLY），异常时发出告警并持久化报告。
+#
+# 使用方式：
+#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/checks/docker.yaml
+templateRef: "../template-cron.zh.yaml"
+
+variables:
+  JOB_NAME: "【AAC-巡检】Docker 容器健康"
+  CATEGORY: "巡检"
+  DESCRIPTION: "检查 Docker 容器与 Compose 项目的运行状态、健康状态及近期日志"
+
+  SCHEDULE_EXPR: "0 */6 * * *"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "00:00"
+  WINDOW_END: "23:59"
+
+  # 巡检类任务正常时静默，异常时告警
+  DELIVERY_MODE: "announce"
+  BEST_EFFORT: "true"
+  LIGHT_CONTEXT: "true"
+  THINKING: "low"
+  EXACT: "false"
+  TIMEOUT_SECONDS: "300"
+  TOOLS: "exec,read,write"
+
+  DEDUP_ENABLED: "false"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/check-docker.txt"
+
+template: |
+  你是一名 Docker 容器巡检专家，负责检查本机 Docker 容器与 Compose 项目的健康状态。
+
+  **【防护机制 1：时间窗口】防止开机堆叠时非时段任务误触发【非官方】**
+  用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M` 获取当前本地时间。
+  - 若当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间，继续执行。
+  - 否则输出 `NO_REPLY` 并结束。
+
+  **【防护机制 2：单日去重】防止开机堆叠重复告警【非官方】**
+  读取 `{{DEDUP_STATE_FILE}}`。若去重已启用且文件中已存在今天的日期，输出 `NO_REPLY` 并结束。
+
+  **巡检任务**：{{JOB_NAME}}
+  **报告目录**：`{{WORKSPACE}}/docs/reports/docker/`
+
+  ---
+
+  ## 步骤 1：阅读历史报告
+
+  列出最近 3 条报告文件（若存在）：
+  ```bash
+  ls -t {{WORKSPACE}}/docs/reports/docker/ 2>/dev/null | head -3
+  ```
+  用 read 读取这些报告，了解：
+  - 上次哪些容器异常、当前是否仍在持续
+  - 哪些容器上次已标记为「可能主动停用」
+  - 是否存在持续多轮的同一问题
+
+  若报告目录不存在或为空，视为首次巡检。
+
+  ## 步骤 2：获取容器列表
+
+  使用 exec 运行：
+  ```bash
+  docker ps -a --format '{{.Names}}: {{.Status}}'
+  ```
+  获取**所有**容器列表（含已停止）。
+
+  ## 步骤 3：逐容器判定
+
+  对每个容器，结合历史报告上下文：
+
+  - **优先排除主动停用**：若状态为 `Exited (0)` 且最后运行时间超过 24 小时，标记为「可能主动停用」，不视为异常，跳过后续检查。
+    - 若历史报告中该容器已多次标记为「可能主动停用」，本次不再重复告警。
+  - **异常判定**：若状态包含 `Exited`（退出码非 0）、`unhealthy`、`dead`、`restarting`，记录为异常。
+  - 对异常容器，运行 `docker logs --tail 100 <容器名>` 获取最近日志（不使用 `--since`，避免已停止超过 10 分钟的容器返回空日志），搜索 error/fatal/panic/exception 关键字辅助判断根因。
+
+  ## 步骤 4：Compose 服务检查
+
+  若检测到 docker-compose.yml（根目录或常见位置），运行：
+  ```bash
+  docker compose -f <路径> ps
+  ```
+  检查 compose 服务是否全部 running。非 running 的服务按步骤 3 的逻辑判定。
+
+  ## 步骤 5：写入巡检报告
+
+  报告路径：`{{WORKSPACE}}/docs/reports/docker/{{DATE_TODAY}}-<当前 HH-MM>.md`
+  （将当前本地时间 `HH:MM` 中的冒号替换为短横线后填入，因本任务每 6 小时执行，一天可能有多份报告）
+
+  ```markdown
+  # 【AAC-巡检】Docker 容器健康 — {{DATE_TODAY}} {{TIME_NOW}}
+
+  ## 摘要
+  - 容器总数：X | 正常：Y | 主动停用：Z | 异常：W
+  - 一句话：
+
+  ## 详情
+  （如有异常）
+  | 容器名 | 状态 | 关键日志 | 判定 |
+  |--------|------|----------|------|
+  | xxx | unhealthy | error: connection refused | 异常 |
+  | yyy | Exited (0) | — | 可能主动停用 |
+
+  ### Compose 服务
+  - 全部 running / 有 X 个非 running
+
+  ## 历史对比
+  - 上次异常容器「zzz」本次已恢复
+  - 容器「aaa」连续 3 轮异常，建议关注
+  ```
+
+  若全部正常，报告仅保留摘要。
+
+  ## 步骤 6：清理 30 天前的旧报告
+
+  ```bash
+  mkdir -p {{WORKSPACE}}/.trash/ && find {{WORKSPACE}}/docs/reports/docker/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
+  ```
+  `{{WORKSPACE}}/.trash/` 目录不存在则先 `mkdir -p`。
+
+  ---
+
+  **汇总结果**：
+  - 全部正常：输出 `NO_REPLY`，不发送任何消息。
+  - 发现异常：输出 Markdown 告警，包含异常容器、状态、关键日志片段、建议操作，格式如下：
+
+  ```markdown
+  🚨 Docker 巡检发现异常
+
+  - 容器：xxx
+    - 状态：unhealthy
+    - 关键日志：xxx
+  - 建议：检查服务依赖或重启容器
+  ```
+
+  **执行后（若发送了告警且去重已启用）**
+  若 `{{DEDUP_ENABLED}}` 为 true，用 write 工具将今天的日期写入 `{{DEDUP_STATE_FILE}}`。

@@ -40,6 +40,10 @@
 - `TODO.md`：精简为“待实现 / 已完成”两栏，按 P0~P3 优先级分组，删除历史已决策条目。
 - `README.md`：补充项目结构、使用方法、设计原则和开机堆叠问题说明。
 - `TODO.md`：关闭 `#3`/`#4`/`#7`/`#8`/`#10`。 
+- `OpenClaw/skills/SKILL-GUIDE.md`、`init-cron/SKILL.md`、`migrate-cron/SKILL.md`：将任务分类从 7 类（提醒/巡检/汇报/开发/学习/整理/系统）精简为 4 类（提醒/巡检/开发/学习）。
+- `OpenClaw/skills/init-cron/SKILL.md`、`migrate-cron/SKILL.md`：调整步骤顺序，先定位项目仓库（`AAC_REPO`）再生成场景 YAML，并明确要求将 `templateRef` 修正为仓库绝对路径。
+- `OpenClaw/workspace_example/SOUL.md.example`：调整目录结构规范，将 IDENTITY.md 引用资源从 `assets/` 拆分为 `avatars/`，用户资源仍放 `assets/`，并增加 `.trash` 回收站规范。
+- `OpenClaw/template/template-cron.zh.yaml` 及 `OpenClaw/template/checks/*.yaml`：将 `TIME_WINDOW_ENABLED`、`WINDOW_OUT_ACTION`、`DEDUP_ENABLED` 等非官方配置变量注入 prompt，避免硬配置与 prompt 行为脱节。
 
 ### Fixed
 
@@ -56,6 +60,11 @@
 - 修复 `OpenClaw/conf/flags.yaml` 中 `delivery.mode: none` 不渲染任何 flag 的问题，改为渲染 `--no-deliver`。
 - 修复 `OpenClaw/template/template-cron.zh.yaml` 中 `session:<id>` 注释与占位符混淆的问题。
 - 修复 `OpenClaw/template/template-cron.zh.yaml` 中部分 `{{XXX}}` 占位符未加引号导致的 YAML 解析错误。
+- 修复 `OpenClaw/scripts/build-cron.py` 单次替换无法处理嵌套变量（如 `DEDUP_STATE_FILE: "{{WORKSPACE}}/..."`）的问题，改为最多 5 轮多轮替换。
+- 修复 `OpenClaw/scripts/build-cron.py` 中 `build_persona_prompt` 占位符过滤逻辑不完整的问题，使用正则检测任意 `{{...}}` 子串，避免 `{{PERSONA_ROLE}}-admin` 等部分占位符泄漏到 prompt。
+- 修复 `OpenClaw/template/checks/docker.yaml` 使用未定义 `{{TIME_NOW_SAFE}}` 变量的问题，改为由 AGENT 执行时从当前时间派生文件名。
+- 修复 `OpenClaw/template/checks/docker.yaml` 清理旧报告命令未确保 `.trash/` 目录存在的问题。
+- 同步更新 `TODO.md` 中已删除/重命名的 `OpenClaw/template/check/docker.yaml` 路径引用。
 
 ## [0.0.0] - 2026-06-21
 

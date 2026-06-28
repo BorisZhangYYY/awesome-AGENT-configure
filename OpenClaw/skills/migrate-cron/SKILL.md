@@ -135,19 +135,7 @@ openclaw cron info --id <job-id>
 
 > 以上为选定任务的诊断结果。是否按推荐配置生成改造后的 YAML 并创建新任务？
 
-### 8. 生成改造后的 YAML
-
-用户确认后，为每个选定任务生成新的场景 YAML（放到运行时工作区，与项目源码分离）：
-
-```bash
-export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
-mkdir -p "$AAC_WORKSPACE/cron"
-# YAML 文件路径：$AAC_WORKSPACE/cron/migrated-<job-name>.yaml
-```
-
-基于 `OpenClaw/template/reminders/custom.yaml` 或未来其他分类模板，填入推荐配置和原有任务的 schedule/内容。
-
-### 8.5 定位项目仓库（`AAC_REPO`）
+### 8. 定位项目仓库（`AAC_REPO`）
 
 按照 `OpenClaw/skills/SKILL-GUIDE.md` 中“五、项目路径与运行时路径分离”的方法设置 `AAC_REPO`：
 
@@ -186,7 +174,27 @@ PY
 
 如果定位失败，停止执行并提示用户设置 `AAC_REPO` 环境变量。
 
-### 9. 生成 OpenClaw 命令
+### 9. 生成改造后的 YAML
+
+用户确认后，为每个选定任务生成新的场景 YAML（放到运行时工作区，与项目源码分离）：
+
+```bash
+export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
+mkdir -p "$AAC_WORKSPACE/cron"
+# YAML 文件路径：$AAC_WORKSPACE/cron/migrated-<job-name>.yaml
+```
+
+基于 `OpenClaw/template/reminders/custom.yaml` 或 `OpenClaw/template/checks/` 下对应分类的模板，填入推荐配置和原有任务的 schedule/内容。
+
+**⚠️ 关键：必须修正 `templateRef` 为仓库绝对路径。** 模板源文件中的 `templateRef: "../template-cron.zh.yaml"` 是相对于仓库 `template/` 目录的路径，复制到 workspace 后无法解析。写入 YAML 时必须替换为：
+
+```yaml
+templateRef: "<AAC_REPO 的值>/OpenClaw/template/template-cron.zh.yaml"
+```
+
+其中 `<AAC_REPO 的值>` 使用上一步 `$AAC_REPO` 变量的实际路径（如 `/home/user/awesome-AGENT-configure`）。**禁止保留相对路径。**
+
+### 10. 生成 OpenClaw 命令
 
 运行：
 
@@ -196,13 +204,13 @@ python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
   "$AAC_WORKSPACE/cron/migrated-<job-name>.yaml"
 ```
 
-### 10. 展示并请求确认
+### 11. 展示并请求确认
 
 展示生成的命令，并说明改动后的效果：
 
 > 以上为改造后的 `openclaw cron create` 命令。确认后我将创建新任务。旧任务不会自动删除，如需删除请单独告知。
 
-### 11. 执行创建
+### 12. 执行创建
 
 用户确认后，执行生成的命令。
 
