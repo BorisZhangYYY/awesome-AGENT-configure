@@ -68,6 +68,9 @@
 - 修复 `OpenClaw/template/checks/docker.yaml` 清理旧报告命令未确保 `.trash/` 目录存在的问题。
 - 同步更新 `TODO.md` 中已删除/重命名的 `OpenClaw/template/check/docker.yaml` 路径引用。
 - 修复 `OpenClaw/scripts/build-cron.py` 未注入时间变量的问题，构建时统一注入 `DATE_TODAY`、`TIME_NOW`、`WEEKDAY`。
+- 修复 `OpenClaw/template/checks/cron-check.yaml` 重试方案，改用 `openclaw cron run --wait <任务ID>` 立即重试新故障，避免删除重建导致 job ID 改变。
+- 修复 `OpenClaw/scripts/build-cron.py` 中 `build_command` 函数存在未使用 `scene` 和 `template` 参数的问题，简化函数签名。
+- 补充 `OpenClaw/skills/SKILL-GUIDE.md` 及 `OpenClaw/template/template-cron.zh.yaml` 对场景级 `template` 覆盖能力的说明。
 
 ## [0.0.0] - 2026-06-21
 

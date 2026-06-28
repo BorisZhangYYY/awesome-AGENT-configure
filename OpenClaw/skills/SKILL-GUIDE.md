@@ -195,6 +195,22 @@
 
 整个 Prompt 的模板源。场景变量会替换其中的 `{{XXX}}` 占位符。
 
+**场景级 template 覆盖**
+
+通用模板 `template-cron.zh.yaml` 提供了一份通用 `template`，包含时间窗口、去重、人设注入等通用机制。如果场景不是通用类型，可以在场景 YAML 中通过顶层 `template` 字段**完全覆盖**父模板的 `template`。
+
+例如 `checks/docker.yaml`：
+
+```yaml
+template: |
+  你是一名 Docker 容器巡检专家，负责检查本机 Docker 容器与 Compose 项目的健康状态。
+  ...
+```
+
+如果需要复用父模板的通用机制，同时补充场景特定指令，可以使用 `{{SCENE_SPECIFIC_INSTRUCTIONS}}` 占位符。场景 YAML 通过 `SCENE_SPECIFIC_INSTRUCTIONS` 变量注入特定内容，例如 `reminders/morning.yaml`。
+
+> ⚠️ 如果场景 YAML 不覆盖 `template`，且也不提供 `{{SCENE_SPECIFIC_INSTRUCTIONS}}`，最终 message 将只包含通用机制部分。
+
 ---
 
 ## 四、`openclaw cron edit` 支持矩阵

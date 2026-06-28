@@ -56,7 +56,7 @@ def main():
     message = render_template(template, scene, variables)
     variables["MESSAGE"] = message
 
-    cmd = build_command(scene, template, variables, flags)
+    cmd = build_command(variables, flags)
 
     if args.json:
         print(json.dumps(cmd, ensure_ascii=False, indent=2))
@@ -172,7 +172,7 @@ def build_persona_prompt(template, variables):
     return ""
 
 
-def build_command(scene, template, variables, flags):
+def build_command(variables, flags):
     """根据变量和 flags 映射表构建 openclaw cron create 命令数组。"""
     cmd = ["openclaw", "cron", "create"]
 
