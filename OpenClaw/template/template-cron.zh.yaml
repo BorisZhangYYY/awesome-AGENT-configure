@@ -107,8 +107,8 @@ advanced:
 # 用于生成 message 的内容，避免每个场景重复书写通用 Harness/Loop 约束。
 # 生成器会用场景变量渲染本模板，结果填入 message 后作为 --message 传递给 OpenClaw。
 # 如未配置本模板，则直接使用 message 字段内容。
-# 场景文件可通过顶层 template 字段覆盖本模板；若需复用本模板通用机制，仅补充场景特定内容，
-# 可使用 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符，由场景 YAML 的 SCENE_SPECIFIC_INSTRUCTIONS 变量注入。
+# ⚠️ 场景文件禁止直接定义顶层 template 字段覆盖本模板，以确保时间窗口、去重等 Harness 机制一致生效。
+#    场景特定内容应通过 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符，由场景 YAML 的 SCENE_SPECIFIC_INSTRUCTIONS 变量注入。
 # {{PERSONA_PROMPT}} 由生成器根据 persona 配置渲染：
 # - 若 persona.file 非空：渲染为 "请基于 {{PERSONA_FILE}} 中定义的人设。"
 # - 否则（inline 模式）：渲染为 "你是一个{{PERSONA_ROLE}}。"

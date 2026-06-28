@@ -131,11 +131,17 @@ def resolve_variables(variables, max_depth=5):
 def render_template(template, scene, variables):
     """渲染 template 字段。
 
-    优先使用场景 YAML 中直接定义的 template，未定义则使用模板文件中的 template。
-    变量值中的嵌套占位符会先被预展开，然后对 template 进行一次性统一替换。
-    未提供值的占位符保持原样（由运行时 AGENT 处理）。
+    仅使用父模板中的 template。场景 YAML 不允许直接定义顶层 template 字段，
+    以确保时间窗口、去重等非官方 Harness 机制对所有场景一致生效。
+    场景特定内容应通过 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符注入。
     """
-    template_str = scene.get("template") or template.get("template", "")
+    if scene.get("template"):
+        raise ValueError(
+            "场景 YAML 不允许直接定义顶层 template 字段，"
+            "请使用 SCENE_SPECIFIC_INSTRUCTIONS 变量注入场景特定内容"
+        )
+
+    template_str = template.get("template", "")
     if not template_str:
         # 未配置 template，直接使用 message 字段内容
         return variables.get("MESSAGE", "")

@@ -195,21 +195,27 @@
 
 整个 Prompt 的模板源。场景变量会替换其中的 `{{XXX}}` 占位符。
 
-**场景级 template 覆盖**
+**禁止场景级 template 覆盖**
 
-通用模板 `template-cron.zh.yaml` 提供了一份通用 `template`，包含时间窗口、去重、人设注入等通用机制。如果场景不是通用类型，可以在场景 YAML 中通过顶层 `template` 字段**完全覆盖**父模板的 `template`。
+为确保时间窗口、去重等非官方 Harness 机制对所有场景一致生效，**场景 YAML 不允许直接定义顶层 `template` 字段**。所有场景的 prompt 都基于 `template-cron.zh.yaml` 中的通用 `template`。
 
-例如 `checks/docker.yaml`：
+场景特定内容必须通过 `{{SCENE_SPECIFIC_INSTRUCTIONS}}` 占位符注入，由场景 YAML 的 `SCENE_SPECIFIC_INSTRUCTIONS` 变量提供。例如 `reminders/morning.yaml`：
 
 ```yaml
-template: |
-  你是一名 Docker 容器巡检专家，负责检查本机 Docker 容器与 Compose 项目的健康状态。
-  ...
+variables:
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    你负责在合适的时间给主人送上早安提醒。
+    ...
 ```
 
-如果需要复用父模板的通用机制，同时补充场景特定指令，可以使用 `{{SCENE_SPECIFIC_INSTRUCTIONS}}` 占位符。场景 YAML 通过 `SCENE_SPECIFIC_INSTRUCTIONS` 变量注入特定内容，例如 `reminders/morning.yaml`。
+> ⚠️ 如果场景 YAML 直接定义顶层 `template` 字段，`build-cron.py` 会报错。
 
-> ⚠️ 如果场景 YAML 不覆盖 `template`，且也不提供 `{{SCENE_SPECIFIC_INSTRUCTIONS}}`，最终 message 将只包含通用机制部分。
+**通用 `template` 已包含的机制**
+
+- `{{PERSONA_PROMPT}}`：人设注入
+- 时间窗口检查（基于 `TIME_WINDOW_ENABLED` / `WINDOW_START` / `WINDOW_END` / `WINDOW_OUT_ACTION`）
+- 单日/单次去重（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE` / `DATE_TODAY`）
+- 执行后去重状态写入（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE` / `DATE_TODAY`）
 
 ---
 
