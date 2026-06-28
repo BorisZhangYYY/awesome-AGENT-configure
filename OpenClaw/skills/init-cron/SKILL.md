@@ -32,7 +32,7 @@ metadata:
 
 通过对话询问用户：
 
-1. **任务分类**：提醒 / 巡检 / 汇报 / 开发 / 学习 / 整理 / 系统
+1. **任务分类**：提醒 / 巡检 / 开发 / 学习
 2. **触发时间**：几点执行？是否每天？
 3. **任务内容**：做什么？（如"早安问候"、"检查磁盘"、"生成日报"）
 4. **是否需要送达**：必须送达（announce）还是正常静默（none）？
@@ -43,11 +43,8 @@ metadata:
 |------|----------|
 | 提醒 | 早安、午安、晚安、喝水提醒 |
 | 巡检 | 磁盘检查、服务健康、容器状态 |
-| 汇报 | 日报、数据汇总、股票简报 |
 | 开发 | 持续编码、补全功能、跑测试 |
 | 学习 | 技术调研、读书笔记、代码练习 |
-| 整理 | 文件归档、同步、清理日志 |
-| 系统 | Token 监控、垃圾回收、审计 |
 
 ### 2. 检查是否存在相关/类似任务
 
@@ -76,9 +73,9 @@ openclaw cron list
 ```yaml
 variables:
   SESSION_TARGET: isolated
-  DELIVERY_MODE: announce      # 巡检/学习/系统类改为 none
-  LIGHT_CONTEXT: "true"        # 开发/学习/整理类改为 false
-  THINKING: "off"              # 提醒/巡检 off；汇报/整理 low；开发/学习 medium
+  DELIVERY_MODE: announce      # 巡检/学习类改为 none
+  LIGHT_CONTEXT: "true"        # 开发/学习类改为 false
+  THINKING: "off"              # 提醒/巡检 off；开发/学习 medium
   EXACT: "true"                # 提醒类 true，其他 false
   TIMEOUT_SECONDS: "120"       # 按分类调整
   TIME_WINDOW_ENABLED: "true"
