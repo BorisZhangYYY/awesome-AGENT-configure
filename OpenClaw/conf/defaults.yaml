@@ -21,5 +21,27 @@ THINKING: "off"
 TIME_WINDOW_ENABLED: "true"
 WINDOW_OUT_ACTION: NO_REPLY
 DEDUP_ENABLED: "true"
+# ===== Loop 模式默认值 =====
+# 当 LOOP_MODE_ENABLED 为 true 时，本模板进入 Loop（状态驱动迭代）模式，
+# 适用于开发、维护、重构等需要状态续传的任务。
+LOOP_MODE_ENABLED: "false"
+DEV_PROJECT_NAME: ""
+DEV_PROJECT_DIR: "/path/to/your/project"
+DEV_PHASE: ""
+DEV_BRANCH: ""
+DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-session.json"
+DEV_TEST_PATTERN: "test_*.py"
+DEV_COMMIT_PREFIX: "feat"
+DEV_GOAL: ""
+DEV_MILESTONES: "[]"
+DEV_CURRENT_MILESTONE: ""
+DEV_AUTO_DISABLE_ON_GOAL_REACHED: "false"
+DEV_TASK_INSTRUCTIONS: ""
+# 项目文档目录，用于读取/更新架构文档等
+DEV_DOCS_DIR: "{{DEV_PROJECT_DIR}}/docs"
+
+# 场景特定补充指令，由场景 YAML 注入父模板的 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符
+SCENE_SPECIFIC_INSTRUCTIONS: ""
+
 PERSONA_MODE: inline
 WORKSPACE: ~/.openclaw/workspace

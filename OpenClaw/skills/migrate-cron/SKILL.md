@@ -184,7 +184,7 @@ mkdir -p "$AAC_WORKSPACE/cron"
 # YAML 文件路径：$AAC_WORKSPACE/cron/migrated-<job-name>.yaml
 ```
 
-基于 `OpenClaw/template/reminders/custom.yaml` 或 `OpenClaw/template/checks/` 下对应分类的模板，填入推荐配置和原有任务的 schedule/内容。
+基于 `OpenClaw/template/reminders/custom-reminders.yaml`、`OpenClaw/template/learns/custom-learns.yaml`、`OpenClaw/template/projects/` 或 `OpenClaw/template/checks/` 下对应分类的模板，填入推荐配置和原有任务的 schedule/内容。
 
 **⚠️ 关键：必须修正 `templateRef` 为仓库绝对路径。** 模板源文件中的 `templateRef: "../template-cron.zh.yaml"` 是相对于仓库 `template/` 目录的路径，复制到 workspace 后无法解析。写入 YAML 时必须替换为：
 

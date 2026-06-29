@@ -122,10 +122,10 @@ variables:
 
     ## 步骤 6：写入巡检报告
 
-    报告路径：`{{WORKSPACE}}/docs/reports/workspace-check/{{DATE_TODAY}}.md`
+    报告路径：用 exec 运行 `date +%Y-%m-%d` 获取当前日期，写入 `{{WORKSPACE}}/docs/reports/workspace-check/<YYYY-MM-DD>.md`。
 
     ```markdown
-    # 【AAC-巡检】工作区整理 — {{DATE_TODAY}} {{TIME_NOW}}
+    # 【AAC-巡检】工作区整理 — <用 exec 获取的当前日期> <用 exec 获取的当前时间>
 
     ## 摘要
     - 整理结果：（无需整理 / 移动了 X 个文件）

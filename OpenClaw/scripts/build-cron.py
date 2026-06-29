@@ -42,12 +42,31 @@ def main():
 
     variables = build_variables(defaults, template, scene)
 
+    # 对 Loop 模式相关变量做前置校验，避免未定义变量泄漏到 cron message
+    validate_loop_variables(variables)
+
+    # 递归展开变量值中的嵌套占位符（如 SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"），
+    # 确保命令参数和 message 都使用完全展开后的值
+    variables = resolve_variables(variables)
+
     # 根据 persona 配置注入 {{PERSONA_PROMPT}}
     variables["PERSONA_PROMPT"] = build_persona_prompt(template, variables)
 
     # 渲染 message
     message = render_template(template, scene, variables)
+
+    # 根据 LOOP_MODE_ENABLED 决定是否保留 Loop 模式专属片段
+    message = apply_loop_mode(message, variables)
+
     variables["MESSAGE"] = message
+
+    # 检查是否残留未解析的模板占位符（大写变量风格），避免生成带 {{XXX}} 的命令
+    unresolved = set(re.findall(r"\{\{[A-Z][A-Z0-9_]*\}\}", message))
+    if unresolved:
+        print(
+            f"警告：message 中可能存在未解析的模板占位符：{sorted(unresolved)}",
+            file=sys.stderr,
+        )
 
     cmd = build_command(variables, flags)
 
@@ -105,8 +124,8 @@ def build_variables(defaults, template, scene):
     variables.update(defaults or {})
     variables.update(template.get("variables", {}) or {})
     variables.update(scene.get("variables", {}) or {})
-    # 注入 WORKSPACE：将 ~ 展开为绝对路径，若场景已显式定义则优先使用
-    workspace = os.path.expanduser(variables.get("WORKSPACE", "~/.openclaw/workspace"))
+    # 注入 WORKSPACE：将 ~ 展开并转为绝对路径，若场景已显式定义则优先使用
+    workspace = os.path.abspath(os.path.expanduser(variables.get("WORKSPACE", "~/.openclaw/workspace")))
     variables["WORKSPACE"] = workspace
     return variables
 
@@ -116,14 +135,28 @@ def resolve_variables(variables, max_depth=5):
 
     对变量值中的嵌套占位符（如 DEDUP_STATE_FILE: "{{WORKSPACE}}/..."）进行预展开，
     避免在 template 替换阶段对同一文本多次扫描，同时降低误替换值中字面量 `{{}}` 的风险。
+    列表和字典类型保持原样，由调用方按需序列化。
     """
-    resolved = {k: str(v) if v is not None else "" for k, v in variables.items()}
+    resolved = {}
+    for k, v in variables.items():
+        if v is None:
+            resolved[k] = ""
+        elif isinstance(v, (list, dict)):
+            resolved[k] = v
+        else:
+            resolved[k] = str(v)
+
     for _ in range(max_depth):
         changed = False
         new_resolved = {}
         for key, value in resolved.items():
+            if not isinstance(value, str):
+                new_resolved[key] = value
+                continue
             new_value = value
             for other_key, other_value in resolved.items():
+                if not isinstance(other_value, str):
+                    continue
                 placeholder = "{{" + other_key + "}}"
                 if placeholder in new_value:
                     new_value = new_value.replace(placeholder, other_value)
@@ -163,6 +196,37 @@ def render_template(template, scene, variables):
         result = result.replace(placeholder, str(value))
 
     return result
+
+
+def apply_loop_mode(message, variables):
+    """根据 LOOP_MODE_ENABLED 保留或剥离 Loop 模式专属片段。
+
+    template-cron.zh.yaml 中同时包含普通任务和 Loop 任务两套 Prompt，
+    分别用 {{#LOOP_ONLY}}...{{/LOOP_ONLY}} 和 {{#NON_LOOP_ONLY}}...{{/NON_LOOP_ONLY}}
+    标记。本函数根据 LOOP_MODE_ENABLED 的值只保留对应分支，并移除标记本身。
+    """
+    loop_enabled = parse_bool(variables.get("LOOP_MODE_ENABLED", "false"))
+    if loop_enabled:
+        # 删除普通任务专属片段
+        message = re.sub(
+            r"\{\{#NON_LOOP_ONLY\}\}.*?\{\{/NON_LOOP_ONLY\}\}",
+            "",
+            message,
+            flags=re.DOTALL,
+        )
+        # 移除 Loop 标记，保留内容
+        message = message.replace("{{#LOOP_ONLY}}", "").replace("{{/LOOP_ONLY}}", "")
+    else:
+        # 删除 Loop 任务专属片段
+        message = re.sub(
+            r"\{\{#LOOP_ONLY\}\}.*?\{\{/LOOP_ONLY\}\}",
+            "",
+            message,
+            flags=re.DOTALL,
+        )
+        # 移除普通标记，保留内容
+        message = message.replace("{{#NON_LOOP_ONLY}}", "").replace("{{/NON_LOOP_ONLY}}", "")
+    return message
 
 
 def build_persona_prompt(template, variables):
@@ -319,6 +383,52 @@ def parse_bool(value):
     if isinstance(value, str):
         return value.lower() in ("true", "1", "yes", "on")
     return bool(value)
+
+
+def validate_loop_variables(variables):
+    """对 Loop 模式相关变量做前置校验，防止无效配置生成 cron 命令。"""
+    loop_raw = str(variables.get("LOOP_MODE_ENABLED", "false")).strip().lower()
+    if loop_raw not in ("true", "1", "yes", "on", "false", "0", "no", "off", ""):
+        raise ValueError(
+            f"LOOP_MODE_ENABLED 必须是布尔值字符串，收到：{variables.get('LOOP_MODE_ENABLED')!r}"
+        )
+
+    # 校验 TIMEOUT_SECONDS 为正整数
+    timeout_raw = variables.get("TIMEOUT_SECONDS", "")
+    if timeout_raw:
+        try:
+            timeout = int(str(timeout_raw).strip())
+            if timeout <= 0:
+                raise ValueError
+        except ValueError as exc:
+            raise ValueError(
+                f"TIMEOUT_SECONDS 必须是正整数，收到：{timeout_raw!r}"
+            ) from exc
+
+    loop_enabled = parse_bool(variables.get("LOOP_MODE_ENABLED", "false"))
+    if not loop_enabled:
+        return
+
+    # 校验项目路径不是默认占位符
+    dev_project_dir = str(variables.get("DEV_PROJECT_DIR", "")).strip()
+    if dev_project_dir == "/path/to/your/project":
+        raise ValueError(
+            "DEV_PROJECT_DIR 仍是默认占位符 /path/to/your/project，"
+            "请在场景 YAML 中替换为实际项目绝对路径"
+        )
+
+    # 校验里程碑列表为合法 JSON 数组
+    milestones_raw = variables.get("DEV_MILESTONES", "[]")
+    try:
+        milestones = json.loads(str(milestones_raw))
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"DEV_MILESTONES 必须是合法 JSON 数组字符串，收到：{milestones_raw!r}"
+        ) from exc
+    if not isinstance(milestones, list):
+        raise ValueError(
+            f"DEV_MILESTONES 必须是 JSON 数组，收到：{type(milestones).__name__}"
+        )
 
 
 def is_empty(value):

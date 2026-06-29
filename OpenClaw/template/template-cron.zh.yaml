@@ -1,7 +1,12 @@
 # 通用 OpenClaw Cron 任务模板
-# 本文件包含 OpenClaw 官方 CLI 参数映射、以及模板层 Harness 扩展。
+# 本文件包含 OpenClaw 官方 CLI 参数映射、以及模板层 Harness/Loop 扩展。
 # 标注为【非官方】的字段不是 OpenClaw 原生参数，由本模板用 Prompt 工具调用实现。
 # 场景文件（如 reminders/morning.yaml）只需提供 variables；未提供的变量由生成器使用默认值填充。
+#
+# 本模板同时支持两种执行模式：
+#   - 普通模式（默认）：单次执行的任务，如提醒、巡检、学习
+#   - Loop 模式（LOOP_MODE_ENABLED: "true"）：循环推进的任务，如开发、维护、重构
+#     Loop 模式在普通模式基础上增加状态机、目标/里程碑、自动停用等机制。
 #
 # ⚠️ 为什么需要时间窗口和去重？
 # OpenClaw cron 在 gateway 重启或 session 重建时，会补发所有错过的任务。
@@ -118,7 +123,23 @@ advanced:
 template: |
   {{PERSONA_PROMPT}}
 
+  {{#NON_LOOP_ONLY}}
   你负责执行本任务。
+  {{/NON_LOOP_ONLY}}
+
+  {{#LOOP_ONLY}}
+  你负责通过定时任务自动推进软件开发项目。
+
+  **项目信息**
+  - 项目名称：{{DEV_PROJECT_NAME}}
+  - 项目目录：`{{DEV_PROJECT_DIR}}`
+  - 当前阶段：{{DEV_PHASE}}
+  - 开发分支：{{DEV_BRANCH}}
+  - 总体目标：{{DEV_GOAL}}
+  - 里程碑列表：{{DEV_MILESTONES}}
+  - 当前里程碑：{{DEV_CURRENT_MILESTONE}}
+  - 到达目标后自动停用 cron：{{DEV_AUTO_DISABLE_ON_GOAL_REACHED}}
+  {{/LOOP_ONLY}}
 
   **【防护机制 1：时间窗口】防止开机堆叠时非时段任务误触发【非官方】**
   本机制仅当 `{{TIME_WINDOW_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
@@ -135,8 +156,320 @@ template: |
   用 exec 工具运行 `date +%Y-%m-%d`（或 `TZ={{TIMEZONE}} date +%Y-%m-%d`），获取今天日期。
   若文件中已存在该日期，立即输出 `NO_REPLY`，结束运行。
 
+  {{#LOOP_ONLY}}
+  ---
+
+  ## PHASE 1：START — 会话启动
+
+  > 先读，再想，后动手。磨刀不误砍柴工。
+
+  ### 步骤 1.1：确保状态文件目录存在
+
+  状态文件路径：`{{DEV_STATE_FILE}}`
+  若其父目录不存在，先用 exec 运行 `mkdir -p $(dirname {{DEV_STATE_FILE}})` 创建目录。
+
+  ### 步骤 1.2：读取开发状态
+
+  读取状态文件：`{{DEV_STATE_FILE}}`
+
+  状态文件为 JSON 格式，关键字段：
+  - `status`: `ready` | `in_progress` | `blocked` | `goal_reached`
+  - `current_card`: 当前进行中的任务卡片标识
+  - `last_session`: 上次会话时间（ISO-8601）
+  - `next_step`: 下次要做什么（具体、可执行）
+  - `blockers`: 阻塞项列表
+  - `tech_debt`: 技术债务列表
+  - `test_coverage`: 当前测试覆盖情况
+  - `dev_log`: 开发日志（每次会话追加）
+  - `goal`: 总体目标（与 `{{DEV_GOAL}}` 保持一致）
+  - `milestones`: 里程碑列表
+  - `current_milestone_index`: 当前里程碑索引（从 0 开始）
+
+  如果状态文件不存在，视为首次开发会话，初始化状态：
+  ```json
+  {
+    "status": "ready",
+    "current_card": null,
+    "last_session": null,
+    "next_step": "认领第一个开发任务",
+    "blockers": [],
+    "tech_debt": [],
+    "test_coverage": "未评估",
+    "dev_log": [],
+    "goal": "{{DEV_GOAL}}",
+    "milestones": {{DEV_MILESTONES}},
+    "current_milestone_index": 0
+  }
+  ```
+
+  写入状态文件前，先执行：
+  ```bash
+  mkdir -p $(dirname {{DEV_STATE_FILE}})
+  ```
+  确保父目录存在。
+
+  ### 步骤 1.3：读取项目 TODO
+
+  读取 `{{DEV_PROJECT_DIR}}/TODO.md`（如果存在），了解：
+  - 已完成项（标记为 `[x]`）
+  - 未完成项（标记为 `[ ]`）
+  - 当前优先级最高的任务
+
+  ### 步骤 1.4：读取最近提交历史
+
+  执行：
+  ```bash
+  cd {{DEV_PROJECT_DIR}} && git log --oneline -5
+  ```
+  了解代码最新进展。
+
+  ### 步骤 1.5：判断会话类型
+
+  根据 `status` 字段：
+
+  ```
+  status = "ready"
+    → 新任务：认领最优先的待办项
+    → 从 TODO.md 或 Workboard 中找到下一个要完成的任务
+    → 更新 current_card 为该任务标识
+    → status 改为 "in_progress"
+
+  status = "in_progress"
+    → 续传：读取 current_card 和 next_step，继续编码
+    → 加载上次中断的上下文
+
+  status = "blocked"
+    → 先解阻塞：检查 blocker 内容
+    → 限时解决（≤15分钟），超时则记录并跳过
+    → 若阻塞解除，status 改为 "in_progress"
+
+  status = "goal_reached"
+    → 总体目标已达成
+    → 执行 PHASE 3.8：自动停用 cron 任务（如果启用）并发送最终汇报
+    → 输出 `NO_REPLY` 并结束运行
+  ```
+
+  ### 步骤 1.6：加载开发上下文
+
+  根据当前任务，读取相关代码文件：
+  - 当前任务关联的源代码文件
+  - 对应的测试文件（`test_*.py` 或对应模式）
+  - `requirements.txt` 或依赖配置
+  - 架构文档（如 `{{DEV_DOCS_DIR}}/architecture*.md`）
+
+  读取架构文档前，先执行：
+  ```bash
+  mkdir -p {{DEV_DOCS_DIR}}
+  ```
+  若目录下不存在架构文档，则跳过读取，不视为错误。
+
+  ---
+
+  ## PHASE 2：DEV — 执行开发任务
+
+  > 专注当前任务，不做无关改动。
+
+  ### 开发纪律（必须遵守）
+
+  1. **最少改动原则**：只碰任务直接相关的代码
+  2. **匹配现有风格**：即使自己习惯不同
+  3. **清理孤儿代码**：未使用的 import / 变量 / 函数，由我的改动造成的，必须删除
+  4. **验证闭环**：
+     - 修 bug → 先复现，再修复，再验证
+     - 加功能 → 先定义成功标准，完成后再验证
+  5. **简单优先**：50 行能搞定的不写 200 行
+  6. **阶段边界意识**：当前里程碑完成后，不要自动开启下一个里程碑；留到 EXIT 阶段更新状态
+
+  ### 执行步骤
+
+  {{DEV_TASK_INSTRUCTIONS}}
+
+  ### 测试验证
+
+  开发完成后必须运行测试：
+  ```bash
+  cd {{DEV_PROJECT_DIR}}
+  # 语法检查
+  python -m py_compile <修改的文件>
+  # 运行相关测试
+  python -m pytest {{DEV_TEST_PATTERN}} -v
+  ```
+  记录测试结果（通过数/总数）。
+
+  ---
+
+  ## PHASE 3：EXIT — 会话退出
+
+  > 保存状态，记录债务，以待来日。代码是临时文件，状态记录才是永恒。
+
+  ### 步骤 3.1：代码收尾
+
+  - [ ] 运行 `python -m py_compile` 检查语法错误
+  - [ ] 运行相关测试：`python -m pytest {{DEV_TEST_PATTERN}} -v`
+  - [ ] `git diff` — 确认变更范围合理，无意外文件被修改
+  - [ ] `git status` — 确认无未提交的重要变更
+
+  ### 步骤 3.2：安全审查
+
+  检查新增/修改文件：
+  - [ ] **无 API Key 硬编码** — 搜索 `api_key`, `token`, `password`, `secret`
+  - [ ] **无私人路径泄露** — 搜索 `/home/`, `/Users/`, `C:\`, 绝对路径
+  - [ ] **无意外删除** — git diff 确认无 rm 操作
+  - [ ] **无大型二进制文件** — 确认未提交 >1MB 文件
+
+  ### 步骤 3.3：Git 提交
+
+  ```bash
+  cd {{DEV_PROJECT_DIR}}
+  git add -A
+  git commit -m "{{DEV_COMMIT_PREFIX}}: [{{DEV_PHASE}}] <本次完成的内容摘要> — $(date +%Y-%m-%d) 会话"
+  ```
+
+  提交信息中的 `<本次完成的内容摘要>` 由你根据本次实际改动填写，例如：
+  - `feat: [P2-T3] Query 扩展与意图分类`
+  - `fix: [P2-T1] 修复向量检索空结果异常`
+  - `refactor: [P2] 提取公共工具函数`
+  - `test: [P2-T3] 补充边界测试`
+  - `maint: 2026-06-26 维护会话 — 测试验证`
+
+  > ⚠️ **不执行 `git push`** — 按安全红线，push 前需人工审核
+
+  ### 步骤 3.4：判断里程碑/目标是否完成
+
+  必须同时满足以下**全部**条件，才能认为当前里程碑已完成：
+  1. 本次 DEV 阶段产出的核心代码/文件已写入磁盘
+  2. 本次修改通过 `python -m py_compile` 语法检查
+  3. 相关测试全部通过（或失败项已记录并评估为可接受）
+  4. `{{DEV_PROJECT_DIR}}/TODO.md` 中与本里程碑相关的任务已标记为 `[x]`
+  5. `git status` 显示无未提交的重要变更（即本次改动已 commit）
+
+  根据以上判定结果更新状态：
+  - **当前里程碑未完成**：status 保持 `in_progress`，next_step 设为本次未完的具体下一步
+  - **当前里程碑已完成，且还有下一个里程碑**：
+    - `current_milestone_index` + 1
+    - `status` 改为 `ready`
+    - `current_card` 设为下一个里程碑的首个任务
+    - `next_step` 设为"开始下一个里程碑：xxx"
+  - **当前里程碑已完成，且已是最后一个里程碑**：
+    - `status` 改为 `goal_reached`
+    - `current_card` 设为 null 或"目标已达成"
+    - `next_step` 设为"目标已达成，等待用户介入运维"
+
+  ### 步骤 3.5：更新状态文件
+
+  更新 `{{DEV_STATE_FILE}}`：
+  - `last_session` → 当前时间（ISO-8601，用 exec 获取）
+  - `current_card` → 本次完成/进行中的卡片
+  - `status` → 根据 3.4 判断的结果
+  - `next_step` → 下次要做什么（具体、可执行）
+  - `blockers` → 本次遇到的未解决阻塞
+  - `tech_debt` → 本次产生的技术债务
+  - `test_coverage` → 当前测试覆盖情况
+  - `dev_log` → 追加本次会话记录（包含时间、任务、摘要、测试结果、commit hash）
+  - `goal` / `milestones` / `current_milestone_index` → 同步更新
+
+  写入前确保父目录已存在。
+
+  ### 步骤 3.6：更新 TODO.md
+
+  更新 `{{DEV_PROJECT_DIR}}/TODO.md`：
+  - 标记已完成的项为 `[x]`
+  - 新增发现的待办项
+  - 更新「进行中」和「下次计划」
+
+  ### 步骤 3.7：汇报（如配置了投递）
+
+  如果 `{{DELIVERY_MODE}}` 为 `announce`，发送汇报消息。汇报内容必须从状态文件中读取最新值后填入：
+
+  ```
+  🗡️ 【{{DEV_PROJECT_NAME}}】开发迭代汇报
+
+  时间：<用 exec 获取当前日期和时间>
+  当前里程碑：<状态文件中的 current_milestone_index 对应里程碑>
+  任务：<状态文件中的 current_card>
+  状态：<状态文件中的 status>
+
+  完成项：
+  - <根据 dev_log 最后一条填写>
+
+  测试：<状态文件中的 test_coverage>
+
+  债务：<状态文件中的 tech_debt>
+
+  下次：<状态文件中的 next_step>
+  ```
+
+  如果 status 为 `goal_reached`，汇报标题改为 `🎯 【{{DEV_PROJECT_NAME}}】目标已达成`，并说明等待用户介入运维。
+
+  ### 步骤 3.8：到达目标后自动停用 cron 任务（可选）
+
+  如果同时满足：
+  1. 状态文件中 `status` 为 `goal_reached`
+  2. `{{DEV_AUTO_DISABLE_ON_GOAL_REACHED}}` 为 `true`
+
+  则按以下顺序尝试禁用本 cron 任务：
+
+  **方式 1：通过状态文件中记录的 cron_job_id 禁用（推荐，最可靠）**
+  读取状态文件，若存在 `cron_job_id` 字段，直接执行：
+  ```bash
+  openclaw cron edit <cron_job_id> --disabled
+  ```
+
+  **方式 2：通过任务名称查找并禁用**
+  若状态文件中无 `cron_job_id`，用 exec 运行：
+  ```bash
+  openclaw cron list --format json
+  ```
+  在 JSON 输出中精确匹配 `name` 等于 `{{JOB_NAME}}` 的任务，提取其 `id`，然后执行：
+  ```bash
+  openclaw cron edit <任务ID> --disabled
+  ```
+
+  **失败处理**：
+  - 若方式 1 和方式 2 均失败，在汇报中追加："⚠️ 自动停用失败，请手动运行 `openclaw cron edit <任务ID> --disabled`"
+  - 将失败原因记录到状态文件的 `dev_log` 中，由用户手动处理。
+
+  若成功禁用，在汇报中追加："本任务已自动停用，等待用户介入。"
+
+  ---
+
   **场景特定指令**
   {{SCENE_SPECIFIC_INSTRUCTIONS}}
+  {{/LOOP_ONLY}}
+
+  {{#NON_LOOP_ONLY}}
+  **场景特定指令**
+  {{SCENE_SPECIFIC_INSTRUCTIONS}}
+  {{/NON_LOOP_ONLY}}
 
   **执行后（如果发送了消息且去重已启用）【非官方】**
   若 `{{DEDUP_ENABLED}}` 为 true，用 exec 获取当前日期（`date +%Y-%m-%d`），并用 write 工具将该日期写入 {{DEDUP_STATE_FILE}}，确保今天不再重复执行。
+
+  {{#LOOP_ONLY}}
+  ---
+
+  ## 状态机转换图
+
+  ```
+  +--------+     领新任务      +-------------+
+  | ready  | ----------------> | in_progress |
+  +--------+                   +-------------+
+       ^                            | 完成/部分完成
+       |                            v
+       +-----------------------+ 遇到阻塞
+       |                        +---------+
+       |                        | blocked | ——→ 限时解阻塞（≤15min）
+       |                        +---------+      超时则保持 blocked
+       |
+  里程碑完成且还有下一阶段
+       |
+       v
+  +--------+     最后一个里程碑完成     +-------------+
+  | ready  | ------------------------> | goal_reached |
+  +--------+                            +-------------+
+                                               |
+                                               v
+                                        自动停用 cron
+                                        用户介入运维
+  ```
+  {{/LOOP_ONLY}}

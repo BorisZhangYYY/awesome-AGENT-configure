@@ -85,12 +85,12 @@ variables:
 
     ## 步骤 5：写入巡检报告
 
-    报告路径：`{{WORKSPACE}}/docs/reports/cron-check/{{DATE_TODAY}}.md`
+    报告路径：用 exec 运行 `date +%Y-%m-%d` 获取当前日期，写入 `{{WORKSPACE}}/docs/reports/cron-check/<YYYY-MM-DD>.md`。
 
     无论有无新异常，均写入报告：
 
     ```markdown
-    # 【AAC-巡检】Cron 任务健康 — {{DATE_TODAY}} {{TIME_NOW}}
+    # 【AAC-巡检】Cron 任务健康 — <用 exec 获取的当前日期> <用 exec 获取的当前时间>
 
     ## 摘要
     - 总任务数：X | 正常：Y | 异常：Z

@@ -3,6 +3,18 @@
 templateRef: "../template-cron.zh.yaml"
 
 variables:
+  # ========== 自定义占位符（复制后按需修改）==========
+  CUSTOM_SCENE_NAME: "自定义提醒"
+  CUSTOM_SCENE_KEY: "custom"
+  CUSTOM_DESCRIPTION: "自定义提醒场景"
+  CUSTOM_SCHEDULE_EXPR: "0 9 * * *"
+  CUSTOM_WINDOW_START: "08:00"
+  CUSTOM_WINDOW_END: "22:00"
+  CUSTOM_EMOJI: "📝"
+  CUSTOM_PERSONA_ROLE: "贴心的智能助手"
+  CUSTOM_TONE: "温和、自然"
+  CUSTOM_REMARK: "这是自定义提醒内容"
+
   JOB_NAME: "【AAC-提醒】{{CUSTOM_SCENE_NAME}}"
   DESCRIPTION: "{{CUSTOM_DESCRIPTION}}"
 
@@ -34,7 +46,7 @@ variables:
     **输出示例**
     ```
     {{EMOJI}} {{SCENE_NAME}}！
-    现在是 {{TIME_NOW}}，{{DATE_TODAY}} {{WEEKDAY}}。
+    现在是 <用 exec 运行 `date +%H:%M` 获取的当前时间>，<用 exec 运行 `date +%Y-%m-%d` 获取的当前日期> <用 exec 运行 `LC_TIME=zh_CN date +%A` 获取的星期几>。
     {{REMARK}}
     ```
 

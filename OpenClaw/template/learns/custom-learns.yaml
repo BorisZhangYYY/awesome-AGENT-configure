@@ -1,0 +1,110 @@
+# 自定义学习场景（AI 自我进步）
+# ============================================================
+# 本场景用于让 AI AGENT 通过定时任务自主学习、积累知识并改进自身能力。
+# 适用于：
+#   - 学习新技术、框架、工具
+#   - 阅读文档并提炼知识
+#   - 练习特定技能并记录心得
+#   - 根据项目需要补充知识库或 MEMORY.md
+#
+# 使用方式：
+#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/learns/custom-learns.yaml
+#
+# 设计原则：
+#   1. 每次学习一个具体主题，不贪多
+#   2. 学习后必须输出可复用的笔记/总结
+#   3. 将学习成果关联到现有项目或 MEMORY.md
+#   4. 用去重保证同一主题不会一天内重复学习
+
+templateRef: "../template-cron.zh.yaml"
+
+variables:
+  # ========== 基础信息 ==========
+  # 任务名称，建议使用：【AAC-学习】主题名
+  JOB_NAME: "【AAC-学习】{{CUSTOM_TOPIC_NAME}}"
+  CATEGORY: "学习"
+  DESCRIPTION: "定时学习 {{CUSTOM_TOPIC_NAME}}，输出学习笔记并更新知识库"
+
+  # ========== 调度配置 ==========
+  # 学习任务建议每天固定时间触发，例如早上 7 点
+  SCHEDULE_EXPR: "0 7 * * *"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "06:00"
+  WINDOW_END: "23:00"
+
+  # ========== 学习主题配置 ==========
+  # 本次学习的主题名称
+  CUSTOM_TOPIC_NAME: "XXX 技术/工具/概念"
+  # 学习目标：一句话说明要学到什么程度
+  CUSTOM_LEARNING_GOAL: "理解 XXX 的核心概念，并能在项目中正确使用"
+  # 学习来源：文档 URL、本地文件路径、书籍章节等
+  CUSTOM_SOURCES: |
+    - https://example.com/docs
+    - /path/to/local/note.md
+    - 其他来源...
+  # 学习输出格式：笔记、示例代码、对比表格、思维导图文本等
+  CUSTOM_OUTPUT_FORMAT: "Markdown 笔记，包含核心概念、使用示例、常见误区"
+  # 学习成果保存路径
+  CUSTOM_OUTPUT_FILE: "{{WORKSPACE}}/docs/learning/{{CUSTOM_TOPIC_KEY}}.md"
+  # 主题短键（用于文件名、状态文件等，建议使用 kebab-case）
+  CUSTOM_TOPIC_KEY: "xxx-topic"
+
+  # ========== 投递配置 ==========
+  # 学习类任务正常时静默，产出笔记后可选择投递摘要
+  DELIVERY_MODE: "none"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+
+  # ========== 会话配置 ==========
+  SESSION_TARGET: "isolated"
+  TIMEOUT_SECONDS: "3600"  # 1 小时
+
+  # ========== Agent 配置 ==========
+  # 学习需要完整上下文（读取 MEMORY.md、SOUL.md 等）和推理能力
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  TOOLS: "exec,read,write,edit,bash"
+
+  # ========== 人设配置 ==========
+  PERSONA_MODE: "file"
+  PERSONA_FILE: "{{WORKSPACE}}/SOUL.md"
+
+  # ========== 时间窗口 ==========
+  TIME_WINDOW_ENABLED: "true"
+  WINDOW_OUT_ACTION: "NO_REPLY"
+
+  # ========== 去重配置 ==========
+  # 同一主题一天内只学习一次
+  DEDUP_ENABLED: "true"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/learning-{{CUSTOM_TOPIC_KEY}}.txt"
+
+  # ========== 高级选项 ==========
+  EXACT: "false"
+
+  # ========== 场景特定指令 ==========
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    你负责自主学习 **{{CUSTOM_TOPIC_NAME}}**，目标是：{{CUSTOM_LEARNING_GOAL}}。
+
+    **学习来源**：
+    {{CUSTOM_SOURCES}}
+
+    **学习要求**：
+    1. 每次只聚焦一个子主题，不要贪多
+    2. 优先阅读官方文档或权威来源
+    3. 用 exec 工具运行必要命令进行实践（如安装、运行示例、查看版本等）
+    4. 记录学习过程中的关键发现和疑问
+
+    **输出要求**：
+    - 格式：{{CUSTOM_OUTPUT_FORMAT}}
+    - 保存路径：`{{CUSTOM_OUTPUT_FILE}}`
+    - 必须包含：核心概念、使用示例、常见误区、与现有项目的关联
+    - 若文件已存在，追加本次学习笔记，不要覆盖历史内容
+
+    **关联知识库**：
+    - 读取 `{{WORKSPACE}}/MEMORY.md`（如果存在）
+    - 若学习成果值得长期保留，用 edit 工具更新 MEMORY.md 的相关章节
+    - 若成果与某个项目相关，在项目 TODO.md 中记录待应用项
+
+    **终止条件**：
+    - 成功完成学习并保存笔记后，正常结束
+    - 若来源不可读或学习无法继续，记录原因到 `{{CUSTOM_OUTPUT_FILE}}`，输出 `NO_REPLY`

@@ -34,6 +34,6 @@ variables:
     **输出示例**
     ```
     {{EMOJI}} {{SCENE_NAME}}！
-    现在是 {{TIME_NOW}}，{{DATE_TODAY}} {{WEEKDAY}}。
+    现在是 <用 exec 运行 `date +%H:%M` 获取的当前时间>，<用 exec 运行 `date +%Y-%m-%d` 获取的当前日期> <用 exec 运行 `LC_TIME=zh_CN date +%A` 获取的星期几>。
     {{REMARK}}
     ```

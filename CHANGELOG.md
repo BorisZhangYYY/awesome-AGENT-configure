@@ -6,6 +6,14 @@
 
 ### Added
 
+- 将 Loop 开发迭代逻辑合并入 `OpenClaw/template/template-cron.zh.yaml`，新增 `LOOP_MODE_ENABLED` 开关，支持目标（`DEV_GOAL`）、里程碑（`DEV_MILESTONES`）、当前里程碑（`DEV_CURRENT_MILESTONE`）和到达目标后自动停用 cron（`DEV_AUTO_DISABLE_ON_GOAL_REACHED`）。
+- 新增 `OpenClaw/template/checks/custom-checks.yaml` 通用巡检场景模板，便于用户快速创建自定义巡检任务。
+- 新增 `OpenClaw/template/projects/custom-projects.yaml` 通用项目场景模板，支持基于 Loop 方法的任意项目任务。
+- 新增 `OpenClaw/skills/update-cron/SKILL.md`，用于在 AAC 模板升级后批量同步已有 AAC 规范化定时任务。
+- `OpenClaw/scripts/build-cron.py` 增加 Loop 模式前置校验：验证 `LOOP_MODE_ENABLED` 为合法布尔字符串、`TIMEOUT_SECONDS` 为正整数、`DEV_PROJECT_DIR` 不是默认占位符、`DEV_MILESTONES` 为合法 JSON 数组，防止无效配置生成 cron 命令。
+- `OpenClaw/scripts/build-cron.py` 在渲染前统一展开变量中的嵌套占位符（如 `SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"`），修复命令参数未解析的问题。
+- `OpenClaw/conf/defaults.yaml` 增加 `SCENE_SPECIFIC_INSTRUCTIONS` 默认值。
+- `OpenClaw/scripts/build-cron.py` 增加渲染后未解析大写模板占位符警告，防止未定义变量泄漏到 cron message。
 - 新增 `AI-ProjConf/zh_CN/` 通用项目初始化模板目录，提供 `README.md`、`TODO.md`、`AGENT.md`、`CLAUDE.md`、`CHANGELOG.md` 的 example 模板。
 - 新增 `OpenClaw/scripts/build-cron.py` 脚本，支持从场景 YAML 渲染生成 `openclaw cron create` 命令。
 - 新增 `OpenClaw/conf/flags.yaml`，集中管理 OpenClaw 官方 CLI 参数映射及 boolean/enum 等特殊参数规则。
@@ -21,6 +29,17 @@
 
 ### Changed
 
+- 将 `OpenClaw/template/checks/docker.yaml` 重命名为 `OpenClaw/template/checks/docker-check.yaml`，与类别内其他巡检模板命名风格保持一致。
+- `OpenClaw/template/template-cron.zh.yaml`：
+  - 移除状态机中不可达的 `completed` 状态，状态现在为 `ready` | `in_progress` | `blocked` | `goal_reached`，并同步更新状态机转换图。
+  - 增强 PHASE 3.4 里程碑完成判定，要求同时满足代码已提交、语法检查通过、测试通过、TODO.md 对应项已标记完成、git 无未提交重要变更。
+  - 增强 PHASE 3.8 自动停用 cron 逻辑，优先使用状态文件中记录的 `cron_job_id`，失败后回退到按任务名从 `openclaw cron list --format json` 查找，并增加失败处理说明。
+  - PHASE 1.2 增加写入状态文件前 `mkdir -p` 步骤；PHASE 1.6 增加读取架构文档前 `mkdir -p {{DEV_DOCS_DIR}}` 步骤。
+- 删除独立的 `OpenClaw/template/template-dev.zh.yaml`，其 Loop 逻辑已合并至 `template-cron.zh.yaml`。
+- 将提醒类自定义模板从 `OpenClaw/template/reminders/custom.yaml` 重命名为 `OpenClaw/template/reminders/custom-reminders.yaml`，并补充默认示例值。
+- `OpenClaw/template/template-cron.zh.yaml` 增加 Loop 模式支持，同时完整保留所有 OpenClaw 官方参数字段（systemEvent、command、keepAfterRun、stagger、webhookUrl、failureDestination 等），确保所有场景基于同一父模板。
+- `OpenClaw/conf/defaults.yaml`：新增 Loop 模式相关默认值（`LOOP_MODE_ENABLED`、`DEV_*` 系列变量）。
+- `OpenClaw/scripts/build-cron.py`：将 `WORKSPACE` 展开为绝对路径（`os.path.abspath(os.path.expanduser(...))`）。
 - `OpenClaw/conf/defaults.yaml`：移除 `SESSION_TARGET: isolated` 默认值，改为在 `build-cron.py` 中按 `SESSION_TARGET > PERSISTENT_ID > isolated` 的优先级自动推断，避免 `PERSISTENT_ID` 被默认值覆盖。
 - `OpenClaw/skills/init-cron/SKILL.md`、`OpenClaw/skills/migrate-cron/SKILL.md`、`OpenClaw/skills/edit-cron/SKILL.md`：
   - 不再使用 `/path/to/awesome-AGENT-configure` 占位符，统一按 `SKILL-GUIDE.md` 中的方法自动定位项目仓库（`AAC_REPO`）。
@@ -50,6 +69,15 @@
 
 ### Fixed
 
+- 修复 `OpenClaw/template/reminders/{morning,noon,evening,custom-reminders}.yaml`、`OpenClaw/template/checks/{cron-check,docker,workspace-check}.yaml` 中残留的 `{{DATE_TODAY}}` / `{{TIME_NOW}}` / `{{WEEKDAY}}` 占位符，改为由 Agent 执行时通过 `exec date` 获取当前日期/时间。
+- `OpenClaw/template/projects/feature.yaml`、`OpenClaw/template/projects/maintain.yaml`：补充 `DEV_DOCS_DIR` 变量，明确 TODO.md、CHANGELOG.md、架构文档等路径；扩展 `DEV_COMMIT_PREFIX` 注释，包含 `docs`/`test`/`chore` 等常见前缀。
+- `OpenClaw/conf/defaults.yaml`：补充 `DEV_DOCS_DIR` 默认值；修复之前误删的 `PERSONA_MODE` 和 `WORKSPACE` 默认值。
+- 修复 `OpenClaw/template/template-cron.zh.yaml` 中 Loop 模式分支的未定义占位符泄漏问题：移除 `{{DEV_COMMIT_MESSAGE}}`、`{{DATE_TODAY}}`、`{{TIME_NOW}}` 以及状态字段（`{{current_card}}`、`{{status}}` 等）的直接模板引用，改为从状态文件中读取后填入。
+- 修复 `OpenClaw/template/projects/maintain.yaml` 中项目特定值（`Siyuan-RAG Companion`、`/mnt/d/Study_Project/siyuan-rag-companion` 等）违反通用化原则的问题，统一替换为占位符。
+- 修复 `OpenClaw/template/projects/maintain.yaml` 缺少 `DEDUP_STATE_FILE` 导致 `{{DEDUP_STATE_FILE}}` 泄漏的问题。
+- 修复 `CLAUDE.md` 中 `CHANGLOG.md` 拼写错误，统一为 `CHANGELOG.md`。
+- 修复 `README.md` 中“无需额外安装第三方依赖”的错误说明，补充 PyYAML 依赖。
+- 修复 `OpenClaw/skills/SKILL-GUIDE.md` 仍引用已移除的 `DATE_TODAY` 以及旧 `dev/` 路径的问题。
 - 修正 `README.md` 项目结构中对 `AI-ProjConf/` 的描述，移除已删除的 `STATE` 引用。
 - 删除 `AI-ProjConf/zh_CN/README.md.example` 中指向未提交 `CONTRIBUTING.md` 的“贡献指南”章节。
 - 重命名 `AI-ProjConf/zh_CN/CHANGLOG.md.example` 为 `CHANGELOG.md.example`，修正拼写错误。

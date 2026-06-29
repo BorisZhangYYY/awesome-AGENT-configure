@@ -32,7 +32,7 @@ metadata:
 
 通过对话询问用户：
 
-1. **任务分类**：提醒 / 巡检 / 开发 / 学习
+1. **任务分类**：提醒 / 巡检 / 项目 / 学习
 2. **触发时间**：几点执行？是否每天？
 3. **任务内容**：做什么？（如"早安问候"、"检查磁盘"、"生成日报"）
 4. **是否需要送达**：必须送达（announce）还是正常静默（none）？
@@ -43,7 +43,7 @@ metadata:
 |------|----------|
 | 提醒 | 早安、午安、晚安、喝水提醒 |
 | 巡检 | 磁盘检查、服务健康、容器状态 |
-| 开发 | 持续编码、补全功能、跑测试 |
+| 项目 | 功能开发、维护会话、代码重构 |
 | 学习 | 技术调研、读书笔记、代码练习 |
 
 ### 2. 检查是否存在相关/类似任务
@@ -150,7 +150,7 @@ mkdir -p "$AAC_WORKSPACE/cron"
 # YAML 文件路径：$AAC_WORKSPACE/cron/init-<job-name>.yaml
 ```
 
-文件内容基于 `OpenClaw/template/reminders/custom.yaml` 或 `OpenClaw/template/checks/` 下对应分类的模板。
+文件内容基于 `OpenClaw/template/reminders/custom-reminders.yaml`、`OpenClaw/template/learns/custom-learns.yaml`、`OpenClaw/template/projects/` 或 `OpenClaw/template/checks/` 下对应分类的模板。
 
 **⚠️ 关键：必须修正 `templateRef` 为仓库绝对路径。** 模板源文件中的 `templateRef: "../template-cron.zh.yaml"` 是相对于仓库 `template/` 目录的路径，复制到 workspace 后无法解析。写入 YAML 时必须替换为：
 

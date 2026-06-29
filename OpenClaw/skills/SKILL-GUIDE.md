@@ -30,12 +30,12 @@
 例如：
 - `【AAC-提醒】早安`
 - `【AAC-巡检】磁盘空间`
-- `【AAC-开发】补全登录功能`
+- `【AAC-项目】补全登录功能`
 
 **为什么要强制命名？**
 
 - 一眼识别哪些任务按 AAC 规范创建
-- `edit-cron` skill 可通过 `【AAC-` 前缀快速定位可编辑任务
+- `edit-cron` / `update-cron` skill 可通过 `【AAC-` 前缀快速定位可编辑/可同步的任务
 - `migrate-cron` 迁移时统一重命名为 AAC 格式
 - 避免用户手动创建的任务和 AAC 任务混淆
 
@@ -45,17 +45,16 @@
 |------|------|------|
 | 提醒 | `【AAC-提醒】` | `【AAC-提醒】早安` |
 | 巡检 | `【AAC-巡检】` | `【AAC-巡检】磁盘空间` |
-| 开发 | `【AAC-开发】` | `【AAC-开发】登录功能` |
+| 项目 | `【AAC-项目】` | `【AAC-项目】登录功能` |
 | 学习 | `【AAC-学习】` | `【AAC-学习】RAG 调研` |
 
 ### 1.4 模板类型
 
 | 模板 | 路径 | 适用场景 | 核心机制 |
 |------|------|----------|----------|
-| **通用 Cron** | `template-cron.zh.yaml` | 提醒、巡检、单次任务 | Harness（时间窗口 + 去重） |
-| **开发迭代** | `template-dev.zh.yaml` | 功能开发、维护、重构 | Loop（状态驱动 + 清单驱动 + 增量迭代） |
+| **统一父模板** | `template-cron.zh.yaml` | 提醒、巡检、学习、项目 | Harness（时间窗口 + 去重）+ 可选 Loop（状态驱动 + 里程碑） |
 
-> **关键区别**：通用 Cron 模板面向**单次执行**的任务（提醒、巡检），执行完即结束；开发迭代模板面向**循环推进**的任务（开发、维护），每次执行都是一个迭代，需要状态续传。
+> **关键区别**：`template-cron.zh.yaml` 是所有场景的统一父模板。当 `LOOP_MODE_ENABLED` 为 `true` 时进入 Loop 模式，支持状态续传、目标/里程碑和到达目标后自动停用 cron。
 
 ---
 
@@ -227,8 +226,8 @@ variables:
 
 - `{{PERSONA_PROMPT}}`：人设注入
 - 时间窗口检查（基于 `TIME_WINDOW_ENABLED` / `WINDOW_START` / `WINDOW_END` / `WINDOW_OUT_ACTION`）
-- 单日/单次去重（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE` / `DATE_TODAY`）
-- 执行后去重状态写入（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE` / `DATE_TODAY`）
+- 单日/单次去重（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE`，日期由 Agent 运行时通过 `exec date` 获取）
+- 执行后去重状态写入（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE`，日期由 Agent 运行时通过 `exec date` 获取）
 
 ---
 
@@ -429,15 +428,18 @@ Loop 方法是一种**状态驱动的增量迭代开发模式**，核心思想�
 5. 更新 TODO.md
 6. 汇报（如配置了投递）
 
-### 6.5 开发场景文件示例
+### 6.5 项目场景文件示例
 
-#### 功能开发（`dev/feature.yaml`）
+#### 功能开发（`projects/feature.yaml`）
 
 ```yaml
-templateRef: "../template-dev.zh.yaml"
+templateRef: "../template-cron.zh.yaml"
 
 variables:
-  JOB_NAME: "【AAC-开发】XXX 功能开发"
+  # 启用 Loop 模式
+  LOOP_MODE_ENABLED: "true"
+
+  JOB_NAME: "【AAC-项目】XXX 功能开发"
   SCHEDULE_EXPR: "0 10 * * 1-5"  # 工作日上午 10 点
   TIMEZONE: "Asia/Shanghai"
   WINDOW_START: "09:00"
@@ -449,7 +451,16 @@ variables:
   DEV_BRANCH: "dev/main"
   DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-session.json"
   DEV_TEST_PATTERN: "test_*.py"
+  # Git 提交前缀（常见：feat/fix/refactor/maint/docs/test/chore）
   DEV_COMMIT_PREFIX: "feat"
+  # 项目文档目录
+  DEV_DOCS_DIR: "{{DEV_PROJECT_DIR}}/docs"
+
+  # 目标与里程碑
+  DEV_GOAL: "完成 XXX 功能的开发与测试"
+  DEV_MILESTONES: '["里程碑 1：基础模块", "里程碑 2：核心逻辑", "里程碑 3：集成测试与文档"]'
+  DEV_CURRENT_MILESTONE: "里程碑 1：基础模块"
+  DEV_AUTO_DISABLE_ON_GOAL_REACHED: "true"
 
   # 核心：定义具体开发指令
   DEV_TASK_INSTRUCTIONS: |
@@ -464,31 +475,45 @@ variables:
     - 测试全部通过
     - 代码符合项目规范
 
-  # 开发类配置
+  # 项目类配置
   LIGHT_CONTEXT: "false"
   THINKING: "medium"
-  TOOLS: "exec,read,write,edit"
+  TOOLS: "exec,read,write,edit,bash"
   TIMEOUT_SECONDS: "14400"  # 4 小时
   SESSION_TARGET: "isolated"
 
   # 通常不需要单日去重
   DEDUP_ENABLED: "false"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/dev-feature-dedup.txt"
 ```
 
-#### 维护会话（`dev/maintain.yaml`）
+#### 维护会话（`projects/maintain.yaml`）
 
 ```yaml
-templateRef: "../template-dev.zh.yaml"
+templateRef: "../template-cron.zh.yaml"
 
 variables:
-  JOB_NAME: "【AAC-开发】XXX 维护会话"
+  # 启用 Loop 模式
+  LOOP_MODE_ENABLED: "true"
+
+  JOB_NAME: "【AAC-项目】XXX 维护会话"
   SCHEDULE_EXPR: "0 15 * * 1-5"  # 工作日下午 3 点
 
   DEV_PROJECT_NAME: "MyProject"
   DEV_PROJECT_DIR: "/path/to/project"
   DEV_PHASE: "维护"
   DEV_BRANCH: "main"
+  DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-maintain-session.json"
+  # Git 提交前缀（常见：feat/fix/refactor/maint/docs/test/chore）
   DEV_COMMIT_PREFIX: "maint"
+  # 项目文档目录
+  DEV_DOCS_DIR: "{{DEV_PROJECT_DIR}}/docs"
+
+  # 目标与里程碑
+  DEV_GOAL: "完成本轮维护周期"
+  DEV_MILESTONES: '["测试回归", "健康检查", "债务处理", "依赖与文档同步"]'
+  DEV_CURRENT_MILESTONE: "测试回归"
+  DEV_AUTO_DISABLE_ON_GOAL_REACHED: "false"
 
   DEV_TASK_INSTRUCTIONS: |
     ### 维护标准流程
@@ -517,13 +542,16 @@ variables:
 
 ```json
 {
-  "status": "ready | in_progress | blocked",
+  "status": "ready | in_progress | blocked | completed | goal_reached",
   "current_card": "任务标识（如 P4-T1）",
   "last_session": "2026-06-29T10:00:00+08:00",
   "next_step": "具体、可执行的下一步",
   "blockers": ["阻塞项描述"],
   "tech_debt": ["债务描述"],
   "test_coverage": "208/208 全部通过",
+  "goal": "总体目标描述",
+  "milestones": ["里程碑 1", "里程碑 2", "里程碑 3"],
+  "current_milestone_index": 0,
   "dev_log": [
     {
       "time": "2026-06-29T10:00:00+08:00",
