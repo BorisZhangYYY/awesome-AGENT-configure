@@ -65,7 +65,7 @@ special:
   context.lightContext:
     type: boolean_flag
     true_flag: --light-context
-    false_flag: --no-light-context
+    false_flag: null
 
   advanced.disabled:
     type: boolean_flag
