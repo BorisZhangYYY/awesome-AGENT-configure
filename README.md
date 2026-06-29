@@ -21,7 +21,12 @@
 
 ## 支持的模板
 
-- **OpenClaw**：通用 cron 模板 + 提醒类场景 + 生成器脚本
+- **OpenClaw**：
+  - 通用 cron 模板（`template-cron.zh.yaml`）：提醒、巡检等单次任务
+  - 开发迭代模板（`template-dev.zh.yaml`）：功能开发、维护、重构等循环推进任务
+  - 提醒类场景（morning / noon / evening / custom）
+  - 巡检类场景（workspace-check / docker / cron-check）
+  - 开发类场景（feature / maintain）
 - **Hermes**：待补充
 - **Claude Code**：待补充
 
@@ -92,7 +97,10 @@ awesome-AGENT-configure/
 │   ├── scripts/              # 模板生成与辅助脚本
 │   ├── skills/               # 方便管理 AAC cron 封装的 skills
 │   └── template/             # cron 场景模板，按类别分子目录
-│       ├── check/            # 巡检类模板
+│       ├── checks/           # 巡检类模板
+│       ├── dev/              # 开发迭代模板（Loop 方法）
+│       │   ├── feature.yaml  # 功能开发场景
+│       │   └── maintain.yaml # 维护会话场景
 │       └── reminders/        # 提醒类模板
 ├── CHANGELOG.md
 ├── CLAUDE.md

@@ -1,0 +1,127 @@
+# 功能开发场景（Loop 迭代）
+# ============================================================
+# 本场景用于通过定时任务自动推进软件功能开发。
+# 适用于：新特性开发、模块实现、功能增强
+#
+# 使用方式：
+#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/dev/feature.yaml
+#
+# 与提醒/巡检场景的区别：
+#   - 开发类任务通常不需要单日去重（一天可多次迭代）
+#   - 需要完整上下文（lightContext: false）
+#   - 需要完整工具集（开发需要 edit/write/exec 等）
+#   - 超时时间更长（4小时）
+#   - 需要状态文件管理续传
+#
+# 使用步骤：
+#   1. 复制本文件到你的运行时目录（AAC_WORKSPACE/cron/）
+#   2. 修改 variables 中的占位符为你的实际项目信息
+#   3. 在 DEV_TASK_INSTRUCTIONS 中定义具体的开发任务
+#   4. 运行 build-cron.py 生成 cron 命令
+
+templateRef: "../template-dev.zh.yaml"
+
+variables:
+  # ========== 基础信息 ==========
+  # 任务名称，建议使用：【AAC-开发】项目名-功能名
+  JOB_NAME: "【AAC-开发】XXX 功能开发"
+  CATEGORY: "开发"
+  DESCRIPTION: "通过 Loop 方法定时推进功能开发"
+
+  # ========== 调度配置 ==========
+  # 开发任务建议在工作日的上午/下午触发
+  # 示例：工作日 10:00
+  SCHEDULE_EXPR: "0 10 * * 1-5"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "09:00"
+  WINDOW_END: "12:00"
+
+  # ========== 开发任务配置 ==========
+  # 项目名称（用于汇报和日志）
+  DEV_PROJECT_NAME: "MyProject"
+  # 项目绝对路径
+  DEV_PROJECT_DIR: "/path/to/your/project"
+  # 当前阶段标识（用于提交信息）
+  DEV_PHASE: "Phase 1"
+  # 开发分支名称
+  DEV_BRANCH: "dev/main"
+  # 状态文件路径（用于续传）
+  DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-session.json"
+  # 测试文件匹配模式
+  DEV_TEST_PATTERN: "test_*.py"
+  # Git 提交前缀（feat/fix/refactor/maint）
+  DEV_COMMIT_PREFIX: "feat"
+
+  # ========== 场景特定指令 ==========
+  # 这里定义 Phase 2（DEV 阶段）的具体开发指令
+  # 请根据你的实际项目填写以下内容
+  DEV_TASK_INSTRUCTIONS: |
+    ### 当前开发任务：实现 XXX 功能
+
+    **技术方案**（简述）：
+    1. ...
+    2. ...
+    3. ...
+
+    **开发步骤**（分迭代执行，每次只完成一小步）：
+
+    #### 迭代 1：基础模块
+    - 创建文件/修改文件...
+    - 实现核心逻辑...
+    - 添加单元测试...
+
+    #### 迭代 2：集成测试
+    - ...
+
+    #### 迭代 3：完善文档
+    - ...
+
+    **每次迭代的验收标准**：
+    1. 新增代码通过语法检查
+    2. 新增代码有对应的单元测试
+    3. 测试全部通过
+    4. git commit 提交（不 push）
+
+  # ========== 投递配置 ==========
+  # 开发任务正常时静默，有进度或阻塞时汇报
+  # 如需汇报，改为 announce
+  DELIVERY_MODE: "none"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+
+  # ========== 会话配置 ==========
+  # 开发任务使用 isolated 会话，不污染主会话
+  SESSION_TARGET: "isolated"
+  TIMEOUT_SECONDS: "14400"  # 4 小时
+
+  # ========== Agent 配置 ==========
+  # 开发任务需要完整上下文和推理能力
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  # 开发需要完整工具集
+  TOOLS: "exec,read,write,edit"
+
+  # ========== 人设配置 ==========
+  PERSONA_MODE: "file"
+  PERSONA_FILE: "{{WORKSPACE}}/SOUL.md"
+
+  # ========== 时间窗口 ==========
+  TIME_WINDOW_ENABLED: "true"
+  WINDOW_OUT_ACTION: "NO_REPLY"
+
+  # ========== 去重配置 ==========
+  # 开发任务通常不需要单日去重，因为可能一天多次迭代
+  DEDUP_ENABLED: "false"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/dev-dedup.txt"
+
+  # ========== 高级选项 ==========
+  EXACT: "false"
+
+  # ========== 场景特定补充指令 ==========
+  # 这里可以添加额外的约束或说明
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    **额外约束**（按需填写）：
+    1. 优先复用现有代码，不重复造轮子
+    2. 遵守项目许可证要求
+    3. 任何涉及外部仓库的操作需先汇报
+    4. ...

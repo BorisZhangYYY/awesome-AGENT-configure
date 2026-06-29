@@ -1,0 +1,111 @@
+# 维护会话场景（Loop 迭代）
+# ============================================================
+# 本场景用于通过定时任务自动执行项目维护工作。
+# 适用于：回归测试、技术债务清理、代码健康检查、依赖更新
+#
+# 与功能开发的区别：
+#   - 维护任务通常不新增功能，而是验证和清理
+#   - 更强调测试覆盖率和代码健康度
+#   - 可能涉及多个模块的交叉验证
+
+templateRef: "../template-dev.zh.yaml"
+
+variables:
+  # ========== 基础信息 ==========
+  JOB_NAME: "【AAC-开发】Siyuan-RAG 维护会话"
+  CATEGORY: "开发"
+  DESCRIPTION: "定期维护 Siyuan-RAG 项目：测试验证、债务清理、健康检查"
+
+  # ========== 调度配置 ==========
+  # 维护会话建议在工作日下午触发
+  SCHEDULE_EXPR: "0 15 * * 1-5"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "14:00"
+  WINDOW_END: "18:00"
+
+  # ========== 开发任务配置 ==========
+  DEV_PROJECT_NAME: "Siyuan-RAG Companion"
+  DEV_PROJECT_DIR: "/mnt/d/Study_Project/siyuan-rag-companion"
+  DEV_PHASE: "维护"
+  DEV_BRANCH: "main"
+  DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.loop/.state/session.json"
+  DEV_TEST_PATTERN: "test_*.py"
+  DEV_COMMIT_PREFIX: "maint"
+
+  # ========== 场景特定指令 ==========
+  DEV_TASK_INSTRUCTIONS: |
+    ### 维护会话标准流程
+
+    **每次维护必须执行以下检查**：
+
+    #### 1. 测试回归验证
+    运行全部测试：
+    ```bash
+    cd {{DEV_PROJECT_DIR}}
+    python -m pytest {{DEV_TEST_PATTERN}} -v
+    ```
+    记录结果：通过数/总数/失败项
+
+    #### 2. 代码健康检查
+    - 语法检查：`python -m py_compile` 遍历所有 .py 文件
+    - 未使用变量检测：检查新增/修改文件中是否有未使用 import
+    - TODO/FIXME/HACK 扫描：记录数量
+    - 安全审查：确认无 API Key、token、私人路径硬编码
+
+    #### 3. 技术债务处理
+    读取状态文件的 `tech_debt` 列表：
+    - 评估每条债务的优先级和影响
+    - 选择 1-2 条高优先级债务处理（限时 30 分钟）
+    - 无法处理的债务更新状态并记录原因
+
+    #### 4. 依赖检查
+    - 检查 `requirements.txt` 与实际使用的一致性
+    - 检查是否有未使用的依赖
+    - 记录需要更新的依赖（不自动更新，仅记录）
+
+    #### 5. 文档同步
+    - 检查代码变更是否已反映在 TODO.md 中
+    - 检查 CHANGELOG.md 是否需要更新
+    - 检查架构文档是否过时
+
+    **维护验收标准**：
+    1. 所有测试通过（或失败项已记录并评估）
+    2. 代码健康检查无新增问题
+    3. 至少处理或评估一条技术债务
+    4. 状态文件已更新
+
+  # ========== 投递配置 ==========
+  DELIVERY_MODE: "none"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+
+  # ========== 会话配置 ==========
+  SESSION_TARGET: "isolated"
+  TIMEOUT_SECONDS: "7200"  # 2 小时
+
+  # ========== Agent 配置 ==========
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  TOOLS: "exec,read,write,edit"
+
+  # ========== 人设配置 ==========
+  PERSONA_MODE: "file"
+  PERSONA_FILE: "{{WORKSPACE}}/SOUL.md"
+
+  # ========== 时间窗口 ==========
+  TIME_WINDOW_ENABLED: "true"
+  WINDOW_OUT_ACTION: "NO_REPLY"
+
+  # ========== 去重配置 ==========
+  DEDUP_ENABLED: "false"
+
+  # ========== 高级选项 ==========
+  EXACT: "false"
+
+  # ========== 场景特定补充指令 ==========
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    **维护纪律**：
+    1. 不引入新功能，只做验证和清理
+    2. 发现的问题能当场修就修，不能修的记为债务
+    3. 保持客观：记录真实情况，不粉饰
+    4. 上次维护发现的问题，本次优先验证是否已解决

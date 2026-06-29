@@ -48,6 +48,15 @@
 | 开发 | `【AAC-开发】` | `【AAC-开发】登录功能` |
 | 学习 | `【AAC-学习】` | `【AAC-学习】RAG 调研` |
 
+### 1.4 模板类型
+
+| 模板 | 路径 | 适用场景 | 核心机制 |
+|------|------|----------|----------|
+| **通用 Cron** | `template-cron.zh.yaml` | 提醒、巡检、单次任务 | Harness（时间窗口 + 去重） |
+| **开发迭代** | `template-dev.zh.yaml` | 功能开发、维护、重构 | Loop（状态驱动 + 清单驱动 + 增量迭代） |
+
+> **关键区别**：通用 Cron 模板面向**单次执行**的任务（提醒、巡检），执行完即结束；开发迭代模板面向**循环推进**的任务（开发、维护），每次执行都是一个迭代，需要状态续传。
+
 ---
 
 ## 二、官方参数详解
@@ -352,5 +361,186 @@ python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
 ```
 
 如果 `AAC_REPO` 定位失败，应停止执行并提示用户设置 `AAC_REPO` 环境变量。
+
+---
+
+## 六、开发迭代模板（Loop 方法）
+
+### 6.1 什么是 Loop 方法
+
+Loop 方法是一种**状态驱动的增量迭代开发模式**，核心思想：
+
+1. **状态续传**：通过 `.state/session.json` 记录进度，跨会话保持连续性
+2. **清单驱动**：START 清单（启动时）和 EXIT 清单（退出时）确保每次会话质量
+3. **增量迭代**：每次只做一小块，积累到完整功能
+4. **自动恢复**：根据状态自动判断是「领新任务」「续传」还是「解阻塞」
+
+### 6.2 与通用 Cron 模板的区别
+
+| 维度 | 通用 Cron（提醒/巡检） | 开发迭代（Loop） |
+|------|------------------------|------------------|
+| **执行模式** | 单次执行，结束即完 | 循环迭代，状态续传 |
+| **状态管理** | 无（或简单去重） | 有（session.json 完整状态机） |
+| **清单机制** | 无 | START / EXIT 双清单 |
+| **超时时间** | 短（2-5 分钟） | 长（2-4 小时） |
+| **lightContext** | 通常为 `true` | 必须为 `false`（需系统文件） |
+| **thinking** | 通常为 `off` | 通常为 `medium/high` |
+| **单日去重** | 通常启用 | 通常禁用（一天可多次迭代） |
+
+### 6.3 状态机
+
+```
++--------+     领新任务      +-------------+
+| ready  | ----------------> | in_progress |
++--------+                   +-------------+
+       ^                            | 完成/部分完成
+       |                            v
+       +-----------------------+ 遇到阻塞
+                                 +---------+
+                                 | blocked | ——→ 限时解阻塞（≤15min）
+                                 +---------+      超时则保持 blocked
+```
+
+### 6.4 开发迭代的三阶段
+
+#### PHASE 1：START — 会话启动
+
+**必须执行**：
+1. 读取状态文件（`session.json`）
+2. 读取项目 TODO.md
+3. 读取最近 git 提交历史
+4. 判断会话类型（ready / in_progress / blocked）
+5. 加载开发上下文（代码、测试、文档）
+
+#### PHASE 2：DEV — 执行开发任务
+
+**核心开发工作**：
+1. 按当前任务执行编码
+2. 遵守最少改动原则和验证闭环
+3. 运行测试验证
+
+#### PHASE 3：EXIT — 会话退出
+
+**必须执行**：
+1. 代码收尾（语法检查、测试、git diff）
+2. 安全审查（无 API Key、无私人路径）
+3. Git 提交（**不 push**，遵守安全红线）
+4. 更新状态文件（status、next_step、tech_debt）
+5. 更新 TODO.md
+6. 汇报（如配置了投递）
+
+### 6.5 开发场景文件示例
+
+#### 功能开发（`dev/feature.yaml`）
+
+```yaml
+templateRef: "../template-dev.zh.yaml"
+
+variables:
+  JOB_NAME: "【AAC-开发】XXX 功能开发"
+  SCHEDULE_EXPR: "0 10 * * 1-5"  # 工作日上午 10 点
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "09:00"
+  WINDOW_END: "12:00"
+
+  DEV_PROJECT_NAME: "MyProject"
+  DEV_PROJECT_DIR: "/path/to/project"
+  DEV_PHASE: "Phase 1"
+  DEV_BRANCH: "dev/main"
+  DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-session.json"
+  DEV_TEST_PATTERN: "test_*.py"
+  DEV_COMMIT_PREFIX: "feat"
+
+  # 核心：定义具体开发指令
+  DEV_TASK_INSTRUCTIONS: |
+    ### 当前任务：实现 XXX 功能
+    
+    步骤：
+    1. ...
+    2. ...
+    3. ...
+    
+    验收标准：
+    - 测试全部通过
+    - 代码符合项目规范
+
+  # 开发类配置
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  TOOLS: "exec,read,write,edit"
+  TIMEOUT_SECONDS: "14400"  # 4 小时
+  SESSION_TARGET: "isolated"
+
+  # 通常不需要单日去重
+  DEDUP_ENABLED: "false"
+```
+
+#### 维护会话（`dev/maintain.yaml`）
+
+```yaml
+templateRef: "../template-dev.zh.yaml"
+
+variables:
+  JOB_NAME: "【AAC-开发】XXX 维护会话"
+  SCHEDULE_EXPR: "0 15 * * 1-5"  # 工作日下午 3 点
+
+  DEV_PROJECT_NAME: "MyProject"
+  DEV_PROJECT_DIR: "/path/to/project"
+  DEV_PHASE: "维护"
+  DEV_BRANCH: "main"
+  DEV_COMMIT_PREFIX: "maint"
+
+  DEV_TASK_INSTRUCTIONS: |
+    ### 维护标准流程
+    1. 运行全部测试
+    2. 代码健康检查
+    3. 技术债务处理
+    4. 依赖检查
+    5. 文档同步
+```
+
+### 6.6 推荐配置速查表
+
+| 配置项 | 功能开发 | 维护会话 | 重构任务 |
+|--------|----------|----------|----------|
+| `SCHEDULE_EXPR` | `0 10 * * 1-5` | `0 15 * * 1-5` | `0 10 * * 1,3,5` |
+| `TIMEOUT_SECONDS` | `14400` (4h) | `7200` (2h) | `10800` (3h) |
+| `THINKING` | `medium` | `medium` | `high` |
+| `LIGHT_CONTEXT` | `false` | `false` | `false` |
+| `DEDUP_ENABLED` | `false` | `false` | `false` |
+| `TOOLS` | `exec,read,write,edit` | `exec,read,write,edit` | `exec,read,write,edit` |
+| `DEV_COMMIT_PREFIX` | `feat` | `maint` | `refactor` |
+
+### 6.7 状态文件格式
+
+开发迭代模板依赖的状态文件（`session.json`）标准格式：
+
+```json
+{
+  "status": "ready | in_progress | blocked",
+  "current_card": "任务标识（如 P4-T1）",
+  "last_session": "2026-06-29T10:00:00+08:00",
+  "next_step": "具体、可执行的下一步",
+  "blockers": ["阻塞项描述"],
+  "tech_debt": ["债务描述"],
+  "test_coverage": "208/208 全部通过",
+  "dev_log": [
+    {
+      "time": "2026-06-29T10:00:00+08:00",
+      "task": "P4-T1",
+      "summary": "完成了 xxx",
+      "tests": "通过",
+      "commit": "abc1234"
+    }
+  ]
+}
+```
+
+### 6.8 安全红线（开发模板特有）
+
+1. **不自动 push**：模板只执行 `git commit`，`git push` 必须人工审核后执行
+2. **敏感信息检查**：EXIT 阶段必须检查 API Key、token、私人路径
+3. **变更范围确认**：`git diff` 确认无意外文件被修改
+4. **测试通过才能提交**：未通过测试的代码不提交（或明确标记为 WIP）
 
 ---
