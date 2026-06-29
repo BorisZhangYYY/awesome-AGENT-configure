@@ -32,7 +32,7 @@ metadata:
 
 通过对话询问用户：
 
-1. **任务分类**：提醒 / 巡检 / 汇报 / 开发 / 学习 / 整理 / 系统
+1. **任务分类**：提醒 / 巡检 / 开发 / 学习
 2. **触发时间**：几点执行？是否每天？
 3. **任务内容**：做什么？（如"早安问候"、"检查磁盘"、"生成日报"）
 4. **是否需要送达**：必须送达（announce）还是正常静默（none）？
@@ -43,11 +43,8 @@ metadata:
 |------|----------|
 | 提醒 | 早安、午安、晚安、喝水提醒 |
 | 巡检 | 磁盘检查、服务健康、容器状态 |
-| 汇报 | 日报、数据汇总、股票简报 |
 | 开发 | 持续编码、补全功能、跑测试 |
 | 学习 | 技术调研、读书笔记、代码练习 |
-| 整理 | 文件归档、同步、清理日志 |
-| 系统 | Token 监控、垃圾回收、审计 |
 
 ### 2. 检查是否存在相关/类似任务
 
@@ -76,9 +73,9 @@ openclaw cron list
 ```yaml
 variables:
   SESSION_TARGET: isolated
-  DELIVERY_MODE: announce      # 巡检/学习/系统类改为 none
-  LIGHT_CONTEXT: "true"        # 开发/学习/整理类改为 false
-  THINKING: "off"              # 提醒/巡检 off；汇报/整理 low；开发/学习 medium
+  DELIVERY_MODE: announce      # 巡检/学习类改为 none
+  LIGHT_CONTEXT: "true"        # 开发/学习类改为 false
+  THINKING: "off"              # 提醒/巡检 off；开发/学习 medium
   EXACT: "true"                # 提醒类 true，其他 false
   TIMEOUT_SECONDS: "120"       # 按分类调整
   TIME_WINDOW_ENABLED: "true"
@@ -104,19 +101,7 @@ variables:
 
 **命名强制规则**：所有通过本 skill 创建的任务，名称必须带有 `【AAC-分类】` 前缀。
 
-### 5. 生成场景 YAML 文件
-
-将收集到的变量写入运行时工作区（与项目源码分离）：
-
-```bash
-export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
-mkdir -p "$AAC_WORKSPACE/cron"
-# YAML 文件路径：$AAC_WORKSPACE/cron/init-<job-name>.yaml
-```
-
-文件内容基于 `OpenClaw/template/reminders/custom.yaml` 或未来其他分类模板。
-
-### 5.5 定位项目仓库（`AAC_REPO`）
+### 5. 定位项目仓库（`AAC_REPO`）
 
 按照 `OpenClaw/skills/SKILL-GUIDE.md` 中“五、项目路径与运行时路径分离”的方法设置 `AAC_REPO`：
 
@@ -155,7 +140,27 @@ PY
 
 如果定位失败，停止执行并提示用户设置 `AAC_REPO` 环境变量。
 
-### 6. 生成 OpenClaw 命令
+### 6. 生成场景 YAML 文件
+
+将收集到的变量写入运行时工作区（与项目源码分离）：
+
+```bash
+export AAC_WORKSPACE="${AAC_WORKSPACE:-$HOME/.openclaw/workspace/awesome-AGENT-configure}"
+mkdir -p "$AAC_WORKSPACE/cron"
+# YAML 文件路径：$AAC_WORKSPACE/cron/init-<job-name>.yaml
+```
+
+文件内容基于 `OpenClaw/template/reminders/custom.yaml` 或 `OpenClaw/template/checks/` 下对应分类的模板。
+
+**⚠️ 关键：必须修正 `templateRef` 为仓库绝对路径。** 模板源文件中的 `templateRef: "../template-cron.zh.yaml"` 是相对于仓库 `template/` 目录的路径，复制到 workspace 后无法解析。写入 YAML 时必须替换为：
+
+```yaml
+templateRef: "<AAC_REPO 的值>/OpenClaw/template/template-cron.zh.yaml"
+```
+
+其中 `<AAC_REPO 的值>` 使用上一步 `$AAC_REPO` 变量的实际路径（如 `/home/user/awesome-AGENT-configure`）。**禁止保留相对路径。**
+
+### 7. 生成 OpenClaw 命令
 
 运行：
 
@@ -165,7 +170,7 @@ python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
   "$AAC_WORKSPACE/cron/init-<job-name>.yaml"
 ```
 
-### 7. 向用户展示并请求确认
+### 8. 向用户展示并请求确认
 
 展示以下内容给用户：
 
@@ -177,7 +182,7 @@ python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
 
 > 以上是生成的 cron 任务配置，请审阅。确认无误后回复"执行"，我将创建该任务。
 
-### 8. 执行创建
+### 9. 执行创建
 
 用户确认后，执行生成的 `openclaw cron create` 命令。
 

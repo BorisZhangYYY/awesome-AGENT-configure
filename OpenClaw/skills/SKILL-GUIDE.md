@@ -30,7 +30,6 @@
 例如：
 - `【AAC-提醒】早安`
 - `【AAC-巡检】磁盘空间`
-- `【AAC-汇报】日报`
 - `【AAC-开发】补全登录功能`
 
 **为什么要强制命名？**
@@ -40,17 +39,14 @@
 - `migrate-cron` 迁移时统一重命名为 AAC 格式
 - 避免用户手动创建的任务和 AAC 任务混淆
 
-七类分类对应：
+四类分类对应：
 
 | 分类 | 前缀 | 示例 |
 |------|------|------|
 | 提醒 | `【AAC-提醒】` | `【AAC-提醒】早安` |
 | 巡检 | `【AAC-巡检】` | `【AAC-巡检】磁盘空间` |
-| 汇报 | `【AAC-汇报】` | `【AAC-汇报】日报` |
 | 开发 | `【AAC-开发】` | `【AAC-开发】登录功能` |
 | 学习 | `【AAC-学习】` | `【AAC-学习】RAG 调研` |
-| 整理 | `【AAC-整理】` | `【AAC-整理】归档日志` |
-| 系统 | `【AAC-系统】` | `【AAC-系统】Token 监控` |
 
 ---
 
@@ -116,8 +112,8 @@
 **thinking 推荐：**
 
 - `off`：问候、提醒、固定格式输出
-- `low`：简单巡检、汇报
-- `medium`：开发、学习、整理
+- `low`：简单巡检
+- `medium`：开发、学习
 - `high`：复杂分析、代码审查
 
 **tools 推荐：**
@@ -198,6 +194,28 @@
 ### 3.4 模板 `template`
 
 整个 Prompt 的模板源。场景变量会替换其中的 `{{XXX}}` 占位符。
+
+**禁止场景级 template 覆盖**
+
+为确保时间窗口、去重等非官方 Harness 机制对所有场景一致生效，**场景 YAML 不允许直接定义顶层 `template` 字段**。所有场景的 prompt 都基于 `template-cron.zh.yaml` 中的通用 `template`。
+
+场景特定内容必须通过 `{{SCENE_SPECIFIC_INSTRUCTIONS}}` 占位符注入，由场景 YAML 的 `SCENE_SPECIFIC_INSTRUCTIONS` 变量提供。例如 `reminders/morning.yaml`：
+
+```yaml
+variables:
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    你负责在合适的时间给主人送上早安提醒。
+    ...
+```
+
+> ⚠️ 如果场景 YAML 直接定义顶层 `template` 字段，`build-cron.py` 会报错。
+
+**通用 `template` 已包含的机制**
+
+- `{{PERSONA_PROMPT}}`：人设注入
+- 时间窗口检查（基于 `TIME_WINDOW_ENABLED` / `WINDOW_START` / `WINDOW_END` / `WINDOW_OUT_ACTION`）
+- 单日/单次去重（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE` / `DATE_TODAY`）
+- 执行后去重状态写入（基于 `DEDUP_ENABLED` / `DEDUP_STATE_FILE` / `DATE_TODAY`）
 
 ---
 

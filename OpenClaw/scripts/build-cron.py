@@ -10,8 +10,10 @@
 
 import argparse
 import json
+import re
 import shlex
 import sys
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -40,6 +42,13 @@ def main():
 
     variables = build_variables(defaults, template, scene)
 
+    # 注入运行时相关变量；若场景 YAML 已显式定义，优先使用场景值
+    now = datetime.now()
+    weekday_cn = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][now.weekday()]
+    variables.setdefault("DATE_TODAY", now.strftime("%Y-%m-%d"))
+    variables.setdefault("TIME_NOW", now.strftime("%H:%M"))
+    variables.setdefault("WEEKDAY", weekday_cn)
+
     # 根据 persona 配置注入 {{PERSONA_PROMPT}}
     variables["PERSONA_PROMPT"] = build_persona_prompt(template, variables)
 
@@ -47,7 +56,7 @@ def main():
     message = render_template(template, scene, variables)
     variables["MESSAGE"] = message
 
-    cmd = build_command(scene, template, variables, flags)
+    cmd = build_command(variables, flags)
 
     if args.json:
         print(json.dumps(cmd, ensure_ascii=False, indent=2))
@@ -95,22 +104,57 @@ def build_variables(defaults, template, scene):
     return variables
 
 
+def resolve_variables(variables, max_depth=5):
+    """递归展开变量值中的嵌套占位符，返回完全展开后的新字典。
+
+    对变量值中的嵌套占位符（如 DEDUP_STATE_FILE: "{{WORKSPACE}}/..."）进行预展开，
+    避免在 template 替换阶段对同一文本多次扫描，同时降低误替换值中字面量 `{{}}` 的风险。
+    """
+    resolved = {k: str(v) if v is not None else "" for k, v in variables.items()}
+    for _ in range(max_depth):
+        changed = False
+        new_resolved = {}
+        for key, value in resolved.items():
+            new_value = value
+            for other_key, other_value in resolved.items():
+                placeholder = "{{" + other_key + "}}"
+                if placeholder in new_value:
+                    new_value = new_value.replace(placeholder, other_value)
+                    changed = True
+            new_resolved[key] = new_value
+        resolved = new_resolved
+        if not changed:
+            break
+    return resolved
+
+
 def render_template(template, scene, variables):
     """渲染 template 字段。
 
-    优先使用场景 YAML 中直接定义的 template，未定义则使用模板文件中的 template。
-    未提供值的占位符保持原样（由运行时 AGENT 处理）。
+    仅使用父模板中的 template。场景 YAML 不允许直接定义顶层 template 字段，
+    以确保时间窗口、去重等非官方 Harness 机制对所有场景一致生效。
+    场景特定内容应通过 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符注入。
     """
-    template_str = scene.get("template") or template.get("template", "")
+    if scene.get("template"):
+        raise ValueError(
+            "场景 YAML 不允许直接定义顶层 template 字段，"
+            "请使用 SCENE_SPECIFIC_INSTRUCTIONS 变量注入场景特定内容"
+        )
+
+    template_str = template.get("template", "")
     if not template_str:
         # 未配置 template，直接使用 message 字段内容
         return variables.get("MESSAGE", "")
 
+    # 先完全展开所有变量值中的嵌套占位符
+    resolved = resolve_variables(variables)
+
+    # 统一单轮替换 template 中的占位符
     result = template_str
-    for key, value in variables.items():
+    for key, value in resolved.items():
         placeholder = "{{" + key + "}}"
-        if placeholder in result:
-            result = result.replace(placeholder, str(value))
+        result = result.replace(placeholder, str(value))
+
     return result
 
 
@@ -119,7 +163,13 @@ def build_persona_prompt(template, variables):
     persona = template.get("persona", {})
     mode = str(variables.get("PERSONA_MODE", persona.get("mode", "inline"))).lower()
     persona_file = variables.get("PERSONA_FILE", persona.get("file", ""))
-    persona_role = variables.get("PERSONA_ROLE", persona.get("role", ""))
+    persona_role = variables.get("PERSONA_ROLE", "")
+    # 场景未定义 PERSONA_ROLE 时，尝试从模板 persona.role 读取
+    # 但需过滤包含未解析占位符（如 "{{PERSONA_ROLE}}"）的字符串，避免泄漏到输出
+    if not persona_role:
+        raw_role = persona.get("role", "")
+        if raw_role and not re.search(r"\{\{.*?\}\}", raw_role):
+            persona_role = raw_role
 
     if mode == "file" and persona_file:
         return f"请基于 {persona_file} 中定义的人设。"
@@ -128,7 +178,7 @@ def build_persona_prompt(template, variables):
     return ""
 
 
-def build_command(scene, template, variables, flags):
+def build_command(variables, flags):
     """根据变量和 flags 映射表构建 openclaw cron create 命令数组。"""
     cmd = ["openclaw", "cron", "create"]
 

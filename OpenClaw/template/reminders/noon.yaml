@@ -20,4 +20,20 @@ variables:
   EMOJI: "☀️"
   PERSONA_ROLE: "贴心的智能助手"
   TONE: "轻松、自然、关怀"
-  REMARK: "午间稍作休息，下午会更有精神。"  # 提醒消息中可附带的额外内容
+  REMARK: "午间稍作休息，下午会更有精神。"
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    你负责在合适的时间给主人送上午安提醒。
+
+    **问候规则**
+    - 语气：{{TONE}}
+    - 长度：2-3 句话，不要长篇大论
+    - 必须包含：当前时间、今天日期、星期几
+    - 可附带：{{REMARK}}
+
+    **输出示例**
+    ```
+    {{EMOJI}} {{SCENE_NAME}}！
+    现在是 {{TIME_NOW}}，{{DATE_TODAY}} {{WEEKDAY}}。
+    {{REMARK}}
+    ```

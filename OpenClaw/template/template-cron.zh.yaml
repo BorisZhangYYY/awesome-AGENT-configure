@@ -62,7 +62,7 @@ delivery:
   threadId: "{{THREAD_ID}}"       # --thread-id；Telegram forum topic ID
   webhookUrl: "{{WEBHOOK_URL}}" # --webhook；webhook 模式必填
   bestEffort: "{{BEST_EFFORT}}"   # --best-effort-deliver / --no-best-effort-deliver；为 true 时投递失败不会导致整个 cron 作业失败
-  failureDestination: "{{FAILURE_DESTINATION}}"  # 【非官方】失败通知投递目标
+  failureDestination: "{{FAILURE_DESTINATION}}"  # 【非官方】失败通知投递目标；当前 AGENT 模式无向任意目标投递消息的工具，暂未注入 prompt，预留字段
 
 # 会话配置
 session:
@@ -107,43 +107,37 @@ advanced:
 # 用于生成 message 的内容，避免每个场景重复书写通用 Harness/Loop 约束。
 # 生成器会用场景变量渲染本模板，结果填入 message 后作为 --message 传递给 OpenClaw。
 # 如未配置本模板，则直接使用 message 字段内容。
+# ⚠️ 场景文件禁止直接定义顶层 template 字段覆盖本模板，以确保时间窗口、去重等 Harness 机制一致生效。
+#    场景特定内容应通过 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符，由场景 YAML 的 SCENE_SPECIFIC_INSTRUCTIONS 变量注入。
 # {{PERSONA_PROMPT}} 由生成器根据 persona 配置渲染：
 # - 若 persona.file 非空：渲染为 "请基于 {{PERSONA_FILE}} 中定义的人设。"
 # - 否则（inline 模式）：渲染为 "你是一个{{PERSONA_ROLE}}。"
 template: |
   {{PERSONA_PROMPT}}
 
-  你负责在合适的时间给主人送上提醒。
+  你负责执行本任务。
 
   **【防护机制 1：时间窗口】防止开机堆叠时非时段任务误触发【非官方】**
+  本机制仅当 `{{TIME_WINDOW_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
   OpenClaw 在 gateway 重启或 session 重建时会补发错过的任务。
-  即使 cron 表达式命中，也必须检查当前时间是否落在有效窗口内，否则输出 `NO_REPLY`。
+  即使 cron 表达式命中，也必须检查当前时间是否落在有效窗口内。
   执行：用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M`，获取当前本地时间。
   将结果解析为 HH:MM 格式：
   - 如果当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间：继续执行
-  - 否则：立即输出 `NO_REPLY`，结束运行
+  - 否则：执行窗口外动作 `{{WINDOW_OUT_ACTION}}`；若该动作为 `NO_REPLY`，立即输出 `NO_REPLY` 并结束运行；若为 `continue`，则继续执行
 
-  **【防护机制 2：单日去重】防止开机堆叠时同一任务重复触发【非官方】**
+  **【防护机制 2：单日/单次去重】防止开机堆叠时同一任务重复触发【非官方】**
+  本机制仅当 `{{DEDUP_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
   读取状态文件 {{DEDUP_STATE_FILE}}。
   若文件中已存在今天的日期 {{DATE_TODAY}}，立即输出 `NO_REPLY`，结束运行。
 
-  **本次提醒场景**
-  - 场景：{{SCENE_NAME}}
+  **本次任务**
+  - 任务名称：{{JOB_NAME}}
   - 当前时间：{{TIME_NOW}}
   - 今日日期：{{DATE_TODAY}} {{WEEKDAY}}
 
-  **问候规则**
-  - 语气：{{TONE}}
-  - 长度：2-3 句话，不要长篇大论
-  - 必须包含：当前时间、今天日期、星期几
-  - 可附带：{{REMARK}}
+  **场景特定指令**
+  {{SCENE_SPECIFIC_INSTRUCTIONS}}
 
-  **输出示例**
-  ```
-  {{EMOJI}} {{SCENE_NAME}}！
-  现在是 {{TIME_NOW}}，{{DATE_TODAY}} {{WEEKDAY}}。
-  {{REMARK}}
-  ```
-
-  **执行后（如果发送了消息）【非官方】**
-  用 write 工具将 "{{DATE_TODAY}}" 写入 {{DEDUP_STATE_FILE}}，确保今天不再重复发送。
+  **执行后（如果发送了消息且去重已启用）【非官方】**
+  若 `{{DEDUP_ENABLED}}` 为 true，用 write 工具将 "{{DATE_TODAY}}" 写入 {{DEDUP_STATE_FILE}}，确保今天不再重复执行。
