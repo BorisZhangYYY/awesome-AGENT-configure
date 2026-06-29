@@ -10,6 +10,7 @@
 
 import argparse
 import json
+import os
 import re
 import shlex
 import sys
@@ -58,6 +59,14 @@ def main():
 
     cmd = build_command(variables, flags)
 
+    if args.preview:
+        print("=== 渲染后的 MESSAGE（前500字符）===")
+        print(message[:500] + ("..." if len(message) > 500 else ""))
+        print()
+        print("=== 完整命令 ===")
+        print(format_shell_command(cmd))
+        return
+
     if args.json:
         print(json.dumps(cmd, ensure_ascii=False, indent=2))
     else:
@@ -71,6 +80,9 @@ def parse_args():
     parser.add_argument("scene_file", help="场景 YAML 文件路径")
     parser.add_argument(
         "--json", action="store_true", help="以 JSON 数组格式输出命令"
+    )
+    parser.add_argument(
+        "--preview", action="store_true", help="预览渲染后的 message 和命令，不执行创建"
     )
     return parser.parse_args()
 
@@ -101,6 +113,9 @@ def build_variables(defaults, template, scene):
     variables.update(defaults or {})
     variables.update(template.get("variables", {}) or {})
     variables.update(scene.get("variables", {}) or {})
+    # 注入 WORKSPACE：将 ~ 展开为绝对路径，若场景已显式定义则优先使用
+    workspace = os.path.expanduser(variables.get("WORKSPACE", "~/.openclaw/workspace"))
+    variables["WORKSPACE"] = workspace
     return variables
 
 

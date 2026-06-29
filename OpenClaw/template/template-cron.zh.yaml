@@ -73,6 +73,9 @@ session:
 # Agent 执行上下文
 context:
   # --light-context：为 true 时跳过 workspace bootstrap 文件注入，节省 Token
+  # 说明：
+  #   true  = 不加载 AGENTS.md/SOUL.md/IDENTITY.md/USER.md/MEMORY.md（简单提醒/巡检推荐）
+  #   false = 完整加载所有系统文件（审查/整理/开发任务必需，需读取系统文件内容）
   lightContext: "{{LIGHT_CONTEXT}}"
 
 # Agent 配置

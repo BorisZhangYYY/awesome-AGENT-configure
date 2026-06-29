@@ -144,7 +144,11 @@
 
 | YAML 字段 | CLI 参数 | 说明 | 推荐值 |
 |-----------|----------|------|--------|
-| `context.lightContext` | `--light-context` / `--no-light-context` | 是否跳过 workspace bootstrap | 巡检/提醒 `true`，开发 `false` |
+| `context.lightContext` | `--light-context` / `--no-light-context` | 是否跳过 workspace bootstrap | 巡检/提醒 `true`，开发/整理 `false` |
+
+**`lightContext` 含义：**
+- `true`（`--light-context`）：**不加载** AGENTS.md/SOUL.md/IDENTITY.md 等系统文件，节省 Token。适合简单提醒、巡检等无需读取系统文件的任务。
+- `false`（`--no-light-context`）：**完整加载**所有 bootstrap 文件。审查/整理/开发类任务必须设为 `false`，因为任务需要读取这些文件的内容。
 
 ### 2.8 高级选项
 
