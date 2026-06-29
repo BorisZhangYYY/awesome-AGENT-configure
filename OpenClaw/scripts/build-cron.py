@@ -14,7 +14,6 @@ import os
 import re
 import shlex
 import sys
-from datetime import datetime
 from pathlib import Path
 
 try:
@@ -42,13 +41,6 @@ def main():
     template = load_template(scene, scene_path)
 
     variables = build_variables(defaults, template, scene)
-
-    # 注入运行时相关变量；若场景 YAML 已显式定义，优先使用场景值
-    now = datetime.now()
-    weekday_cn = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][now.weekday()]
-    variables.setdefault("DATE_TODAY", now.strftime("%Y-%m-%d"))
-    variables.setdefault("TIME_NOW", now.strftime("%H:%M"))
-    variables.setdefault("WEEKDAY", weekday_cn)
 
     # 根据 persona 配置注入 {{PERSONA_PROMPT}}
     variables["PERSONA_PROMPT"] = build_persona_prompt(template, variables)
