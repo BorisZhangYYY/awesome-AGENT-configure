@@ -6,6 +6,15 @@
 
 ### Added
 
+- `OpenClaw/scripts/build-cron.py` 重构为完全自包含的独立脚本：内嵌 `DEFAULTS` 和 `FLAGS` 常量，零外部文件依赖，可直接拷贝到任意项目使用。
+- `OpenClaw/scripts/build-cron.py` 新增 `{{#IF VAR}}...{{#ELSE}}...{{/IF}}` 条件块引擎，支持模板按变量值分支渲染。
+- `OpenClaw/scripts/build-cron.py` 新增 `<!-- AAC_ORIGIN: ... -->` 起源标记注入机制，即使 cron 被大幅定制化（改名、改结构）也能通过 message 追溯上游模板来源。
+- `OpenClaw/template/template-cron.zh.yaml` 新增 `DEDUP_GRANULARITY` 去重粒度配置，支持 `daily`（默认，向后兼容）/ `half-day`（上午/下午）/ `hourly` / `per-run`（永不去重）四种模式。
+- `OpenClaw/template/template-cron.zh.yaml` 新增 `LOOP_TASK_TYPE` 变量，替换模板中硬编码的"推进软件开发项目"文本，使 Loop 模式适用于任意领域。
+- `OpenClaw/template/template-cron.zh.yaml` 新增 `LOOP_EXEC_INSTRUCTIONS` 变量：非空时完全替换 PHASE 2 默认开发流程（git log、py_compile、pytest 等），仅保留状态机管理、里程碑判定、自动停用等核心 Loop 架构。
+- `OpenClaw/template/template-cron.zh.yaml` 新增 `LOOP_STATE_SCHEMA` 变量：非空时将自定义字段 merge 到状态文件 schema 中，使 Loop 状态文件不再局限于 `tech_debt`/`test_coverage` 等开发专用字段。
+- 新增 `OpenClaw/hook-pack/` 通用上下文注入模板（`HOOK.md`、`handler.js`、`context.md`），支持插件/子项目通过 `agent:bootstrap` 事件注入任意上下文（角色、规则、工作流、状态约定等），无需修改用户工作区文件。
+
 - 将 Loop 开发迭代逻辑合并入 `OpenClaw/template/template-cron.zh.yaml`，新增 `LOOP_MODE_ENABLED` 开关，支持目标（`DEV_GOAL`）、里程碑（`DEV_MILESTONES`）、当前里程碑（`DEV_CURRENT_MILESTONE`）和到达目标后自动停用 cron（`DEV_AUTO_DISABLE_ON_GOAL_REACHED`）。
 - 新增 `OpenClaw/template/checks/custom-checks.yaml` 通用巡检场景模板，便于用户快速创建自定义巡检任务。
 - 新增 `OpenClaw/template/projects/custom-projects.yaml` 通用项目场景模板，支持基于 Loop 方法的任意项目任务。
@@ -28,6 +37,12 @@
 - `OpenClaw/template/template-cron.zh.yaml` 顶部注释增加 `{{WORKSPACE}}` 内置变量说明。
 
 ### Changed
+
+- `OpenClaw/template/template-cron.zh.yaml` Loop 模式通用化：移除硬编码的"推进软件开发项目"及 git log/py_compile/pytest 等开发专属步骤；状态机核心架构保留，业务执行阶段通过 `LOOP_EXEC_INSTRUCTIONS` 可完全自定义；状态文件 schema 通过 `LOOP_STATE_SCHEMA` 可扩展自定义字段。
+- `OpenClaw/template/template-cron.zh.yaml` 去重机制升级：从单一 `date +%Y-%m-%d` 升级为粒度可配（`daily`/`half-day`/`hourly`/`per-run`），通过 `DEDUP_GRANULARITY` 控制。
+- `OpenClaw/template/template-cron.zh.yaml` PHASE 1/2/3 重组：PHASE 1（状态机核心 + 状态文件管理）→ PHASE 2（可替换业务执行，通过 `{{#IF LOOP_EXEC_INSTRUCTIONS}}` 分支）→ PHASE 3（退出管理核心：里程碑判定 + 状态更新 + 汇报 + 自动停用）。
+- `OpenClaw/scripts/build-cron.py` 管线重排：结构标记处理（`{{#LOOP_ONLY}}`、`{{#IF}}` 等）先于变量替换执行，消除用户内容中 `{{#IF}}` 等字面量被误解析为模板指令的安全风险。
+- `CLAUDE.md` 新增模板变量命名规范：仅使用大写字母、数字和下划线，禁止连字符。
 
 - 将 `OpenClaw/template/checks/docker.yaml` 重命名为 `OpenClaw/template/checks/docker-check.yaml`，与类别内其他巡检模板命名风格保持一致。
 - `OpenClaw/template/template-cron.zh.yaml`：
@@ -67,7 +82,21 @@
 - `OpenClaw/template/reminders/*.yaml` 及 `OpenClaw/template/checks/*.yaml`：将业务特定 prompt 从顶层 `template` 字段迁移到 `SCENE_SPECIFIC_INSTRUCTIONS` 变量，统一由父模板控制 Harness 机制。
 - `OpenClaw/skills/SKILL-GUIDE.md` 及 `OpenClaw/template/template-cron.zh.yaml`：明确禁止场景 YAML 通过顶层 `template` 字段覆盖父模板，确保时间窗口、去重等非官方机制对所有场景生效。
 
+### Removed
+
+- 删除 `OpenClaw/conf/defaults.yaml` 和 `OpenClaw/conf/flags.yaml`：`build-cron.py` 已将所有默认值和 CLI 参数映射内嵌为 `DEFAULTS`/`FLAGS` 常量，实现完全自包含。
+
 ### Fixed
+
+- `OpenClaw/scripts/build-cron.py` `apply_conditional_blocks()` truthiness 检查修复：`"false"`/`"0"`/`"[]"`/`"{}"` 等字符串字面量现正确判定为假。
+- `OpenClaw/scripts/build-cron.py` `inject_origin_tag()` 修复 HTML 注释注入风险：对 `CATEGORY`/`JOB_NAME` 中的 `-->` 序列做 sanitize（替换为 `-- >`）。
+- `OpenClaw/scripts/build-cron.py` `substitute_variables()` 修复列表/字典值的序列化：使用 `json.dumps()` 替代 `str()`，确保 JSON 代码块合法性。
+- `OpenClaw/scripts/build-cron.py` `build_persona_prompt()` 修复 `PERSONA_MODE` 为空或 YAML `null` 时静默丢失人设的问题，现正确回退到模板默认值 `"inline"`。
+- `OpenClaw/scripts/build-cron.py` 消除 `resolve_variables()` 冗余调用：变量解析仅在 `main()` 中执行一次，`render_message()` 内不再重复扫描。
+- `OpenClaw/scripts/build-cron.py` 未解析标记检查扩展为同时检测变量占位符（`{{XXX}}`）和控制标记（`{{#IF}}`/`{{/IF}}` 等），防止模板语法错误静默泄漏。
+- `OpenClaw/scripts/build-cron.py` `inject_origin_tag()` 新增 `now` 参数，支持测试注入固定时间戳以实现可复现输出。
+- `TODO.md` 修复重复的 `### P2：` 标题。
+- `OpenClaw/skills/update-cron/SKILL.md` 更新过时的 `defaults.yaml` 引用为 `build-cron.py` 中的 `DEFAULTS`/`FLAGS` 常量。
 
 - 修复 `OpenClaw/template/reminders/{morning,noon,evening,custom-reminders}.yaml`、`OpenClaw/template/checks/{cron-check,docker,workspace-check}.yaml` 中残留的 `{{DATE_TODAY}}` / `{{TIME_NOW}}` / `{{WEEKDAY}}` 占位符，改为由 Agent 执行时通过 `exec date` 获取当前日期/时间。
 - `OpenClaw/template/projects/feature.yaml`、`OpenClaw/template/projects/maintain.yaml`：补充 `DEV_DOCS_DIR` 变量，明确 TODO.md、CHANGELOG.md、架构文档等路径；扩展 `DEV_COMMIT_PREFIX` 注释，包含 `docs`/`test`/`chore` 等常见前缀。

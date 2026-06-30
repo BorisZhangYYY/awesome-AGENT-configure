@@ -18,7 +18,7 @@ metadata:
 
 # update-cron
 
-当 `awesome-AGENT-configure` 项目的模板（`OpenClaw/template/template-cron.zh.yaml`、场景模板、`OpenClaw/conf/defaults.yaml` 等）发生升级后，AGENT 使用本 skill 帮助用户把已创建的 AAC 规范化任务同步到最新模板，**保留任务 ID 和核心配置**。
+当 `awesome-AGENT-configure` 项目的模板（`OpenClaw/template/template-cron.zh.yaml`、场景模板、`OpenClaw/scripts/build-cron.py` 中的 `DEFAULTS`/`FLAGS` 常量等）发生升级后，AGENT 使用本 skill 帮助用户把已创建的 AAC 规范化任务同步到最新模板，**保留任务 ID 和核心配置**。
 
 ## 何时触发
 

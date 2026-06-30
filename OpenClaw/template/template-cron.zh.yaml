@@ -49,6 +49,7 @@ timeWindow:
 deduplication:
   enabled: "{{DEDUP_ENABLED}}"
   stateFile: "{{DEDUP_STATE_FILE}}"
+  granularity: "{{DEDUP_GRANULARITY}}"  # daily | half-day | hourly | per-run
 
 # 人设/身份配置【非官方】
 # OpenClaw 原生通过 workspace 下的 bootstrap 文件注入人设（SOUL.md / IDENTITY.md 等）。
@@ -128,13 +129,13 @@ template: |
   {{/NON_LOOP_ONLY}}
 
   {{#LOOP_ONLY}}
-  你负责通过定时任务自动推进软件开发项目。
+  你负责通过定时任务自动推进 {{LOOP_TASK_TYPE}} 任务。
 
-  **项目信息**
-  - 项目名称：{{DEV_PROJECT_NAME}}
-  - 项目目录：`{{DEV_PROJECT_DIR}}`
+  **任务信息**
+  - 任务名称：{{DEV_PROJECT_NAME}}
+  - 工作目录：`{{DEV_PROJECT_DIR}}`
   - 当前阶段：{{DEV_PHASE}}
-  - 开发分支：{{DEV_BRANCH}}
+  - 工作分支：{{DEV_BRANCH}}
   - 总体目标：{{DEV_GOAL}}
   - 里程碑列表：{{DEV_MILESTONES}}
   - 当前里程碑：{{DEV_CURRENT_MILESTONE}}
@@ -150,11 +151,15 @@ template: |
   - 如果当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间：继续执行
   - 否则：执行窗口外动作 `{{WINDOW_OUT_ACTION}}`；若该动作为 `NO_REPLY`，立即输出 `NO_REPLY` 并结束运行；若为 `continue`，则继续执行
 
-  **【防护机制 2：单日/单次去重】防止开机堆叠时同一任务重复触发【非官方】**
+  **【防护机制 2：去重】防止开机堆叠时同一任务重复触发【非官方】**
   本机制仅当 `{{DEDUP_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
   读取状态文件 {{DEDUP_STATE_FILE}}。
-  用 exec 工具运行 `date +%Y-%m-%d`（或 `TZ={{TIMEZONE}} date +%Y-%m-%d`），获取今天日期。
-  若文件中已存在该日期，立即输出 `NO_REPLY`，结束运行。
+  根据去重粒度 `{{DEDUP_GRANULARITY}}` 生成去重 key：
+  - `daily`：用 exec 运行 `TZ={{TIMEZONE}} date +%Y-%m-%d`，以日期为 key（向后兼容，默认）
+  - `half-day`：用 exec 运行 `TZ={{TIMEZONE}} date +%Y-%m-%d` 获取日期，再用 `TZ={{TIMEZONE}} date +%H` 获取小时；若小时 < 12 则 key 为"日期-AM"，否则为"日期-PM"
+  - `hourly`：用 exec 运行 `TZ={{TIMEZONE}} date +%Y-%m-%d-%H`，以日期+小时为 key
+  - `per-run`：永不去重（直接跳过本检查）
+  若文件中已存在该 key，立即输出 `NO_REPLY`，结束运行。
 
   {{#LOOP_ONLY}}
   ---
@@ -168,30 +173,34 @@ template: |
   状态文件路径：`{{DEV_STATE_FILE}}`
   若其父目录不存在，先用 exec 运行 `mkdir -p $(dirname {{DEV_STATE_FILE}})` 创建目录。
 
-  ### 步骤 1.2：读取开发状态
+  ### 步骤 1.2：读取状态
 
   读取状态文件：`{{DEV_STATE_FILE}}`
 
-  状态文件为 JSON 格式，关键字段：
+  状态文件为 JSON 格式，**核心字段**（所有 Loop 任务通用）：
   - `status`: `ready` | `in_progress` | `blocked` | `goal_reached`
-  - `current_card`: 当前进行中的任务卡片标识
+  - `current_card`: 当前进行中的任务标识
   - `last_session`: 上次会话时间（ISO-8601）
   - `next_step`: 下次要做什么（具体、可执行）
   - `blockers`: 阻塞项列表
-  - `tech_debt`: 技术债务列表
-  - `test_coverage`: 当前测试覆盖情况
-  - `dev_log`: 开发日志（每次会话追加）
+  - `dev_log`: 执行日志（每次会话追加）
   - `goal`: 总体目标（与 `{{DEV_GOAL}}` 保持一致）
   - `milestones`: 里程碑列表
   - `current_milestone_index`: 当前里程碑索引（从 0 开始）
 
-  如果状态文件不存在，视为首次开发会话，初始化状态：
+  **默认扩展字段**（软件开发场景，`tech_debt` 记录技术债务，`test_coverage` 记录测试覆盖）：
+  - `tech_debt`: []
+  - `test_coverage`: "未评估"
+
+  **自定义扩展字段**：如果 `{{LOOP_STATE_SCHEMA}}` 非空，解析其中的字段定义，在初始化或更新状态文件时一并维护。
+
+  如果状态文件不存在，视为首次会话，初始化状态：
   ```json
   {
     "status": "ready",
     "current_card": null,
     "last_session": null,
-    "next_step": "认领第一个开发任务",
+    "next_step": "认领第一个任务",
     "blockers": [],
     "tech_debt": [],
     "test_coverage": "未评估",
@@ -202,40 +211,25 @@ template: |
   }
   ```
 
+  如果 `{{LOOP_STATE_SCHEMA}}` 非空，将其中定义的字段 merge 到以上 JSON 中再写入。
   写入状态文件前，先执行：
   ```bash
   mkdir -p $(dirname {{DEV_STATE_FILE}})
   ```
   确保父目录存在。
 
-  ### 步骤 1.3：读取项目 TODO
-
-  读取 `{{DEV_PROJECT_DIR}}/TODO.md`（如果存在），了解：
-  - 已完成项（标记为 `[x]`）
-  - 未完成项（标记为 `[ ]`）
-  - 当前优先级最高的任务
-
-  ### 步骤 1.4：读取最近提交历史
-
-  执行：
-  ```bash
-  cd {{DEV_PROJECT_DIR}} && git log --oneline -5
-  ```
-  了解代码最新进展。
-
-  ### 步骤 1.5：判断会话类型
+  ### 步骤 1.3：判断会话类型（状态机核心）
 
   根据 `status` 字段：
 
   ```
   status = "ready"
     → 新任务：认领最优先的待办项
-    → 从 TODO.md 或 Workboard 中找到下一个要完成的任务
     → 更新 current_card 为该任务标识
     → status 改为 "in_progress"
 
   status = "in_progress"
-    → 续传：读取 current_card 和 next_step，继续编码
+    → 续传：读取 current_card 和 next_step，继续执行
     → 加载上次中断的上下文
 
   status = "blocked"
@@ -245,11 +239,35 @@ template: |
 
   status = "goal_reached"
     → 总体目标已达成
-    → 执行 PHASE 3.8：自动停用 cron 任务（如果启用）并发送最终汇报
+    → 执行 PHASE 3 的自动停用步骤并发送最终汇报
     → 输出 `NO_REPLY` 并结束运行
   ```
 
-  ### 步骤 1.6：加载开发上下文
+  ---
+
+  ## PHASE 2：EXEC — 执行任务
+
+  > 以下为业务执行阶段。通过变量 LOOP_EXEC_INSTRUCTIONS 可自定义本阶段全部内容。
+
+  {{#IF LOOP_EXEC_INSTRUCTIONS}}
+  {{LOOP_EXEC_INSTRUCTIONS}}
+  {{#ELSE}}
+  ### 步骤 2.1：读取项目 TODO
+
+  读取 `{{DEV_PROJECT_DIR}}/TODO.md`（如果存在），了解：
+  - 已完成项（标记为 `[x]`）
+  - 未完成项（标记为 `[ ]`）
+  - 当前优先级最高的任务
+
+  ### 步骤 2.2：读取最近提交历史
+
+  执行：
+  ```bash
+  cd {{DEV_PROJECT_DIR}} && git log --oneline -5
+  ```
+  了解代码最新进展。
+
+  ### 步骤 2.3：加载开发上下文
 
   根据当前任务，读取相关代码文件：
   - 当前任务关联的源代码文件
@@ -264,10 +282,6 @@ template: |
   若目录下不存在架构文档，则跳过读取，不视为错误。
 
   ---
-
-  ## PHASE 2：DEV — 执行开发任务
-
-  > 专注当前任务，不做无关改动。
 
   ### 开发纪律（必须遵守）
 
@@ -298,18 +312,14 @@ template: |
 
   ---
 
-  ## PHASE 3：EXIT — 会话退出
-
-  > 保存状态，记录债务，以待来日。代码是临时文件，状态记录才是永恒。
-
-  ### 步骤 3.1：代码收尾
+  ### 代码收尾
 
   - [ ] 运行 `python -m py_compile` 检查语法错误
   - [ ] 运行相关测试：`python -m pytest {{DEV_TEST_PATTERN}} -v`
   - [ ] `git diff` — 确认变更范围合理，无意外文件被修改
   - [ ] `git status` — 确认无未提交的重要变更
 
-  ### 步骤 3.2：安全审查
+  ### 安全审查
 
   检查新增/修改文件：
   - [ ] **无 API Key 硬编码** — 搜索 `api_key`, `token`, `password`, `secret`
@@ -317,7 +327,7 @@ template: |
   - [ ] **无意外删除** — git diff 确认无 rm 操作
   - [ ] **无大型二进制文件** — 确认未提交 >1MB 文件
 
-  ### 步骤 3.3：Git 提交
+  ### Git 提交
 
   ```bash
   cd {{DEV_PROJECT_DIR}}
@@ -334,14 +344,34 @@ template: |
 
   > ⚠️ **不执行 `git push`** — 按安全红线，push 前需人工审核
 
-  ### 步骤 3.4：判断里程碑/目标是否完成
+  ### 更新 TODO.md
 
-  必须同时满足以下**全部**条件，才能认为当前里程碑已完成：
-  1. 本次 DEV 阶段产出的核心代码/文件已写入磁盘
+  更新 `{{DEV_PROJECT_DIR}}/TODO.md`：
+  - 标记已完成的项为 `[x]`
+  - 新增发现的待办项
+  - 更新「进行中」和「下次计划」
+  {{/IF}}
+
+  ---
+
+  ## PHASE 3：EXIT — 会话退出
+
+  > 保存状态，记录日志，以待来日。状态记录才是永恒。
+
+  ### 步骤 3.1：判断里程碑/目标是否完成
+
+  根据 PHASE 2 的执行结果和 {{DEV_GOAL}} 各里程碑的完成标准，判定当前里程碑的完成状态。
+
+  {{#IF LOOP_EXEC_INSTRUCTIONS}}
+  （根据你在 PHASE 2 中定义的任务完成标准自行判定）
+  {{#ELSE}}
+  软件开发场景的判定条件（需同时满足**全部**）：
+  1. 本次产出的核心代码/文件已写入磁盘
   2. 本次修改通过 `python -m py_compile` 语法检查
   3. 相关测试全部通过（或失败项已记录并评估为可接受）
   4. `{{DEV_PROJECT_DIR}}/TODO.md` 中与本里程碑相关的任务已标记为 `[x]`
   5. `git status` 显示无未提交的重要变更（即本次改动已 commit）
+  {{/IF}}
 
   根据以上判定结果更新状态：
   - **当前里程碑未完成**：status 保持 `in_progress`，next_step 设为本次未完的具体下一步
@@ -355,34 +385,31 @@ template: |
     - `current_card` 设为 null 或"目标已达成"
     - `next_step` 设为"目标已达成，等待用户介入运维"
 
-  ### 步骤 3.5：更新状态文件
+  ### 步骤 3.2：更新状态文件
 
   更新 `{{DEV_STATE_FILE}}`：
   - `last_session` → 当前时间（ISO-8601，用 exec 获取）
   - `current_card` → 本次完成/进行中的卡片
-  - `status` → 根据 3.4 判断的结果
+  - `status` → 根据 3.1 判断的结果
   - `next_step` → 下次要做什么（具体、可执行）
   - `blockers` → 本次遇到的未解决阻塞
+  - `dev_log` → 追加本次会话记录（包含时间、任务、摘要、结果）
+  - `goal` / `milestones` / `current_milestone_index` → 同步更新
+  {{#IF LOOP_EXEC_INSTRUCTIONS}}
+  - 自定义字段：根据 {{LOOP_STATE_SCHEMA}} 中定义的字段同步更新
+  {{#ELSE}}
   - `tech_debt` → 本次产生的技术债务
   - `test_coverage` → 当前测试覆盖情况
-  - `dev_log` → 追加本次会话记录（包含时间、任务、摘要、测试结果、commit hash）
-  - `goal` / `milestones` / `current_milestone_index` → 同步更新
+  {{/IF}}
 
   写入前确保父目录已存在。
 
-  ### 步骤 3.6：更新 TODO.md
-
-  更新 `{{DEV_PROJECT_DIR}}/TODO.md`：
-  - 标记已完成的项为 `[x]`
-  - 新增发现的待办项
-  - 更新「进行中」和「下次计划」
-
-  ### 步骤 3.7：汇报（如配置了投递）
+  ### 步骤 3.3：汇报（如配置了投递）
 
   如果 `{{DELIVERY_MODE}}` 为 `announce`，发送汇报消息。汇报内容必须从状态文件中读取最新值后填入：
 
   ```
-  🗡️ 【{{DEV_PROJECT_NAME}}】开发迭代汇报
+  汇报标题：【{{DEV_PROJECT_NAME}}】任务执行汇报
 
   时间：<用 exec 获取当前日期和时间>
   当前里程碑：<状态文件中的 current_milestone_index 对应里程碑>
@@ -392,16 +419,12 @@ template: |
   完成项：
   - <根据 dev_log 最后一条填写>
 
-  测试：<状态文件中的 test_coverage>
-
-  债务：<状态文件中的 tech_debt>
-
   下次：<状态文件中的 next_step>
   ```
 
   如果 status 为 `goal_reached`，汇报标题改为 `🎯 【{{DEV_PROJECT_NAME}}】目标已达成`，并说明等待用户介入运维。
 
-  ### 步骤 3.8：到达目标后自动停用 cron 任务（可选）
+  ### 步骤 3.4：到达目标后自动停用 cron 任务（可选）
 
   如果同时满足：
   1. 状态文件中 `status` 为 `goal_reached`
@@ -443,7 +466,8 @@ template: |
   {{/NON_LOOP_ONLY}}
 
   **执行后（如果发送了消息且去重已启用）【非官方】**
-  若 `{{DEDUP_ENABLED}}` 为 true，用 exec 获取当前日期（`date +%Y-%m-%d`），并用 write 工具将该日期写入 {{DEDUP_STATE_FILE}}，确保今天不再重复执行。
+  若 `{{DEDUP_ENABLED}}` 为 true，按照去重粒度 `{{DEDUP_GRANULARITY}}` 生成去重 key（生成规则同【防护机制 2】），
+  并用 write 工具将该 key 写入 {{DEDUP_STATE_FILE}}。
 
   {{#LOOP_ONLY}}
   ---

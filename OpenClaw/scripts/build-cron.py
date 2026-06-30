@@ -2,10 +2,15 @@
 """OpenClaw Cron 模板渲染器
 
 读取场景 YAML 和通用模板，渲染后输出 openclaw cron create 命令。
+本脚本完全自包含，无外部文件依赖，可直接拷贝到任意项目使用。
 
 用法：
-    python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml
-    python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml --json
+    python3 build-cron.py scene.yaml
+    python3 build-cron.py scene.yaml --json
+    python3 build-cron.py scene.yaml --preview
+
+依赖：
+    pip install pyyaml
 """
 
 import argparse
@@ -14,6 +19,7 @@ import os
 import re
 import shlex
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -23,6 +29,124 @@ except ImportError as exc:
     raise SystemExit(1) from exc
 
 
+# ===== 默认变量值 =====
+# 场景 YAML 中未提供的变量使用以下默认值。
+
+DEFAULTS = {
+    "SCHEDULE_TYPE": "cron",
+    "TIMEZONE": "Asia/Shanghai",
+    "DELIVERY_MODE": "announce",
+    "BEST_EFFORT": "true",
+    "LIGHT_CONTEXT": "false",
+    "DISABLED": "false",
+    "DELETE_AFTER_RUN": "false",
+    "KEEP_AFTER_RUN": "false",
+    "EXACT": "false",
+    "TIMEOUT_SECONDS": "300",
+    "THINKING": "off",
+    "TIME_WINDOW_ENABLED": "true",
+    "WINDOW_OUT_ACTION": "NO_REPLY",
+    "DEDUP_ENABLED": "true",
+    "DEDUP_STATE_FILE": "{{WORKSPACE}}/.state/dedup.txt",
+    "DEDUP_GRANULARITY": "daily",
+    "LOOP_MODE_ENABLED": "false",
+    "LOOP_TASK_TYPE": "软件开发",
+    "LOOP_EXEC_INSTRUCTIONS": "",
+    "LOOP_STATE_SCHEMA": "",
+    "DEV_PROJECT_NAME": "",
+    "DEV_PROJECT_DIR": "/path/to/your/project",
+    "DEV_PHASE": "",
+    "DEV_BRANCH": "",
+    "DEV_STATE_FILE": "{{DEV_PROJECT_DIR}}/.state/dev-session.json",
+    "DEV_TEST_PATTERN": "test_*.py",
+    "DEV_COMMIT_PREFIX": "feat",
+    "DEV_GOAL": "",
+    "DEV_MILESTONES": "[]",
+    "DEV_CURRENT_MILESTONE": "",
+    "DEV_AUTO_DISABLE_ON_GOAL_REACHED": "false",
+    "DEV_TASK_INSTRUCTIONS": "",
+    "DEV_DOCS_DIR": "{{DEV_PROJECT_DIR}}/docs",
+    "SCENE_SPECIFIC_INSTRUCTIONS": "",
+    "PERSONA_MODE": "inline",
+    "WORKSPACE": "~/.openclaw/workspace",
+}
+
+# ===== CLI 参数映射表 =====
+# 模板字段到 openclaw cron create 命令行参数的映射。
+
+FLAGS = {
+    "official": {
+        "name": "--name",
+        "message": "--message",
+        "systemEvent": "--system-event",
+        "schedule.timezone": "--tz",
+        "delivery.channel": "--channel",
+        "delivery.to": "--to",
+        "delivery.threadId": "--thread-id",
+        "delivery.webhookUrl": "--webhook",
+        "session.target": "--session",
+        "session.timeoutSeconds": "--timeout-seconds",
+        "agent.agentId": "--agent",
+        "agent.model": "--model",
+        "agent.thinking": "--thinking",
+        "agent.tools": "--tools",
+        "command.script": "--command",
+        "command.cwd": "--command-cwd",
+        "command.argv": "--command-argv",
+        "command.input": "--command-input",
+        "command.env": "--command-env",
+        "command.noOutputTimeoutSeconds": "--no-output-timeout-seconds",
+        "command.outputMaxBytes": "--output-max-bytes",
+        "advanced.wake": "--wake",
+        "advanced.stagger": "--stagger",
+    },
+    "special": {
+        "schedule.expr": {
+            "type": "positional",
+            "note": "cron 表达式，作为 openclaw cron create 的第一个位置参数",
+        },
+        "delivery.mode": {
+            "type": "enum_flag",
+            "values": {
+                "announce": "--announce",
+                "webhook": "--webhook",
+                "none": "--no-deliver",
+            },
+        },
+        "delivery.bestEffort": {
+            "type": "boolean_flag",
+            "true_flag": "--best-effort-deliver",
+            "false_flag": "--no-best-effort-deliver",
+        },
+        "context.lightContext": {
+            "type": "boolean_flag",
+            "true_flag": "--light-context",
+            "false_flag": None,
+        },
+        "advanced.disabled": {
+            "type": "boolean_flag",
+            "true_flag": "--disabled",
+            "false_flag": None,
+        },
+        "advanced.deleteAfterRun": {
+            "type": "boolean_flag",
+            "true_flag": "--delete-after-run",
+            "false_flag": None,
+        },
+        "advanced.keepAfterRun": {
+            "type": "boolean_flag",
+            "true_flag": "--keep-after-run",
+            "false_flag": None,
+        },
+        "advanced.exact": {
+            "type": "boolean_flag",
+            "true_flag": "--exact",
+            "false_flag": None,
+        },
+    },
+}
+
+
 def main():
     args = parse_args()
     scene_path = Path(args.scene_file)
@@ -30,45 +154,28 @@ def main():
     if not scene_path.exists():
         raise FileNotFoundError(f"场景文件不存在：{scene_path}")
 
-    # 定位配置目录（与脚本位于同一 OpenClaw 目录下）
-    script_dir = Path(__file__).resolve().parent
-    conf_dir = script_dir.parent / "conf"
-
-    flags = load_yaml(conf_dir / "flags.yaml")
-    defaults = load_yaml(conf_dir / "defaults.yaml")
-
     scene = load_yaml(scene_path)
-    template = load_template(scene, scene_path)
+    template, template_path = load_template(scene, scene_path)
 
-    variables = build_variables(defaults, template, scene)
+    variables = build_variables(DEFAULTS, template, scene)
 
     # 对 Loop 模式相关变量做前置校验，避免未定义变量泄漏到 cron message
     validate_loop_variables(variables)
 
-    # 递归展开变量值中的嵌套占位符（如 SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"），
-    # 确保命令参数和 message 都使用完全展开后的值
-    variables = resolve_variables(variables)
-
     # 根据 persona 配置注入 {{PERSONA_PROMPT}}
     variables["PERSONA_PROMPT"] = build_persona_prompt(template, variables)
 
-    # 渲染 message
-    message = render_template(template, scene, variables)
+    # 渲染 message（结构处理 → 变量替换 → 起源标记）
+    message = render_message(template, scene, variables, template_path)
 
-    # 根据 LOOP_MODE_ENABLED 决定是否保留 Loop 模式专属片段
-    message = apply_loop_mode(message, variables)
-
+    # 递归展开变量值中的嵌套占位符，供 build_command 使用
+    variables = resolve_variables(variables)
     variables["MESSAGE"] = message
 
-    # 检查是否残留未解析的模板占位符（大写变量风格），避免生成带 {{XXX}} 的命令
-    unresolved = set(re.findall(r"\{\{[A-Z][A-Z0-9_]*\}\}", message))
-    if unresolved:
-        print(
-            f"警告：message 中可能存在未解析的模板占位符：{sorted(unresolved)}",
-            file=sys.stderr,
-        )
+    # 检查是否残留未解析的模板标记
+    check_unresolved(message)
 
-    cmd = build_command(variables, flags)
+    cmd = build_command(variables, FLAGS)
 
     if args.preview:
         print("=== 渲染后的 MESSAGE（前500字符）===")
@@ -115,7 +222,7 @@ def load_template(scene, scene_path):
     if not template_path.exists():
         raise FileNotFoundError(f"模板文件不存在：{template_path}")
 
-    return load_yaml(template_path)
+    return load_yaml(template_path), template_path
 
 
 def build_variables(defaults, template, scene):
@@ -168,12 +275,13 @@ def resolve_variables(variables, max_depth=5):
     return resolved
 
 
-def render_template(template, scene, variables):
-    """渲染 template 字段。
+def render_message(template, scene, variables, template_path):
+    """完整的消息渲染管线。
 
-    仅使用父模板中的 template。场景 YAML 不允许直接定义顶层 template 字段，
-    以确保时间窗口、去重等非官方 Harness 机制对所有场景一致生效。
-    场景特定内容应通过 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符注入。
+    阶段 1：处理结构标记（{{#LOOP_ONLY}}、{{#IF}} 等），此时变量值尚未替换，
+            用户内容中的 {{#IF}} 等字面量不会被误解析为模板指令。
+    阶段 2：替换 {{VAR}} 占位符为实际变量值。
+    阶段 3：注入 AAC 起源标记。
     """
     if scene.get("template"):
         raise ValueError(
@@ -183,19 +291,57 @@ def render_template(template, scene, variables):
 
     template_str = template.get("template", "")
     if not template_str:
-        # 未配置 template，直接使用 message 字段内容
         return variables.get("MESSAGE", "")
 
-    # 先完全展开所有变量值中的嵌套占位符
+    # 阶段 1：结构处理（先于变量替换，防止用户内容注入模板指令）
+    message = apply_loop_mode(template_str, variables)
+    message = apply_conditional_blocks(message, variables)
+
+    # 阶段 2：变量替换
     resolved = resolve_variables(variables)
+    message = substitute_variables(message, resolved)
 
-    # 统一单轮替换 template 中的占位符
-    result = template_str
-    for key, value in resolved.items():
+    # 阶段 3：起源标记
+    message = inject_origin_tag(message, template_path, variables)
+
+    return message
+
+
+def substitute_variables(text, variables):
+    """替换文本中的 {{VAR}} 占位符为实际变量值。
+
+    列表/字典值使用 json.dumps 序列化（双引号 JSON），
+    而非 Python 的 str()（单引号 repr），确保在 JSON 代码块中的合法性。
+    """
+    result = text
+    for key, value in variables.items():
         placeholder = "{{" + key + "}}"
-        result = result.replace(placeholder, str(value))
-
+        if isinstance(value, (list, dict)):
+            result = result.replace(placeholder, json.dumps(value, ensure_ascii=False))
+        else:
+            result = result.replace(placeholder, str(value))
     return result
+
+
+def check_unresolved(message):
+    """检查 message 中是否有未解析的模板标记，通过 stderr 发出警告。
+
+    覆盖两类标记：
+    - 变量占位符：{{XXX}}（大写变量风格）
+    - 控制标记：{{#IF}}、{{/IF}}、{{#ELSE}}、{{#LOOP_ONLY}} 等
+    """
+    var_pattern = r"\{\{[A-Z][A-Z0-9_]*\}\}"
+    control_pattern = r"\{\{[#/](?:IF|LOOP_ONLY|NON_LOOP_ONLY|ELSE)\s*\w*\}\}"
+
+    unresolved_vars = set(re.findall(var_pattern, message))
+    unresolved_ctrl = set(re.findall(control_pattern, message))
+
+    all_unresolved = sorted(unresolved_vars | unresolved_ctrl)
+    if all_unresolved:
+        print(
+            f"警告：message 中可能存在未解析的模板标记：{all_unresolved}",
+            file=sys.stderr,
+        )
 
 
 def apply_loop_mode(message, variables):
@@ -229,15 +375,90 @@ def apply_loop_mode(message, variables):
     return message
 
 
+def apply_conditional_blocks(message, variables):
+    """处理 {{#IF VAR}}...{{#ELSE}}...{{/IF}} 条件块。
+
+    若 VAR 语义为「真」（非空且非 falsy 字面量），保留 IF 分支；否则保留 ELSE 分支。
+    处理时机：在变量替换之前执行，防止用户内容中的 {{#IF}} 字面量被误解析。
+    """
+    pattern = r"\{\{#IF\s+(\w+)\}\}(.*?)\{\{#ELSE\}\}(.*?)\{\{/IF\}\}"
+
+    def replacer(match):
+        var_name = match.group(1)
+        if_block = match.group(2)
+        else_block = match.group(3)
+        value = variables.get(var_name, "")
+        if _is_truthy(value):
+            return if_block
+        return else_block
+
+    return re.sub(pattern, replacer, message, flags=re.DOTALL)
+
+
+def _is_truthy(value):
+    """判断变量值在模板条件中是否为「真」。
+
+    除 Python 原生 falsy 值（None、空字符串、0、False、空列表/字典）外，
+    还将以下字符串字面量视为 falsy：
+    "false"、"0"、"no"、"off"、"[]"、"{}"、"null"、"none"
+    """
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (list, dict)):
+        return len(value) > 0
+    if isinstance(value, (int, float)):
+        return bool(value)
+    s = str(value).strip().lower()
+    if s in ("", "false", "0", "no", "off", "[]", "{}", "null", "none"):
+        return False
+    return True
+
+
+def inject_origin_tag(message, template_path, variables, now=None):
+    """在 message 开头注入 AAC 起源标记，用于后续 SKILL 识别和管理。
+
+    格式：<!-- AAC_ORIGIN: template=xxx | generated=xxx | category=xxx | job=xxx -->
+
+    即使 cron 被大幅定制化（改名、改结构），只要 message 中保留此标记，
+    AAC SKILL（如 update-cron）就能识别其上游模板来源。
+
+    now 参数用于测试：传入固定 datetime 以产生可复现输出。
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+    origin_timestamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    template_name = template_path.name
+    category = _sanitize_origin(str(variables.get("CATEGORY", "")))
+    job_name = _sanitize_origin(str(variables.get("JOB_NAME", "")))
+
+    origin_tag = (
+        f"<!-- AAC_ORIGIN: template={template_name}"
+        f" | generated={origin_timestamp}"
+        f" | category={category}"
+        f" | job={job_name} -->"
+    )
+    return origin_tag + "\n\n" + message
+
+
+def _sanitize_origin(text):
+    """替换 HTML 注释终止符 --> 为 -- >，防止 origin 标签提前闭合。"""
+    return text.replace("-->", "-- >")
+
+
 def build_persona_prompt(template, variables):
     """根据 persona 配置生成 {{PERSONA_PROMPT}} 的内容。"""
     persona = template.get("persona", {})
-    mode = str(variables.get("PERSONA_MODE", persona.get("mode", "inline"))).lower()
+    mode = str(variables.get("PERSONA_MODE", "")).strip().lower()
+    # 显式未设置（空字符串、null）时回退到模板默认值
+    if not mode:
+        mode = str(persona.get("mode", "inline")).strip().lower()
     persona_file = variables.get("PERSONA_FILE", persona.get("file", ""))
     persona_role = variables.get("PERSONA_ROLE", "")
     # 场景未定义 PERSONA_ROLE 时，尝试从模板 persona.role 读取
     # 但需过滤包含未解析占位符（如 "{{PERSONA_ROLE}}"）的字符串，避免泄漏到输出
-    if not persona_role:
+    if not persona_role or str(persona_role).strip() == "":
         raw_role = persona.get("role", "")
         if raw_role and not re.search(r"\{\{.*?\}\}", raw_role):
             persona_role = raw_role
