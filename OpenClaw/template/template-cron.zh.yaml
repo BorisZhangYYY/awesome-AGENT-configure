@@ -171,6 +171,7 @@ template: |
   ### 步骤 1.1：确保状态文件目录存在
 
   状态文件路径：`{{DEV_STATE_FILE}}`
+  ⚠️ **警告**：每个 Loop 任务必须使用独立的状态文件。若多个任务共用同一个 `DEV_STATE_FILE`，会导致状态互相覆盖、里程碑错乱甚至目标提前达成。请在场景 YAML 中为每个任务配置不同的状态文件路径（例如 `dev-session.json` 与 `maintain-session.json`）。
   若其父目录不存在，先用 exec 运行 `mkdir -p $(dirname {{DEV_STATE_FILE}})` 创建目录。
 
   ### 步骤 1.2：读取状态

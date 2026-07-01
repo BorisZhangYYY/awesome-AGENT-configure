@@ -88,6 +88,8 @@
 
 ### Fixed
 
+- `OpenClaw/template/template-cron.zh.yaml`：在 Loop 模式状态文件初始化步骤（PHASE 1.1）增加"状态文件冲突"警告，明确提示"每个 Loop 任务必须使用独立的状态文件"，防止用户将多个任务配置为共用同一个 `DEV_STATE_FILE` 导致状态互相覆盖、里程碑错乱。
+- `OpenClaw/template/projects/feature.yaml`、`OpenClaw/template/projects/maintain.yaml`：在 `DEV_STATE_FILE` 变量注释中同步增加冲突警告，并建议使用不同文件名（如 `dev-session.json` / `maintain-session.json`）。
 - `OpenClaw/scripts/build-cron.py` `apply_conditional_blocks()` truthiness 检查修复：`"false"`/`"0"`/`"[]"`/`"{}"` 等字符串字面量现正确判定为假。
 - `OpenClaw/scripts/build-cron.py` `inject_origin_tag()` 修复 HTML 注释注入风险：对 `CATEGORY`/`JOB_NAME` 中的 `-->` 序列做 sanitize（替换为 `-- >`）。
 - `OpenClaw/scripts/build-cron.py` `substitute_variables()` 修复列表/字典值的序列化：使用 `json.dumps()` 替代 `str()`，确保 JSON 代码块合法性。

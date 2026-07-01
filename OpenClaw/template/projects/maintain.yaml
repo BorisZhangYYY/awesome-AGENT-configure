@@ -35,6 +35,7 @@ variables:
   DEV_PROJECT_DIR: "/path/to/your/project"
   DEV_PHASE: "维护"
   DEV_BRANCH: "main"
+  # 状态文件路径（用于续传）。⚠️ 每个 Loop 任务必须使用独立的状态文件，多个任务共用会导致状态互相覆盖。
   DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-maintain-session.json"
   DEV_TEST_PATTERN: "test_*.py"
   # Git 提交前缀（常见：feat/fix/refactor/maint/docs/test/chore）
