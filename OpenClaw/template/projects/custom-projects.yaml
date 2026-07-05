@@ -8,7 +8,7 @@
 #   - 任何需要状态续传、按里程碑推进的项目工作
 #
 # 使用方式：
-#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/projects/custom-projects.yaml
+#   python3 OpenClaw/skills/init-cron/scripts/build-cron.py OpenClaw/template/projects/custom-projects.yaml
 
 templateRef: "../template-cron.zh.yaml"
 

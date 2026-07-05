@@ -101,15 +101,10 @@ FLAGS = {
         "advanced.stagger": "--stagger",
     },
     "special": {
-        "schedule.expr": {
-            "type": "positional",
-            "note": "cron 表达式，作为 openclaw cron create 的第一个位置参数",
-        },
         "delivery.mode": {
             "type": "enum_flag",
             "values": {
                 "announce": "--announce",
-                "webhook": "--webhook",
                 "none": "--no-deliver",
             },
         },
@@ -475,10 +470,18 @@ def build_command(variables, flags):
     cmd = ["openclaw", "cron", "create"]
 
     # 位置参数：schedule.expr
+    schedule_type = str(variables.get("SCHEDULE_TYPE", "cron")).strip().lower()
     schedule_expr = variables.get("SCHEDULE_EXPR")
     if not schedule_expr:
         raise ValueError("缺少必要变量：SCHEDULE_EXPR")
-    cmd.append(str(schedule_expr))
+    if schedule_type == "cron":
+        cmd.append(str(schedule_expr))
+    elif schedule_type == "at":
+        cmd.extend(["--at", str(schedule_expr)])
+    elif schedule_type == "every":
+        cmd.extend(["--every", str(schedule_expr)])
+    else:
+        raise ValueError(f"不支持的调度类型：{schedule_type}")
 
     # message 与 command 二选一
     command_script = variables.get("COMMAND_SCRIPT", "")
@@ -549,6 +552,8 @@ def build_command(variables, flags):
     add_special_boolean(cmd, "advanced.disabled", variables.get("DISABLED", ""), flags)
     add_special_boolean(cmd, "advanced.deleteAfterRun", variables.get("DELETE_AFTER_RUN", ""), flags)
     add_special_boolean(cmd, "advanced.keepAfterRun", variables.get("KEEP_AFTER_RUN", ""), flags)
+    if parse_bool(variables.get("DELETE_AFTER_RUN", "")) and parse_bool(variables.get("KEEP_AFTER_RUN", "")):
+        raise ValueError("DELETE_AFTER_RUN 与 KEEP_AFTER_RUN 不能同时为 true")
     add_flag(cmd, "advanced.wake", variables.get("WAKE", ""), flags)
     add_special_boolean(cmd, "advanced.exact", variables.get("EXACT", ""), flags)
     add_flag(cmd, "advanced.stagger", variables.get("STAGGER", ""), flags)
@@ -575,6 +580,11 @@ def add_special_delivery(cmd, variables, flags):
     flag = rule.get("values", {}).get(mode)
     if flag:
         cmd.append(flag)
+
+    if mode == "webhook":
+        webhook_url = variables.get("WEBHOOK_URL", "")
+        if is_empty(webhook_url):
+            raise ValueError("delivery.mode 为 webhook 时，必须提供 delivery.webhookUrl (WEBHOOK_URL)")
 
     best_effort = variables.get("BEST_EFFORT", "")
     add_special_boolean(cmd, "delivery.bestEffort", best_effort, flags)

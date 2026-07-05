@@ -8,7 +8,7 @@
 #   - 根据项目需要补充知识库或 MEMORY.md
 #
 # 使用方式：
-#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/learns/custom-learns.yaml
+#   python3 OpenClaw/skills/init-cron/scripts/build-cron.py OpenClaw/template/learns/custom-learns.yaml
 #
 # 设计原则：
 #   1. 每次学习一个具体主题，不贪多

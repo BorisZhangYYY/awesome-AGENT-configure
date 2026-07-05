@@ -1,134 +1,92 @@
 # awesome-AGENT-configure
 
-> 基于 AGENT 常见的 Cron 定时任务机制，结合 Harness 和 Loop 思想，来打造一个**既自律，又准确，还可以自我提升的 AI AGENT**。
+> 一套面向 OpenClaw、Hermes 等 AI AGENT 框架的**模板集合**，通过 Harness 与 Loop 机制让 AI AGENT 更加可控与可靠。
 
-## 目录
+## 项目定位
 
-- [项目简介](#项目简介)
-- [支持的模板](#支持的模板)
-- [安装与依赖](#安装与依赖)
-- [使用方法](#使用方法)
-  - [1. 生成 cron 命令](#1-生成-cron-命令)
-  - [2. JSON 输出](#2-json-输出)
-  - [3. 自定义场景](#3-自定义场景)
-- [项目结构](#项目结构)
-- [设计原则](#设计原则)
-- [链接](#链接)
+本项目不是直接安装的软件，而是**可拿走的模板**：
 
-## 项目简介
+1. **`{AGENT}/skills/`** 提供基础 Skill 模板（如创建 skill、管理 cron）。
+2. **`{AGENT}/template/`** 提供通用配置模板（如 cron 父模板）。
 
-你在使用 OpenClaw、Hermes 等 AI AGENT 工具的时候，是否面临 workspace 杂乱、skills 冗杂，Heartbeat 与 Cron 效果不佳的情况？通过本项目提供的模板，结合自身需求修改后将其应用在 AI AGENT 的 cron 机制内，即可通过严格的提示词系统，如状态机、时间窗口、效果评估等方式，让 AI AGENT 的 Cron 效果可记录、可追踪、可推进。
+你可以把 `skills/` 和 `template/` 中的模板复制到自己的项目中，结合需求改造后再使用。
 
-## 支持的模板
+## 目录说明
 
-- **OpenClaw**：
-  - 通用 cron 模板（`template-cron.zh.yaml`）：提醒、巡检、学习等单次任务，以及项目类 Loop 模式任务
-  - 提醒类场景（morning / noon / evening / custom-reminders）
-  - 巡检类场景（workspace-check / docker / cron-check）
-  - 项目类场景（feature / maintain，启用 `LOOP_MODE_ENABLED`）
-  - 学习类场景（custom-learns）
-- **Hermes**：待补充
-- **Claude Code**：待补充
-
-> 如果你有更多的实用模板，或者是发现了项目中的一些错误与问题，欢迎在 PR 中补充，我会在审核后将其合并入代码库。
-
-## 安装与依赖
-
-本项目为模板集合，可直接复制使用。若需使用脚本生成 cron 命令，请确保环境满足：
-
-- Python 3
-- PyYAML（`pip install pyyaml`）
-
-```bash
-pip install pyyaml
-```
-
-## 使用方法
-
-### 1. 生成 cron 命令
-
-以早安提醒为例：
-
-```bash
-python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml
-```
-
-输出示例：
-
-```bash
-openclaw \
-  cron \
-  create \
-  '0 8 * * *' \
-  --message \
-  '...' \
-  --name \
-  '【AAC-提醒】 - 早安' \
-  --tz \
-  Asia/Shanghai \
-  --announce \
-  --best-effort-deliver \
-  --session \
-  isolated \
-  --timeout-seconds \
-  300 \
-  --no-light-context \
-  --thinking \
-  off \
-  --exact
-```
-
-### 2. JSON 输出
-
-如果需要程序化调用，可输出 JSON 数组：
-
-```bash
-python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml --json
-```
-
-### 3. 自定义场景
-
-复制 `OpenClaw/template/reminders/custom-reminders.yaml`，修改 `variables` 中的值即可。
-
-## 项目结构
-
-```
+```text
 awesome-AGENT-configure/
-├── AI-ProjConf/              # 通用项目初始化模板（README / TODO / AGENT 等）
 ├── OpenClaw/
-│   ├── conf/                 # OpenClaw 参数与 flag 配置
-│   ├── scripts/              # 模板生成与辅助脚本
-│   ├── skills/               # 方便管理 AAC cron 封装的 skills
-│   └── template/             # cron 场景模板，按类别分子目录
-│       ├── checks/           # 巡检类模板
-│       │   ├── cron-check.yaml      # Cron 任务健康巡检
-│       │   ├── custom-checks.yaml   # 自定义巡检场景
-│       │   ├── docker-check.yaml    # Docker 容器/Compose 巡检
-│       │   └── workspace-check.yaml # 工作区整理巡检
-│       ├── projects/         # 项目类模板（Loop 方法，基于 template-cron.zh.yaml）
-│       │   ├── custom-projects.yaml  # 自定义项目场景
-│       │   ├── feature.yaml          # 功能开发场景
-│       │   └── maintain.yaml         # 维护会话场景
-│       ├── learns/           # 学习类模板
-│       │   └── custom-learns.yaml  # AI 自我学习场景
-│       ├── reminders/        # 提醒类模板
-│       │   └── custom-reminders.yaml  # 自定义提醒场景
-│       └── template-cron.zh.yaml  # 通用/Loop 统一父模板
+│   ├── skills/          # 基础 Skill 模板（aac-skill-manage、aac-cron-manage）
+│   ├── scripts/         # 通用辅助脚本（如 aac-manage.sh）
+│   ├── template/        # 通用 cron 父模板与场景模板
+├── Claude Code/         # 未来开发
+├── Hermes/              # 未来开发
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── README.md
 └── TODO.md
 ```
 
+## 使用方式
+
+### 1. 直接使用通用模板
+
+以 OpenClaw 早安提醒为例：
+
+```bash
+python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml
+```
+
+### 2. 基于基础模板创建自己的场景
+
+1. 从 `OpenClaw/skills/` 复制需要的基础 skill（`aac-skill-manage`、`aac-cron-manage`）。
+2. 每个 skill 已自带 `scripts/`，注册到 OpenClaw workspace 后仍可独立运行。
+3. 在运行时目录（默认 `~/.openclaw/workspace/awesome-AGENT-configure/cron/`）编写场景 YAML，`templateRef` 使用项目根目录的绝对路径。
+4. 用本 skill 目录下的 `scripts/build-cron.py` 渲染生成 `openclaw cron create` 命令。
+
+### 3. 管理 Skill 和 Cron
+
+安装基础 skill：
+
+```bash
+./OpenClaw/scripts/aac-manage.sh install-skill aac-skill-manage aac-cron-manage
+```
+
+创建新 skill：
+
+```bash
+python3 OpenClaw/skills/aac-skill-manage/scripts/init_skill.py aac-<name> \
+  --path OpenClaw/skills \
+  --resources scripts
+```
+
+校验 skill：
+
+```bash
+python3 OpenClaw/skills/aac-skill-manage/scripts/quick_validate.py OpenClaw/skills/<name>
+```
+
+安装 cron 场景：
+
+```bash
+./OpenClaw/scripts/aac-manage.sh install-cron OpenClaw/template/reminders/morning.yaml
+```
+
+删除 cron：
+
+```bash
+./OpenClaw/scripts/aac-manage.sh remove-cron "【AAC-提醒】早安"
+```
+
 ## 设计原则
 
-- **官方参数映射为 `--` 命令行参数**：如 `--message`、`--command`、`--thinking`
-- **非官方扩展通过 Prompt 实现 Harness/Loop**：如时间窗口、去重、人设配置
-- **模板化复用**：通用约束写在 `template-cron.zh.yaml`，场景文件只填变量
-- **简约脚本**：`build-cron.py` 只做 YAML → CLI 的翻译，不嵌入业务逻辑
+- **模板化复用**：通用约束写在父模板中，场景文件只填变量。
+- **Harness 防护**：通过时间窗口、单日去重、状态机等机制防止 cron 误触发与重复执行。
+- **Loop 推进**：项目类任务使用状态机持续迭代，直到目标达成。
+- **简约脚本**：`build-cron.py` 只做 YAML → CLI 的翻译，不嵌入业务逻辑；每个 cron skill 均自包含一份，避免注册后路径丢失。
 
 ## 链接
 
 - OpenClaw 官方文档：https://docs.openclaw.ai/
-- Hermes 官方文档：
-- Claude Code 官方文档：
+- Hermes 官方文档：https://hermes-agent.nousresearch.com/docs
+- Claude Code 官方文档：https://code.claude.com/docs
