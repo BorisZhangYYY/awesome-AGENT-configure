@@ -14,7 +14,13 @@
 
 ### P1：
 
-- [ ] {{任务 3}}
+- [ ] 设计决策：`template-cron.zh.yaml` 中 `persona.file` 与 `context.lightContext: true` 的组合冲突
+  - 问题：`lightContext: true` 会跳过 workspace bootstrap 文件（SOUL.md / IDENTITY.md 等）的注入，而 `persona.file` 通常正是引用这些文件；组合使用时 Agent 可能拿不到人设内容。
+  - 可选方案：
+    1. 在 `build-cron.py` 中增加校验：当 `PERSONA_MODE=file` 且 `LIGHT_CONTEXT=true` 时抛出错误或警告；
+    2. 在模板注释中明确说明该组合的风险，由场景文件自行规避；
+    3. 调整 `PERSONA_PROMPT` 渲染逻辑，在 lightContext 模式下主动读取 `persona.file` 内容并注入到 message 中。
+  - 需要用户确认采用哪种方案后再实现。
 
 ### P2：
 
