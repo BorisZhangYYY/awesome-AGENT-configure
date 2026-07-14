@@ -81,6 +81,9 @@ variables:
 
     **核心文件白名单**（不移动，保持在根目录）：
     SOUL.md / AGENTS.md / IDENTITY.md / USER.md / MEMORY.md / TOOLS.md / HEARTBEAT.md / CLAUDE.md / README.md
+    
+    **允许的系统目录**（不移动）：
+    `.git/` / `.clawhub/` / `.state/` / `.trash/` / `awesome-AGENT-configure/`
 
     **分类原则**：按文件主题（做什么）分类，而非按文件类型（是什么格式）分类。
 

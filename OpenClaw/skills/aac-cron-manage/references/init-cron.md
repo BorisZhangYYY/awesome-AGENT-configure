@@ -25,12 +25,12 @@
   export AAC_REPO=$(python3 -c "import os,sys; ...")
   ```
   回退顺序：环境变量 → 当前目录 → $HOME 下搜索
-- **6. 生成 YAML**：写入 `$AAC_WORKSPACE/cron/init-<job-name>.yaml`
+- **6. 生成 YAML**：写入 `$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml`
   - `templateRef` 替换为绝对路径 `<AAC_REPO>/OpenClaw/template/template-cron.zh.yaml`
 - **7. 渲染命令**：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
-    "$AAC_WORKSPACE/cron/init-<job-name>.yaml"
+  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+    "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml"
   ```
 - **8. 用户确认**：展示 YAML 路径、渲染命令、关键配置说明
 - **9. 执行创建**：用户确认后执行 `openclaw cron create ...`
@@ -39,8 +39,8 @@
 ## 测试模式
 
 ```bash
-python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
-  "$AAC_WORKSPACE/cron/init-<job-name>.yaml" \
+python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml" \
   --test
 ```
 

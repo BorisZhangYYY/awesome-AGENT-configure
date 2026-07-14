@@ -599,11 +599,10 @@ def add_trigger(cmd, variables, scene_path, test_mode=False):
         return
 
     job_name = str(variables.get("JOB_NAME", "untitled")).strip()
-    safe_name = re.sub(r'[^\w\-]', '_', job_name)[:64]
-    workspace = os.path.abspath(os.path.expanduser(variables.get("WORKSPACE", "~/.openclaw/workspace")))
-    trigger_dir = os.path.join(workspace, ".aac-triggers")
+    scene_dir = os.path.dirname(os.path.abspath(scene_path))
+    trigger_dir = scene_dir
     os.makedirs(trigger_dir, exist_ok=True)
-    trigger_path = os.path.join(trigger_dir, f"{safe_name}.trigger.js")
+    trigger_path = os.path.join(trigger_dir, "trigger.js")
 
     with open(trigger_path, "w", encoding="utf-8") as f:
         f.write(trigger_script)
@@ -618,12 +617,27 @@ def add_trigger(cmd, variables, scene_path, test_mode=False):
 
 def build_trigger_script(scene_path, variables, test_mode=False):
     """构建完整的 trigger 脚本：环境变量 + 通用 trigger.js + 场景 JS（可选）。"""
-    script_dir = Path(__file__).parent
-    repo_root = script_dir.parent
-    trigger_js_path = repo_root / "triggers" / "trigger.js"
+    # 优先通过 AAC_REPO 环境变量定位 trigger.js
+    aac_repo = os.environ.get("AAC_REPO", "")
+    if aac_repo:
+        trigger_js_path = Path(aac_repo) / "OpenClaw" / "triggers" / "trigger.js"
+    else:
+        # fallback: 向上搜索 triggers/trigger.js
+        script_dir = Path(__file__).parent
+        search_dir = script_dir
+        trigger_js_path = None
+        for _ in range(6):
+            candidate = search_dir / "triggers" / "trigger.js"
+            if candidate.exists():
+                trigger_js_path = candidate
+                break
+            parent = search_dir.parent
+            if parent == search_dir:
+                break
+            search_dir = parent
 
-    if not trigger_js_path.exists():
-        raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path}")
+    if not trigger_js_path or not trigger_js_path.exists():
+        raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path or 'triggers/trigger.js'}")
 
     # 1. 环境变量注入
     env_lines = []

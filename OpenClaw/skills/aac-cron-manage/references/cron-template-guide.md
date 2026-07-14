@@ -310,18 +310,18 @@ import os, sys
 def locate_repo():
     # 1. 环境变量 AAC_REPO（用户显式设置，例如 /mnt/d/Study_Project/awesome-AGENT-configure）
     env = os.environ.get("AAC_REPO")
-    if env and os.path.isfile(os.path.join(env, "OpenClaw/scripts/build-cron.py")):
+    if env and os.path.isfile(os.path.join(env, "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py")):
         return env
     # 2. 当前工作目录
     cwd = os.getcwd()
-    if os.path.isfile(os.path.join(cwd, "OpenClaw/scripts/build-cron.py")):
+    if os.path.isfile(os.path.join(cwd, "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py")):
         return cwd
     # 3. 在 $HOME 下有限深度搜索
     home = os.path.expanduser("~")
     for root, dirs, _ in os.walk(home):
         if "awesome-AGENT-configure" in dirs:
             p = os.path.join(root, "awesome-AGENT-configure")
-            if os.path.isfile(os.path.join(p, "OpenClaw/scripts/build-cron.py")):
+            if os.path.isfile(os.path.join(p, "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py")):
                 return p
         if root.count(os.sep) - home.count(os.sep) >= 4:
             del dirs[:]
@@ -340,7 +340,7 @@ PY
 
 1. 环境变量 `AAC_REPO`。
 2. 当前工作目录（如果它就是项目根目录）。
-3. `$HOME` 下前 4 层中名为 `awesome-AGENT-configure` 且包含 `OpenClaw/scripts/build-cron.py` 的目录。
+3. `$HOME` 下前 4 层中名为 `awesome-AGENT-configure` 且包含 `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py` 的目录。
 
 ### 5.2 运行时路径（`AAC_WORKSPACE`）
 
@@ -355,8 +355,8 @@ mkdir -p "$AAC_WORKSPACE/cron"
 
 ```bash
 # 渲染生成命令
-python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
-  "$AAC_WORKSPACE/cron/init-<job-name>.yaml"
+python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml"
 ```
 
 如果 `AAC_REPO` 定位失败，应停止执行并提示用户设置 `AAC_REPO` 环境变量。

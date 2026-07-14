@@ -19,8 +19,8 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 ## Hard rules
 
 - Only manage tasks with `【AAC-` prefix in the name.
-- All scene YAML files live in `~/.openclaw/workspace/awesome-AGENT-configure/cron/`.
-- Rendering goes through `OpenClaw/scripts/build-cron.py`.
+- All scene YAML files live in `~/.openclaw/workspace/awesome-AGENT-configure/cron/<task-name>/<task-name>.yaml`.
+- Rendering goes through `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`.
 - Templates are directory-based: `checks/docker-check/docker-check.yaml` + optional `docker-check.js`.
 - Trigger logic is unified in `triggers/trigger.js` (time window + dedup). Scene-specific JS is auto-concatenated by `build-cron.py`.
 - Always show config to user and get confirmation before executing.
@@ -40,13 +40,13 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 
 - Render a scene YAML (normal):
   ```bash
-  python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
-    "$AAC_WORKSPACE/cron/<job-name>.yaml"
+  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+    "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml"
   ```
 - Render a scene YAML (test mode):
   ```bash
-  python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
-    "$AAC_WORKSPACE/cron/<job-name>.yaml" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+    "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" \
     --test
   ```
 - Locate AAC repo:

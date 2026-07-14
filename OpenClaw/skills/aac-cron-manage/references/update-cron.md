@@ -21,7 +21,7 @@
 - **5. 查找 YAML**：在 `$AAC_WORKSPACE/cron/` 下搜索
 - **6. 重新渲染**：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml" \
     --preview
   ```

@@ -24,7 +24,7 @@
 - **6. 修改 YAML**：更新对应变量值
 - **7. 重新渲染**：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml"
   ```
 - **8. 选择更新方式**：
