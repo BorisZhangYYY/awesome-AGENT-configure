@@ -1,29 +1,32 @@
-# 晚安提醒场景
+# 午安提醒场景
 # 本文件为示例配置，更多字段可参考 ../template-cron.zh.yaml 按需覆盖。
-templateRef: "../template-cron.zh.yaml"
+templateRef: "../../template-cron.zh.yaml"
 
 variables:
-  JOB_NAME: "【AAC-提醒】晚安"
-  DESCRIPTION: "晚间问候提醒，单日单次，仅在 21:00-23:30 之间触发。"
+  JOB_NAME: "【AAC-提醒】午安"
+  DESCRIPTION: "午间问候提醒，单日单次，仅在 11:30-13:30 之间触发。"
 
-  SCHEDULE_EXPR: "0 22 * * *"
-  WINDOW_START: "21:00"
-  WINDOW_END: "23:30"
-  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-evening.txt"
+  SCHEDULE_EXPR: "0 12 * * *"
+  WINDOW_START: "11:30"
+  WINDOW_END: "13:30"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-noon.txt"
+
+  # Trigger：使用内置 time_window.js 脚本库，在 Prompt 外完成时间窗口和去重检查
+  TRIGGER_ENABLED: "true"
 
   # 提醒类任务关闭思考，节省 Token
   THINKING: "off"
   # 提醒类任务需要准时触发，禁用自动 stagger
   EXACT: "true"
 
-  SCENE_NAME: "晚安"
-  EMOJI: "🌙"
-  PERSONA_ROLE: "安静的智能助手"
-  TONE: "舒缓、安静、温暖"
-  REMARK: "夜深了，愿你有个好梦，明天再见。"
+  SCENE_NAME: "午安"
+  EMOJI: "☀️"
+  PERSONA_ROLE: "贴心的智能助手"
+  TONE: "轻松、自然、关怀"
+  REMARK: "午间稍作休息，下午会更有精神。"
 
   SCENE_SPECIFIC_INSTRUCTIONS: |
-    你负责在合适的时间给主人送上晚安提醒。
+    你负责在合适的时间给主人送上午安提醒。
 
     **问候规则**
     - 语气：{{TONE}}

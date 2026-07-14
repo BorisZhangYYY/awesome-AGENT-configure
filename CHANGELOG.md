@@ -6,6 +6,57 @@
 
 ### Added
 
+- **Trigger 架构重构**：`triggers/trigger.js` 成为唯一通用脚本（时间窗口 + 去重），场景专属 JS（如 `docker-check.js`）自动拼接。`build-cron.py` 新增 `--test` 参数，生成一次性测试任务（跳过窗口/去重，执行后自动删除）。
+- **模板目录化**：所有场景模板从单文件迁移为目录结构（如 `checks/docker-check/docker-check.yaml` + `docker-check.js`），`templateRef` 从 `../` 改为 `../../`。
+- **Skill 架构重构**：4 个独立 project skill（init-cron / edit-cron / migrate-cron / update-cron）合并为 `aac-cron-manage`，SKILL-GUIDE.md 收归 `references/cron-template-guide.md`。
+- `OpenClaw/skills/aac-cron-manage/` 目录建立，与 workspace skill 结构保持一致。
+
+### Changed
+
+- `build-cron.py` 重构 `add_trigger()`：自动检测场景目录下是否有同名 `.js` 文件，有则拼接 `trigger.js + 场景 JS`，无则直接 `return checkTimeWindowAndDedup()`。
+- `build-cron.py` 移除 `TRIGGER_LIBRARY_PATH` / `TRIGGER_LIBRARY_ENV_INJECT` / `TRIGGER_SCRIPT` 支持，改为直接读取 `triggers/trigger.js` + 自动检测场景 `.js`。
+- `build-cron.py` 移除 `TIME_WINDOW_ENABLED` / `DEDUP_ENABLED` / `WINDOW_OUT_ACTION` 默认值。
+- `template-cron.zh.yaml` 移除 `timeWindow.enabled` / `deduplication.enabled` 字段，仅保留 `start` / `end` / `stateFile` / `granularity`。
+- `template-cron.zh.yaml` 更新 trigger 区块注释，说明新架构（trigger.js 通用 + 场景 JS 可选拼接）。
+- 所有场景模板移除 `TRIGGER_LIBRARY_PATH` 和 `DEDUP_ENABLED` / `TIME_WINDOW_ENABLED` 变量。
+
+### Removed
+
+- `OpenClaw/triggers/` 下旧脚本：`docker_status.js` / `git_changed.js` / `file_changed.js` / `http_changed.js` / `time_window.js`，功能已合并入 `trigger.js` 或场景专属 `.js`。
+- `OpenClaw/skills/init-cron/` / `edit-cron/` / `migrate-cron/` / `update-cron/` 独立目录，内容已合并入 `aac-cron-manage/references/`。
+- `OpenClaw/skills/aac-skill-manage/` 空目录（项目无其他 skill 需管理）。
+- 旧单文件模板：`checks/cron-check.yaml` / `docker-check.yaml` / `workspace-check.yaml` 等（已目录化）。
+
+### Added
+
+- **Trigger 脚本库化**：`build-cron.py` 新增 `TRIGGER_LIBRARY_PATH` 和 `TRIGGER_LIBRARY_ENV_INJECT` 支持，自动从 `OpenClaw/triggers/` 读取库脚本并注入环境变量（`AAC_TIMEZONE`、`AAC_WINDOW_START`、`AAC_DEDUP_FILE` 等），实现脚本复用与任务隔离。
+- `OpenClaw/template/reminders/{morning,noon,evening,custom-reminders}.yaml` 新增 `TRIGGER_ENABLED: "true"` + `TRIGGER_LIBRARY_PATH: "OpenClaw/triggers/time_window.js"`，将时间窗口与去重逻辑从 Prompt 迁移至 trigger 脚本。
+- `OpenClaw/template/checks/cron-check.yaml` 新增 `TRIGGER_ENABLED: "true"` + `TRIGGER_LIBRARY_PATH: "OpenClaw/triggers/time_window.js"`，将时间窗口与去重逻辑从 Prompt 迁移至 trigger 脚本。
+- `OpenClaw/template/checks/docker-check.yaml` 改用 `TRIGGER_LIBRARY_PATH: "OpenClaw/triggers/docker_status.js"` 替代内联 `TRIGGER_SCRIPT`，新增 `DOCKER_STATE_FILE` 变量实现任务级状态文件隔离。
+- `OpenClaw/template/checks/workspace-check.yaml` 改用 `TRIGGER_LIBRARY_PATH: "OpenClaw/triggers/git_changed.js"` 替代内联 `TRIGGER_SCRIPT`，新增 `GIT_DIR` / `GIT_STATE_FILE` 变量实现任务级状态文件隔离。
+- `OpenClaw/template/checks/custom-checks.yaml` 新增 `TRIGGER_ENABLED: "true"` + `TRIGGER_LIBRARY_PATH: "OpenClaw/triggers/time_window.js"` 示例配置。
+
+### Changed
+
+- `OpenClaw/template/template-cron.zh.yaml`：移除 Prompt 层【防护机制 1：时间窗口】和【防护机制 2：去重】指令块，以及"执行后去重"块。时间窗口与去重由 trigger 脚本或 YAML 配置层统一管理，不再在 message 中重复描述。保留 YAML `timeWindow` / `deduplication` 配置区作为 trigger 环境变量来源。
+- `OpenClaw/template/template-cron.zh.yaml` 顶部注释更新为"时间窗口、去重与 trigger 的关系"，明确 trigger 脚本为推荐实现方式，Prompt 层仅作向后兼容。
+- `OpenClaw/template/template-cron.zh.yaml` trigger 区块注释更新，说明 trigger 脚本库（`time_window.js` / `docker_status.js` 等）的推荐用法。
+- `OpenClaw/scripts/build-cron.py` `add_trigger()` 重构为支持 `TRIGGER_LIBRARY_PATH`，新增 `build_trigger_from_library()` 函数负责读取库脚本、注入环境变量、生成复合脚本。
+- `OpenClaw/template/checks/docker-check.yaml` 移除冗余 `WINDOW_START` / `WINDOW_END` / `DEDUP_ENABLED` / `DEDUP_STATE_FILE` 变量（docker_status.js 不依赖时间窗口和去重）。
+- `OpenClaw/template/checks/workspace-check.yaml` 移除冗余 `WINDOW_START` / `WINDOW_END` / `DEDUP_ENABLED` / `DEDUP_STATE_FILE` 变量（git_changed.js 自身实现 commit 去重，时间窗口由 cron 调度保证）。
+
+### Removed
+
+- `OpenClaw/template/template-cron.zh.yaml` 中 Prompt 层的【防护机制 1：时间窗口】和【防护机制 2：去重】完整指令块（约 40 行），以及【执行后去重】块（约 3 行）。
+
+### Added
+
+- **OpenClaw 2026.7.1+ trigger 支持**：`template-cron.zh.yaml` 新增 `trigger` 配置区块，`build-cron.py` 支持 `--trigger-script` / `--trigger-once` 参数渲染，默认 `TRIGGER_ENABLED: "false"` 保持向后兼容。
+- 新增 `OpenClaw/triggers/` 内置脚本库：提供 `time_window.js`（时间窗口+去重）、`docker_status.js`（容器状态变化）、`file_changed.js`（文件修改时间）、`http_changed.js`（HTTP 响应变化）、`git_changed.js`（git 新 commit）5 个通用 trigger 脚本。
+- `OpenClaw/template/checks/docker-check.yaml` 新增 `TRIGGER_ENABLED: "true"` 配置，使用 `docker_status.js` 逻辑，仅在容器状态变化时唤醒 Agent。
+- `OpenClaw/template/checks/workspace-check.yaml` 新增 `TRIGGER_ENABLED: "true"` 配置，使用 `git_changed.js` 逻辑，仅在工作区有 git 变化时唤醒 Agent。
+- `OpenClaw/scripts/build-cron.py` 新增 `add_trigger()` 函数：将 `TRIGGER_SCRIPT` 写入 `~/.openclaw/workspace/.aac-triggers/{job_name}.trigger.js` 并添加 `--trigger-script` 参数。
+
 - `OpenClaw/scripts/build-cron.py` 重构为完全自包含的独立脚本：内嵌 `DEFAULTS` 和 `FLAGS` 常量，零外部文件依赖，可直接拷贝到任意项目使用。
 - `OpenClaw/scripts/build-cron.py` 新增 `{{#IF VAR}}...{{#ELSE}}...{{/IF}}` 条件块引擎，支持模板按变量值分支渲染。
 - `OpenClaw/scripts/build-cron.py` 新增 `<!-- AAC_ORIGIN: ... -->` 起源标记注入机制，即使 cron 被大幅定制化（改名、改结构）也能通过 message 追溯上游模板来源。

@@ -8,11 +8,12 @@
 #   - Loop 模式（LOOP_MODE_ENABLED: "true"）：循环推进的任务，如开发、维护、重构
 #     Loop 模式在普通模式基础上增加状态机、目标/里程碑、自动停用等机制。
 #
-# ⚠️ 为什么需要时间窗口和去重？
+# ⚠️ 关于时间窗口、去重与 trigger 的关系
 # OpenClaw cron 在 gateway 重启或 session 重建时，会补发所有错过的任务。
-# 若不设时间窗口，早安/午安/晚安会在开机瞬间同时触发（开机堆叠）。
-# 若不去重，同一任务可能在一日内重复执行多次。
-# 时间窗口和去重是本模板的核心 Harness 防护机制，不是冗余。
+# 若 cron 调度到达时 trigger 返回 fire: false，则任务被跳过，不会造成开机堆叠。
+# 时间窗口和去重统一由 triggers/trigger.js 处理，所有 cron 任务共用同一份基础逻辑。
+# 场景若有额外条件（如 docker 状态检测、git 变化检测），在场景目录下放同名 .js 文件，
+# 由 build-cron.py 自动拼接。
 #
 # 内置变量：
 #   {{WORKSPACE}} - OpenClaw 工作区目录，默认 ~/.openclaw/workspace，由生成器注入
@@ -35,19 +36,15 @@ schedule:
   expr: "{{SCHEDULE_EXPR}}"     # cron 表达式 / 相对时间 / 间隔
   timezone: "{{TIMEZONE}}"      # --tz，可选；不带时区时 at 视为 UTC
 
-# 时间窗口保护【非官方】
-# OpenClaw 原生不支持时间窗口，本模板在 Prompt 中通过 exec date 自行检查。
-# 时区统一使用 schedule.timezone，不在 timeWindow 中重复配置。
+# 时间窗口配置
+# 供 trigger.js 使用。由 build-cron.py 注入为环境变量 AAC_WINDOW_START / AAC_WINDOW_END。
 timeWindow:
-  enabled: "{{TIME_WINDOW_ENABLED}}"
   start: "{{WINDOW_START}}"
   end: "{{WINDOW_END}}"
-  action: "{{WINDOW_OUT_ACTION}}"  # NO_REPLY | continue
 
-# 单日/单次去重【非官方】
-# OpenClaw 原生不支持去重，本模板在 Prompt 中通过 read/write 文件自行实现。
+# 单日/单次去重配置
+# 供 trigger.js 使用。由 build-cron.py 注入为环境变量 AAC_DEDUP_FILE / AAC_DEDUP_GRANULARITY。
 deduplication:
-  enabled: "{{DEDUP_ENABLED}}"
   stateFile: "{{DEDUP_STATE_FILE}}"
   granularity: "{{DEDUP_GRANULARITY}}"  # daily | half-day | hourly | per-run
 
@@ -103,6 +100,20 @@ command:
   noOutputTimeoutSeconds: "{{COMMAND_NO_OUTPUT_TIMEOUT}}"  # --no-output-timeout-seconds
   outputMaxBytes: "{{COMMAND_OUTPUT_MAX_BYTES}}"           # --output-max-bytes
 
+# 触发器配置【OpenClaw 2026.7.1+ 官方特性】
+# 当 trigger 存在时，schedule 到达后先执行 trigger.script，
+# 返回 { fire: true } 时才执行 payload，否则跳过本次唤醒。
+# 推荐做法：
+#   - 基础时间窗口 + 去重 → triggers/trigger.js（所有 cron 共用，省 Token）
+#   - 额外条件检测 → 在场景目录下放同名 .js 文件（如 docker-check/docker-check.js），
+#     build-cron.py 自动拼接：trigger.js + 场景 JS，场景 JS 内自行调用 checkTimeWindowAndDedup()
+# trigger 脚本由 build-cron.py 自动组装并注入环境变量。
+# 若 TRIGGER_ENABLED 为 true，Prompt 层省略时间窗口和去重逻辑。
+trigger:
+  enabled: "{{TRIGGER_ENABLED}}"      # "true" | "false"
+  script: "{{TRIGGER_SCRIPT}}"          # JS 脚本内容，返回 { fire: boolean, reason?: string }
+  once: "{{TRIGGER_ONCE}}"            # "true" 时仅触发一次后自动失效
+
 # 一次性/实验性选项
 advanced:
   disabled: "{{DISABLED}}"        # --disabled，创建后默认禁用
@@ -116,7 +127,7 @@ advanced:
 # 用于生成 message 的内容，避免每个场景重复书写通用 Harness/Loop 约束。
 # 生成器会用场景变量渲染本模板，结果填入 message 后作为 --message 传递给 OpenClaw。
 # 如未配置本模板，则直接使用 message 字段内容。
-# ⚠️ 场景文件禁止直接定义顶层 template 字段覆盖本模板，以确保时间窗口、去重等 Harness 机制一致生效。
+# ⚠️ 场景文件禁止直接定义顶层 template 字段覆盖本模板，以确保 Loop 状态机、Harness 等机制一致生效。
 #    场景特定内容应通过 {{SCENE_SPECIFIC_INSTRUCTIONS}} 占位符，由场景 YAML 的 SCENE_SPECIFIC_INSTRUCTIONS 变量注入。
 # {{PERSONA_PROMPT}} 由生成器根据 persona 配置渲染：
 # - 若 persona.file 非空：渲染为 "请基于 {{PERSONA_FILE}} 中定义的人设。"
@@ -141,25 +152,6 @@ template: |
   - 当前里程碑：{{DEV_CURRENT_MILESTONE}}
   - 到达目标后自动停用 cron：{{DEV_AUTO_DISABLE_ON_GOAL_REACHED}}
   {{/LOOP_ONLY}}
-
-  **【防护机制 1：时间窗口】防止开机堆叠时非时段任务误触发【非官方】**
-  本机制仅当 `{{TIME_WINDOW_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
-  OpenClaw 在 gateway 重启或 session 重建时会补发错过的任务。
-  即使 cron 表达式命中，也必须检查当前时间是否落在有效窗口内。
-  执行：用 exec 工具运行 `TZ={{TIMEZONE}} date +%H:%M`，获取当前本地时间。
-  将结果解析为 HH:MM 格式：
-  - 如果当前时间在 {{WINDOW_START}} 到 {{WINDOW_END}} 之间：继续执行
-  - 否则：执行窗口外动作 `{{WINDOW_OUT_ACTION}}`；若该动作为 `NO_REPLY`，立即输出 `NO_REPLY` 并结束运行；若为 `continue`，则继续执行
-
-  **【防护机制 2：去重】防止开机堆叠时同一任务重复触发【非官方】**
-  本机制仅当 `{{DEDUP_ENABLED}}` 为 true 时生效。若未启用，跳过本检查。
-  读取状态文件 {{DEDUP_STATE_FILE}}。
-  根据去重粒度 `{{DEDUP_GRANULARITY}}` 生成去重 key：
-  - `daily`：用 exec 运行 `TZ={{TIMEZONE}} date +%Y-%m-%d`，以日期为 key（向后兼容，默认）
-  - `half-day`：用 exec 运行 `TZ={{TIMEZONE}} date +%Y-%m-%d` 获取日期，再用 `TZ={{TIMEZONE}} date +%H` 获取小时；若小时 < 12 则 key 为"日期-AM"，否则为"日期-PM"
-  - `hourly`：用 exec 运行 `TZ={{TIMEZONE}} date +%Y-%m-%d-%H`，以日期+小时为 key
-  - `per-run`：永不去重（直接跳过本检查）
-  若文件中已存在该 key，立即输出 `NO_REPLY`，结束运行。
 
   {{#LOOP_ONLY}}
   ---
@@ -465,10 +457,6 @@ template: |
   **场景特定指令**
   {{SCENE_SPECIFIC_INSTRUCTIONS}}
   {{/NON_LOOP_ONLY}}
-
-  **执行后（如果发送了消息且去重已启用）【非官方】**
-  若 `{{DEDUP_ENABLED}}` 为 true，按照去重粒度 `{{DEDUP_GRANULARITY}}` 生成去重 key（生成规则同【防护机制 2】），
-  并用 write 工具将该 key 写入 {{DEDUP_STATE_FILE}}。
 
   {{#LOOP_ONLY}}
   ---

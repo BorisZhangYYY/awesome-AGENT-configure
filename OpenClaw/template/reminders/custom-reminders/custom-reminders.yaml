@@ -1,6 +1,6 @@
 # 自定义提醒场景（复制此文件后按需修改）
 # 本文件为示例配置，更多字段可参考 ../template-cron.zh.yaml 按需覆盖。
-templateRef: "../template-cron.zh.yaml"
+templateRef: "../../template-cron.zh.yaml"
 
 variables:
   # ========== 自定义占位符（复制后按需修改）==========
@@ -22,6 +22,9 @@ variables:
   WINDOW_START: "{{CUSTOM_WINDOW_START}}"
   WINDOW_END: "{{CUSTOM_WINDOW_END}}"
   DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-{{CUSTOM_SCENE_KEY}}.txt"
+
+  # Trigger：使用内置 time_window.js 脚本库，在 Prompt 外完成时间窗口和去重检查
+  TRIGGER_ENABLED: "true"
 
   # 提醒类任务关闭思考，节省 Token
   THINKING: "off"

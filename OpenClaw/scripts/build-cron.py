@@ -44,9 +44,6 @@ DEFAULTS = {
     "EXACT": "false",
     "TIMEOUT_SECONDS": "300",
     "THINKING": "off",
-    "TIME_WINDOW_ENABLED": "true",
-    "WINDOW_OUT_ACTION": "NO_REPLY",
-    "DEDUP_ENABLED": "true",
     "DEDUP_STATE_FILE": "{{WORKSPACE}}/.state/dedup.txt",
     "DEDUP_GRANULARITY": "daily",
     "LOOP_MODE_ENABLED": "false",
@@ -69,6 +66,10 @@ DEFAULTS = {
     "SCENE_SPECIFIC_INSTRUCTIONS": "",
     "PERSONA_MODE": "inline",
     "WORKSPACE": "~/.openclaw/workspace",
+    # Trigger 默认值（OpenClaw 2026.7.1+）
+    "TRIGGER_ENABLED": "false",
+    "TRIGGER_SCRIPT": "",
+    "TRIGGER_ONCE": "false",
 }
 
 # ===== CLI 参数映射表 =====
@@ -143,6 +144,12 @@ FLAGS = {
             "true_flag": "--exact",
             "false_flag": None,
         },
+        # OpenClaw 2026.7.1+ trigger 支持
+        "trigger.once": {
+            "type": "boolean_flag",
+            "true_flag": "--trigger-once",
+            "false_flag": None,
+        },
     },
 }
 
@@ -175,7 +182,7 @@ def main():
     # 检查是否残留未解析的模板标记
     check_unresolved(message)
 
-    cmd = build_command(variables, FLAGS)
+    cmd = build_command(variables, FLAGS, str(scene_path), args.test)
 
     if args.preview:
         print("=== 渲染后的 MESSAGE（前500字符）===")
@@ -201,6 +208,9 @@ def parse_args():
     )
     parser.add_argument(
         "--preview", action="store_true", help="预览渲染后的 message 和命令，不执行创建"
+    )
+    parser.add_argument(
+        "--test", action="store_true", help="测试模式：跳过时间窗口和去重，任务名称加【TEST】前缀，创建后自动删除"
     )
     return parser.parse_args()
 
@@ -470,7 +480,7 @@ def build_persona_prompt(template, variables):
     return ""
 
 
-def build_command(variables, flags):
+def build_command(variables, flags, scene_path, test_mode=False):
     """根据变量和 flags 映射表构建 openclaw cron create 命令数组。"""
     cmd = ["openclaw", "cron", "create"]
 
@@ -479,6 +489,12 @@ def build_command(variables, flags):
     if not schedule_expr:
         raise ValueError("缺少必要变量：SCHEDULE_EXPR")
     cmd.append(str(schedule_expr))
+
+    # 测试模式：任务名称加前缀，自动删除
+    job_name = variables.get("JOB_NAME", "")
+    if test_mode:
+        job_name = f"【TEST】{job_name}"
+        variables["JOB_NAME"] = job_name
 
     # message 与 command 二选一
     command_script = variables.get("COMMAND_SCRIPT", "")
@@ -553,7 +569,130 @@ def build_command(variables, flags):
     add_special_boolean(cmd, "advanced.exact", variables.get("EXACT", ""), flags)
     add_flag(cmd, "advanced.stagger", variables.get("STAGGER", ""), flags)
 
+    # OpenClaw 2026.7.1+ trigger 支持
+    add_trigger(cmd, variables, scene_path, test_mode)
+
+    # 测试模式：自动追加 --delete-after-run
+    if test_mode:
+        cmd.append("--delete-after-run")
+
     return cmd
+
+
+def add_trigger(cmd, variables, scene_path, test_mode=False):
+    """处理 trigger 配置：构建组合脚本并添加 --trigger-script 参数。
+
+    构建流程：
+    1. 注入环境变量（AAC_TIMEZONE / AAC_WINDOW_START 等）
+    2. 读取通用 trigger.js（时间窗口 + 去重）
+    3. 检测场景目录是否有同名 .js 文件：
+       - 有 → 拼接场景 JS（场景内自行调用 checkTimeWindowAndDedup()）
+       - 无 → 自动追加 `return checkTimeWindowAndDedup();`
+    4. 若 test_mode → 在脚本头部注入 AAC_TEST_MODE = "true"
+    """
+    trigger_enabled = parse_bool(variables.get("TRIGGER_ENABLED", "false"))
+    if not trigger_enabled:
+        return
+
+    trigger_script = build_trigger_script(scene_path, variables, test_mode)
+    if not trigger_script:
+        return
+
+    job_name = str(variables.get("JOB_NAME", "untitled")).strip()
+    safe_name = re.sub(r'[^\w\-]', '_', job_name)[:64]
+    workspace = os.path.abspath(os.path.expanduser(variables.get("WORKSPACE", "~/.openclaw/workspace")))
+    trigger_dir = os.path.join(workspace, ".aac-triggers")
+    os.makedirs(trigger_dir, exist_ok=True)
+    trigger_path = os.path.join(trigger_dir, f"{safe_name}.trigger.js")
+
+    with open(trigger_path, "w", encoding="utf-8") as f:
+        f.write(trigger_script)
+
+    cmd.append("--trigger-script")
+    cmd.append(trigger_path)
+
+    trigger_once = parse_bool(variables.get("TRIGGER_ONCE", "false"))
+    if trigger_once:
+        cmd.append("--trigger-once")
+
+
+def build_trigger_script(scene_path, variables, test_mode=False):
+    """构建完整的 trigger 脚本：环境变量 + 通用 trigger.js + 场景 JS（可选）。"""
+    script_dir = Path(__file__).parent
+    repo_root = script_dir.parent
+    trigger_js_path = repo_root / "triggers" / "trigger.js"
+
+    if not trigger_js_path.exists():
+        raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path}")
+
+    # 1. 环境变量注入
+    env_lines = []
+    timezone = variables.get("TIMEZONE", "")
+    if timezone:
+        env_lines.append(f'process.env.AAC_TIMEZONE = {json.dumps(timezone)};')
+
+    window_start = variables.get("WINDOW_START", "")
+    window_end = variables.get("WINDOW_END", "")
+    if window_start:
+        env_lines.append(f'process.env.AAC_WINDOW_START = {json.dumps(window_start)};')
+    if window_end:
+        env_lines.append(f'process.env.AAC_WINDOW_END = {json.dumps(window_end)};')
+
+    dedup_file = variables.get("DEDUP_STATE_FILE", "")
+    if dedup_file:
+        env_lines.append(f'process.env.AAC_DEDUP_FILE = {json.dumps(dedup_file)};')
+
+    dedup_granularity = variables.get("DEDUP_GRANULARITY", "daily")
+    env_lines.append(f'process.env.AAC_DEDUP_GRANULARITY = {json.dumps(dedup_granularity)};')
+
+    # 场景专属变量
+    docker_state = variables.get("DOCKER_STATE_FILE", "")
+    if docker_state:
+        env_lines.append(f'process.env.AAC_DOCKER_STATE_FILE = {json.dumps(docker_state)};')
+
+    git_dir = variables.get("GIT_DIR", "")
+    if git_dir:
+        env_lines.append(f'process.env.AAC_GIT_DIR = {json.dumps(git_dir)};')
+    git_state = variables.get("GIT_STATE_FILE", "")
+    if git_state:
+        env_lines.append(f'process.env.AAC_GIT_STATE_FILE = {json.dumps(git_state)};')
+
+    watch_file = variables.get("WATCH_FILE", "")
+    if watch_file:
+        env_lines.append(f'process.env.AAC_WATCH_FILE = {json.dumps(watch_file)};')
+    file_state = variables.get("FILE_STATE_FILE", "")
+    if file_state:
+        env_lines.append(f'process.env.AAC_FILE_STATE_FILE = {json.dumps(file_state)};')
+
+    watch_url = variables.get("WATCH_URL", "")
+    if watch_url:
+        env_lines.append(f'process.env.AAC_WATCH_URL = {json.dumps(watch_url)};')
+    http_state = variables.get("HTTP_STATE_FILE", "")
+    if http_state:
+        env_lines.append(f'process.env.AAC_HTTP_STATE_FILE = {json.dumps(http_state)};')
+
+    # 测试模式
+    if test_mode:
+        env_lines.append('process.env.AAC_TEST_MODE = "true";')
+
+    preamble = "// ===== AAC Trigger 环境变量注入 =====\n" + "\n".join(env_lines) + "\n\n"
+
+    # 2. 通用 trigger.js
+    base_script = trigger_js_path.read_text(encoding="utf-8")
+
+    # 3. 检测场景专属 JS
+    scene_dir = Path(scene_path).parent
+    scene_name = Path(scene_path).stem
+    scene_js = scene_dir / f"{scene_name}.js"
+
+    if scene_js.exists():
+        scene_script = scene_js.read_text(encoding="utf-8")
+        full_script = preamble + base_script + "\n\n" + scene_script
+    else:
+        # 无场景 JS → 直接返回通用检查结果
+        full_script = preamble + base_script + "\n\n// ===== 场景无专属逻辑，直接返回通用检查结果 =====\nreturn checkTimeWindowAndDedup();\n"
+
+    return full_script
 
 
 def add_flag(cmd, field_path, value, flags):

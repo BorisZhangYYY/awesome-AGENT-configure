@@ -1,0 +1,102 @@
+# 自定义巡检场景（复制此文件后按需修改）
+# ============================================================
+# 本文件为通用巡检模板，用于检查任意目标的状态并在异常时告警。
+# 适用于：
+#   - 服务健康检查
+#   - 资源使用监控（磁盘、内存、CPU）
+#   - 自定义指标巡检
+#   - 任何"正常静默、异常告警"的定时检查任务
+#
+# 使用方式：
+#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/checks/custom-checks.yaml
+
+templateRef: "../../template-cron.zh.yaml"
+
+variables:
+  # ========== 自定义占位符（复制后按需修改）==========
+  CUSTOM_SCENE_NAME: "自定义巡检"
+  CUSTOM_SCENE_KEY: "custom"
+  CUSTOM_DESCRIPTION: "自定义巡检场景"
+  CUSTOM_SCHEDULE_EXPR: "0 */6 * * *"
+  CUSTOM_WINDOW_START: "00:00"
+  CUSTOM_WINDOW_END: "23:59"
+  CUSTOM_EMOJI: "🔍"
+  # 巡检目标：URL、文件路径、命令或资源名称
+  CUSTOM_CHECK_TARGET: "https://example.com/health"
+  # 正常判定标准（满足时静默）
+  CUSTOM_NORMAL_CRITERIA: "HTTP 200 且响应时间 < 1s"
+  # 异常判定标准（满足时告警）
+  CUSTOM_ABNORMAL_CRITERIA: "HTTP 非 200 或响应时间 ≥ 1s 或连接失败"
+
+  JOB_NAME: "【AAC-巡检】{{CUSTOM_SCENE_NAME}}"
+  DESCRIPTION: "{{CUSTOM_DESCRIPTION}}"
+
+  SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"
+  WINDOW_START: "{{CUSTOM_WINDOW_START}}"
+  WINDOW_END: "{{CUSTOM_WINDOW_END}}"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/check-{{CUSTOM_SCENE_KEY}}.txt"
+
+  # Trigger：启用 trigger.js 时间窗口 + 去重检查
+  # 如需额外检测状态变化（如 URL 响应变化），在场景目录下放同名 .js 文件
+  # build-cron.py 自动拼接：trigger.js + 场景 JS
+  TRIGGER_ENABLED: "true"
+
+  # 巡检类任务正常时静默，异常时告警
+  DELIVERY_MODE: "announce"
+  BEST_EFFORT: "true"
+  LIGHT_CONTEXT: "true"
+  THINKING: "low"
+  TOOLS: "exec,read,write"
+  EXACT: "false"
+  TIMEOUT_SECONDS: "300"
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    你负责执行 **{{CUSTOM_SCENE_NAME}}** 巡检任务。
+
+    **巡检目标**：`{{CUSTOM_CHECK_TARGET}}`
+    **报告目录**：`{{WORKSPACE}}/docs/reports/check-{{CUSTOM_SCENE_KEY}}/`
+
+    ---
+
+    ## 步骤 1：执行检查
+
+    根据巡检目标，使用合适的工具获取当前状态：
+    - URL 健康检查：用 exec 运行 `curl -s -o /dev/null -w "%{http_code} %{time_total}" {{CUSTOM_CHECK_TARGET}}`
+    - 本地资源检查：用 exec 运行 `df -h`、`free -m`、`ps aux` 等
+    - 自定义脚本检查：用 exec 运行预定义的命令
+
+    ## 步骤 2：判定结果
+
+    - **正常**：{{CUSTOM_NORMAL_CRITERIA}}
+    - **异常**：{{CUSTOM_ABNORMAL_CRITERIA}}
+
+    ## 步骤 3：写入巡检报告
+
+    报告路径：用 exec 运行 `date +%Y-%m-%d` 获取当前日期，写入 `{{WORKSPACE}}/docs/reports/check-{{CUSTOM_SCENE_KEY}}/<YYYY-MM-DD>.md`。
+
+    ```markdown
+    # {{CUSTOM_EMOJI}} 【AAC-巡检】{{CUSTOM_SCENE_NAME}} — <用 exec 获取的当前日期> <用 exec 获取的当前时间>
+
+    ## 摘要
+    - 巡检目标：{{CUSTOM_CHECK_TARGET}}
+    - 结果：正常 / 异常
+    - 一句话：
+
+    ## 详情
+    （如有异常）
+    - 异常指标：
+    - 建议操作：
+    ```
+
+    ## 步骤 4：清理旧报告
+
+    保留最近 30 天报告，旧报告移入 `.trash/`：
+    ```bash
+    mkdir -p {{WORKSPACE}}/.trash/ && find {{WORKSPACE}}/docs/reports/check-{{CUSTOM_SCENE_KEY}}/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
+    ```
+
+    ---
+
+    **汇总结果**：
+    - 正常：输出 `NO_REPLY`，不发送任何消息。
+    - 异常：输出 Markdown 告警，包含异常详情和建议操作。
