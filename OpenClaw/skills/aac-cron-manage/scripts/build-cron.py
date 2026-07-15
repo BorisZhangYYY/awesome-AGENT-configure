@@ -70,6 +70,15 @@ DEFAULTS = {
     "TRIGGER_ENABLED": "false",
     "TRIGGER_SCRIPT": "",
     "TRIGGER_ONCE": "false",
+    # 2026-07-15 补全：覆盖所有 OpenClaw 官方 cron CLI 参数
+    "DISPLAY_NAME": "",
+    "DECLARATION_KEY": "",
+    "ACCOUNT": "",
+    "TIMEOUT_MS": "",
+    "FALLBACKS": "",
+    "EXPECT_FINAL": "false",
+    "ON_EXIT": "",
+    "ON_EXIT_CWD": "",
 }
 
 # ===== CLI 参数映射表 =====
@@ -78,6 +87,9 @@ DEFAULTS = {
 FLAGS = {
     "official": {
         "name": "--name",
+        "description": "--description",
+        "displayName": "--display-name",
+        "declarationKey": "--declaration-key",
         "message": "--message",
         "systemEvent": "--system-event",
         "schedule.timezone": "--tz",
@@ -85,10 +97,13 @@ FLAGS = {
         "delivery.to": "--to",
         "delivery.threadId": "--thread-id",
         "delivery.webhookUrl": "--webhook",
+        "delivery.account": "--account",
         "session.target": "--session",
         "session.timeoutSeconds": "--timeout-seconds",
+        "session.timeoutMs": "--timeout",
         "agent.agentId": "--agent",
         "agent.model": "--model",
+        "agent.fallbacks": "--fallbacks",
         "agent.thinking": "--thinking",
         "agent.tools": "--tools",
         "command.script": "--command",
@@ -100,6 +115,8 @@ FLAGS = {
         "command.outputMaxBytes": "--output-max-bytes",
         "advanced.wake": "--wake",
         "advanced.stagger": "--stagger",
+        "advanced.onExit": "--on-exit",
+        "advanced.onExitCwd": "--on-exit-cwd",
     },
     "special": {
         "schedule.expr": {
@@ -148,6 +165,12 @@ FLAGS = {
         "trigger.once": {
             "type": "boolean_flag",
             "true_flag": "--trigger-once",
+            "false_flag": None,
+        },
+        # 2026-07-15 补全
+        "advanced.expectFinal": {
+            "type": "boolean_flag",
+            "true_flag": "--expect-final",
             "false_flag": None,
         },
     },
@@ -528,6 +551,9 @@ def build_command(variables, flags, scene_path, test_mode=False):
 
     # 基础信息
     add_flag(cmd, "name", variables.get("JOB_NAME", ""), flags)
+    add_flag(cmd, "description", variables.get("DESCRIPTION", ""), flags)
+    add_flag(cmd, "displayName", variables.get("DISPLAY_NAME", ""), flags)
+    add_flag(cmd, "declarationKey", variables.get("DECLARATION_KEY", ""), flags)
 
     # 调度
     add_flag(cmd, "schedule.timezone", variables.get("TIMEZONE", ""), flags)
@@ -538,6 +564,7 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "delivery.to", variables.get("TO", ""), flags)
     add_flag(cmd, "delivery.threadId", variables.get("THREAD_ID", ""), flags)
     add_flag(cmd, "delivery.webhookUrl", variables.get("WEBHOOK_URL", ""), flags)
+    add_flag(cmd, "delivery.account", variables.get("ACCOUNT", ""), flags)
 
     # 会话
     session_target = str(variables.get("SESSION_TARGET", "")).strip()
@@ -551,6 +578,7 @@ def build_command(variables, flags, scene_path, test_mode=False):
     if session_target:
         add_flag(cmd, "session.target", session_target, flags)
     add_flag(cmd, "session.timeoutSeconds", variables.get("TIMEOUT_SECONDS", ""), flags)
+    add_flag(cmd, "session.timeoutMs", variables.get("TIMEOUT_MS", ""), flags)
 
     # 上下文
     add_special_boolean(cmd, "context.lightContext", variables.get("LIGHT_CONTEXT", ""), flags)
@@ -560,6 +588,7 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "agent.model", variables.get("MODEL", ""), flags)
     add_flag(cmd, "agent.thinking", variables.get("THINKING", ""), flags)
     add_flag(cmd, "agent.tools", variables.get("TOOLS", ""), flags)
+    add_flag(cmd, "agent.fallbacks", variables.get("FALLBACKS", ""), flags)
 
     # 高级选项
     add_special_boolean(cmd, "advanced.disabled", variables.get("DISABLED", ""), flags)
@@ -568,6 +597,9 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "advanced.wake", variables.get("WAKE", ""), flags)
     add_special_boolean(cmd, "advanced.exact", variables.get("EXACT", ""), flags)
     add_flag(cmd, "advanced.stagger", variables.get("STAGGER", ""), flags)
+    add_special_boolean(cmd, "advanced.expectFinal", variables.get("EXPECT_FINAL", ""), flags)
+    add_flag(cmd, "advanced.onExit", variables.get("ON_EXIT", ""), flags)
+    add_flag(cmd, "advanced.onExitCwd", variables.get("ON_EXIT_CWD", ""), flags)
 
     # OpenClaw 2026.7.1+ trigger 支持
     add_trigger(cmd, variables, scene_path, test_mode)

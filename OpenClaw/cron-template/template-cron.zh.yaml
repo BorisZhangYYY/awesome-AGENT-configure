@@ -18,92 +18,174 @@
 # 内置变量：
 #   {{WORKSPACE}} - OpenClaw 工作区目录，默认 ~/.openclaw/workspace，由生成器注入
 
+# ===== 基础信息 =====
+# --name：任务名称，强制格式为 【AAC-分类】任务名
+#   分类取值：提醒 | 巡检 | 项目 | 学习
+#   示例：【AAC-巡检】Docker 容器健康
 name: "{{JOB_NAME}}"
+# 内部分类标签（提醒/巡检/项目/学习），非 OpenClaw CLI 参数，仅用于文档与 skill 路由
 category: "{{CATEGORY}}"
+# --description：任务用途的简短描述，便于在 cron list 中快速识别
+#   示例：检查 Docker 容器运行状态，异常时告警
 description: "{{DESCRIPTION}}"
+# --display-name：人类可读的声明式标签，用于 UI 展示（可选，留空则使用 name）
+#   与 name 的区别：name 用于机器匹配（带 【AAC-】 前缀），displayName 用于人类阅读
+#   示例：Docker 巡检
+displayName: "{{DISPLAY_NAME}}"
+# --declaration-key：幂等声明键，同一 key 的 create 操作不会重复创建
+#   场景 YAML 中建议填写固定值，防止 skill 误操作创建重复任务
+#   留空则不启用幂等保护
+declarationKey: "{{DECLARATION_KEY}}"
 
-# Agent 任务载荷（与 command 二选一）
-# --message：isolated / current / session:<id> 模式下的任务提示文本
+# ===== 任务载荷（Agent 模式与命令模式二选一）=====
+# --message：isolated / current / session:<id> 模式下的 Agent 提示文本
 # --system-event：main 模式下的系统事件文本
 # message 由下方 template 渲染后填充；如未配置 template，则直接使用本字段内容
 message: "{{MESSAGE}}"
 systemEvent: "{{SYSTEM_EVENT}}"
 
-# 调度配置
-# OpenClaw 支持三种计划类型：at（一次性） | every（固定间隔） | cron（定时表达式）
+# ===== 调度配置 =====
+# OpenClaw 支持三种计划类型。
 schedule:
-  type: "{{SCHEDULE_TYPE}}"     # at | every | cron
-  expr: "{{SCHEDULE_EXPR}}"     # cron 表达式 / 相对时间 / 间隔
-  timezone: "{{TIMEZONE}}"      # --tz，可选；不带时区时 at 视为 UTC
+  # 计划类型：cron（定时表达式）| at（一次性）| every（固定间隔）
+  type: "{{SCHEDULE_TYPE}}"
+  # 计划表达式：
+  #   cron 类型：5 字段 cron 表达式，如 "0 8 * * *"（每天 8:00）
+  #   at 类型：ISO-8601 时间戳或相对时间，如 "+1h"
+  #   every 类型：间隔，如 "10m"、"1h"
+  expr: "{{SCHEDULE_EXPR}}"
+  # --tz：IANA 时区。为空时使用 Gateway 宿主机本地时区
+  #   示例：Asia/Shanghai | America/New_York | Europe/London
+  timezone: "{{TIMEZONE}}"
 
-# 时间窗口配置
-# 供 trigger.js 使用。由 build-cron.py 注入为环境变量 AAC_WINDOW_START / AAC_WINDOW_END。
+# ===== 时间窗口（Trigger 环境变量）=====
+# 供 trigger.js 使用，由 build-cron.py 注入为环境变量。
+# 窗口外触发的任务会被 trigger 拦截（fire: false），防止 Gateway 重启后开机堆叠。
 timeWindow:
+  # 窗口开始时间，格式 HH:MM，如 "07:00"
   start: "{{WINDOW_START}}"
+  # 窗口结束时间，格式 HH:MM，如 "23:59"
   end: "{{WINDOW_END}}"
 
-# 单日/单次去重配置
-# 供 trigger.js 使用。由 build-cron.py 注入为环境变量 AAC_DEDUP_FILE / AAC_DEDUP_GRANULARITY。
+# ===== 去重（Trigger 环境变量）=====
+# 供 trigger.js 使用，由 build-cron.py 注入为环境变量。
+# 防止同一任务在短时间内被重复执行。
 deduplication:
+  # 去重状态文件路径，如 {{WORKSPACE}}/.state/reminder-morning.txt
   stateFile: "{{DEDUP_STATE_FILE}}"
-  granularity: "{{DEDUP_GRANULARITY}}"  # daily | half-day | hourly | per-run
+  # 去重粒度：daily（每天一次）| half-day（每半天）| hourly（每小时）| per-run（不去重）
+  granularity: "{{DEDUP_GRANULARITY}}"
 
-# 人设/身份配置【非官方】
-# OpenClaw 原生通过 workspace 下的 bootstrap 文件注入人设（SOUL.md / IDENTITY.md 等）。
-# 本模板提供一层显式配置，方便场景文件决定使用内联角色还是引用外部人设文件。
+# ===== 人设/身份（非官方扩展）=====
+# OpenClaw 原生通过 workspace bootstrap 文件注入人设（SOUL.md / IDENTITY.md）。
+# 本模板提供显式配置层，方便场景文件选择内联角色还是引用外部人设文件。
 persona:
-  mode: "{{PERSONA_MODE}}"      # inline | file
-  file: "{{PERSONA_FILE}}"      # 外部人设文件路径，如 ~/.openclaw/workspace/SOUL.md 或 IDENTITY.md
-  role: "{{PERSONA_ROLE}}"      # inline 模式下的角色描述；file 模式下可留空
+  # 注入方式：inline（内联角色描述）| file（引用外部人设文件）
+  mode: "{{PERSONA_MODE}}"
+  # file 模式下的外部人设文件路径，如 {{WORKSPACE}}/SOUL.md
+  file: "{{PERSONA_FILE}}"
+  # inline 模式下的角色描述，如 "贴心的智能助手"；file 模式下可留空
+  role: "{{PERSONA_ROLE}}"
 
-# 投递配置
+# ===== 投递配置 =====
+# 控制任务执行结果/汇报投递到哪个渠道。巡检类可设为 none（正常静默），提醒类设为 announce（强制送达）。
 delivery:
-  mode: "{{DELIVERY_MODE}}"     # announce | webhook | none
-  channel: "{{CHANNEL}}"        # --channel；具体平台如 telegram | slack | discord | whatsapp | mattermost | signal | imessage | ...
-                                # 特殊值：last 表示使用最近/当前会话的渠道（非具体平台）
-  to: "{{TO}}"                  # --to；接收目标：群聊 ID、私聊 ID 或频道名；部分平台需特殊格式（如 Telegram: -100xxx:topic:123）
-  threadId: "{{THREAD_ID}}"       # --thread-id；Telegram forum topic ID
-  webhookUrl: "{{WEBHOOK_URL}}" # --webhook；webhook 模式必填
-  bestEffort: "{{BEST_EFFORT}}"   # --best-effort-deliver / --no-best-effort-deliver；为 true 时投递失败不会导致整个 cron 作业失败
-  failureDestination: "{{FAILURE_DESTINATION}}"  # 【非官方】失败通知投递目标；当前 AGENT 模式无向任意目标投递消息的工具，暂未注入 prompt，预留字段
+  # --announce / --webhook / --no-deliver
+  #   announce：Agent 没发则 Runner 兜底发，适合必须送达的提醒
+  #   webhook：POST 到 webhookUrl，适合集成外部系统
+  #   none：无 Runner 兜底，适合巡检类（正常时静默，异常由 Agent 自行投递）
+  mode: "{{DELIVERY_MODE}}"
+  # --channel：投递渠道。填写平台标识：telegram | slack | discord | whatsapp | feishu | ...
+  #   特殊值 "last" 表示复用最近会话的渠道
+  channel: "{{CHANNEL}}"
+  # --to：接收目标。格式因平台而异：
+  #   Telegram: -100xxx（群聊）或数字 ID（私聊），支持 topic:123 后缀
+  #   Discord: channelId 或 user:ID
+  #   Feishu: chat_id 或 open_id
+  to: "{{TO}}"
+  # --thread-id：Telegram 论坛话题 ID，仅 Telegram 平台有效
+  threadId: "{{THREAD_ID}}"
+  # --webhook：webhook 接收 URL，仅 delivery.mode = webhook 时生效
+  webhookUrl: "{{WEBHOOK_URL}}"
+  # --best-effort-deliver / --no-best-effort-deliver
+  #   true：投递失败不导致 cron 作业标记为失败（提醒类推荐）
+  #   false：投递失败则作业也标记失败
+  bestEffort: "{{BEST_EFFORT}}"
+  # --account：多渠道账号选择。当同一平台配置了多个账号时，指定使用哪个
+  #   留空则使用默认账号
+  account: "{{ACCOUNT}}"
+  # 【非官方】失败通知的备用投递目标。当前 Agent 模式下暂未注入 prompt，预留字段。
+  failureDestination: "{{FAILURE_DESTINATION}}"
 
-# 会话配置
+# ===== 会话配置 =====
+# 控制 cron 任务在哪个会话中执行。绝大多数任务推荐 isolated（独立会话，不污染主会话）。
 session:
-  target: "{{SESSION_TARGET}}"  # --session；main | isolated | current | session:<具体ID>
-  persistentId: "{{PERSISTENT_ID}}"  # 仅填写 ID 即可，生成器会自动拼成 session:<ID>
-  timeoutSeconds: "{{TIMEOUT_SECONDS}}"  # --timeout-seconds
+  # --session：执行会话目标
+  #   main：主会话，适合需要立即打扰用户的提醒
+  #   isolated：独立会话，不污染主会话（推荐）
+  #   current：绑定当前创建时的会话
+  #   session:<id>：持久命名会话，适合需要历史积累的 Loop 任务
+  target: "{{SESSION_TARGET}}"
+  # 持久会话 ID（仅填写 ID 即可，生成器自动拼成 session:<ID> 传给 --session）
+  # 当 SESSION_TARGET 不以 session: 开头时，若 PERSISTENT_ID 非空则自动拼接
+  persistentId: "{{PERSISTENT_ID}}"
+  # --timeout-seconds：Agent/命令任务的超时秒数
+  #   提醒类: 120s | 巡检类: 300s | 开发类: 14400s (4h) | 学习类: 3600s (1h)
+  timeoutSeconds: "{{TIMEOUT_SECONDS}}"
+  # --timeout：毫秒级超时（可选）。若同时设置 timeoutSeconds 和 timeoutMs，
+  #   OpenClaw 以更严格的为准。大多数场景用 timeoutSeconds 即可，
+  #   需要亚秒级精度控制时使用 timeoutMs
+  timeoutMs: "{{TIMEOUT_MS}}"
 
-# Agent 执行上下文
+# ===== 执行上下文 =====
 context:
-  # --light-context：为 true 时跳过 workspace bootstrap 文件注入，节省 Token
-  # 说明：
-  #   true  = 不加载 AGENTS.md/SOUL.md/IDENTITY.md/USER.md/MEMORY.md（简单提醒/巡检推荐）
-  #   false = 完整加载所有系统文件（审查/整理/开发任务必需，需读取系统文件内容）
+  # --light-context：是否跳过 workspace bootstrap 文件注入
+  #   true：不加载 AGENTS.md/SOUL.md/IDENTITY.md 等，省 Token（提醒/巡检推荐）
+  #   false：完整加载所有系统文件（开发/整理/学习必需）
   lightContext: "{{LIGHT_CONTEXT}}"
 
-# Agent 配置
+# ===== Agent 配置 =====
+# 控制执行任务的 Agent 身份、模型与能力。留空则使用 Gateway 默认值。
 agent:
-  agentId: "{{AGENT_ID}}"       # --agent，绑定特定 agent
-  model: "{{MODEL}}"            # --model，模型覆盖，如 claude-sonnet-4-6
-  thinking: "{{THINKING}}"      # --thinking，思考级别覆盖，如 off | low | medium | high
-  tools: "{{TOOLS}}"            # --tools，限制作业可用工具，如 "exec,read"
+  # --agent：绑定特定 Agent ID，不填则使用默认 Agent
+  agentId: "{{AGENT_ID}}"
+  # --model：模型覆盖。格式为 provider/model 或别名
+  #   示例：kimi-for-coding/kimi-for-coding | datagrand/deepseek-v4-pro
+  model: "{{MODEL}}"
+  # --fallbacks：模型降级链。当主模型不可用时，按顺序尝试 fallback 模型
+  #   格式：逗号分隔的模型列表，如 "datagrand/deepseek-v4-pro,openai/gpt-4o"
+  #   留空则不启用降级
+  fallbacks: "{{FALLBACKS}}"
+  # --thinking：思考级别。控制推理深度与 Token 消耗
+  #   off：关闭思考（提醒/问候类推荐）| low：简单巡检 | medium：开发/学习 | high：复杂分析
+  thinking: "{{THINKING}}"
+  # --tools：工具白名单，限制 Agent 可用的工具
+  #   逗号分隔，如 "exec,read,write"。留空则可用全部工具
+  tools: "{{TOOLS}}"
 
-# 命令模式（与 message 二选一）
-# OpenClaw 原生语义：只要存在 --command 参数即启用命令模式
-# 模板层规则：command.script 非空时渲染 --command，否则不渲染
+# ===== 命令模式（与 Agent 模式二选一）=====
+# 当 command.script 非空时启用命令模式，否则使用 Agent 模式。
+# 命令模式适合纯脚本巡检、数据导出等不需要 Agent 推理的确定性任务。
 command:
-  script: "{{COMMAND_SCRIPT}}"  # --command；非空时启用命令模式
-  cwd: "{{COMMAND_CWD}}"        # --command-cwd
-  argv: "{{COMMAND_ARGV}}"        # --command-argv
-  input: "{{COMMAND_INPUT}}"    # --command-input
-  env: "{{COMMAND_ENV}}"          # --command-env
-  noOutputTimeoutSeconds: "{{COMMAND_NO_OUTPUT_TIMEOUT}}"  # --no-output-timeout-seconds
-  outputMaxBytes: "{{COMMAND_OUTPUT_MAX_BYTES}}"           # --output-max-bytes
+  # --command：要执行的 shell 命令
+  script: "{{COMMAND_SCRIPT}}"
+  # --command-cwd：命令的工作目录
+  cwd: "{{COMMAND_CWD}}"
+  # --command-argv：精确参数数组（JSON），避免 shell 转义问题
+  #   示例：["node", "scripts/export.mjs", "--format=json"]
+  argv: "{{COMMAND_ARGV}}"
+  # --command-input：标准输入内容
+  input: "{{COMMAND_INPUT}}"
+  # --command-env：环境变量覆盖，格式 KEY=VALUE（可重复）
+  env: "{{COMMAND_ENV}}"
+  # --no-output-timeout-seconds：无输出超时秒数，超时则杀进程
+  noOutputTimeoutSeconds: "{{COMMAND_NO_OUTPUT_TIMEOUT}}"
+  # --output-max-bytes：stdout/stderr 捕获上限（字节）
+  outputMaxBytes: "{{COMMAND_OUTPUT_MAX_BYTES}}"
 
-# 触发器配置【OpenClaw 2026.7.1+ 官方特性】
-# 当 trigger 存在时，schedule 到达后先执行 trigger.script，
-# 返回 { fire: true } 时才执行 payload，否则跳过本次唤醒。
-# trigger 脚本由 trigger-template/trigger.js 统一提供（时间窗口检查），
+# ===== Trigger 配置（OpenClaw 2026.7.1+ 官方特性）=====
+# schedule 到达后先执行 trigger 脚本，返回 { fire: true } 时才执行 payload。
+# 脚本由 trigger-template/trigger.js 统一提供（时间窗口检查），
 # build-cron.py 自动组装并注入环境变量。
 # 若 TRIGGER_ENABLED 为 true，Prompt 层省略时间窗口和去重逻辑。
 #
@@ -111,18 +193,41 @@ command:
 #    当前仅通用时间窗口检查可正常工作。build-cron.py 保留场景 JS 拼接脚手架，
 #    待 OpenClaw 优化沙箱策略后启用。
 trigger:
-  enabled: "{{TRIGGER_ENABLED}}"      # "true" | "false"
-  script: "{{TRIGGER_SCRIPT}}"          # JS 脚本内容，返回 { fire: boolean, reason?: string }
-  once: "{{TRIGGER_ONCE}}"            # "true" 时仅触发一次后自动失效
+  # 是否启用 trigger 机制（true/false）
+  enabled: "{{TRIGGER_ENABLED}}"
+  # trigger 脚本内容（由 build-cron.py 自动填充，场景 YAML 无需设置）
+  script: "{{TRIGGER_SCRIPT}}"
+  # --trigger-once：首次成功触发后自动失效（true/false）
+  once: "{{TRIGGER_ONCE}}"
 
-# 一次性/实验性选项
+# ===== 高级选项 =====
+# 控制任务生命周期、执行精度与钩子。
 advanced:
-  disabled: "{{DISABLED}}"        # --disabled，创建后默认禁用
-  deleteAfterRun: "{{DELETE_AFTER_RUN}}"  # --delete-after-run，运行成功后自动删除
-  keepAfterRun: "{{KEEP_AFTER_RUN}}"      # --keep-after-run，运行成功后保留作业
-  wake: "{{WAKE}}"              # --wake；now | next-heartbeat
-  exact: "{{EXACT}}"              # --exact，强制精确计时，禁止自动错开
-  stagger: "{{STAGGER}}"        # --stagger，显式错开窗口，如 "30s"
+  # --disabled：创建后默认禁用，需手动启用（调试/预发布场景）
+  disabled: "{{DISABLED}}"
+  # --delete-after-run：成功执行后自动删除（一次性任务）
+  deleteAfterRun: "{{DELETE_AFTER_RUN}}"
+  # --keep-after-run：成功执行后保留任务（默认行为）
+  keepAfterRun: "{{KEEP_AFTER_RUN}}"
+  # --wake：创建后立即唤醒还是等下次心跳
+  #   now：立即执行 | next-heartbeat：等下次心跳
+  wake: "{{WAKE}}"
+  # --exact：禁用 cron 自动错峰（stagger），精确按 cron 表达式触发
+  #   true：准时触发（提醒类推荐）| false：允许 Gateway 自动错峰
+  exact: "{{EXACT}}"
+  # --stagger：显式错峰窗口，如 "30s"、"5m"
+  #   与 exact 互斥：exact=true 时 stagger 无效
+  stagger: "{{STAGGER}}"
+  # --expect-final：等待 Agent 最终回复后才标记任务完成
+  #   true：适合需要保证输出质量的开发/学习类任务
+  #   false：Agent 启动即标记完成（默认，适合提醒/巡检类）
+  expectFinal: "{{EXPECT_FINAL}}"
+  # --on-exit：监听进程退出事件。填写要监控的命令（如 "docker compose up"），
+  #   该命令退出时触发一次性回调。与普通 cron 互斥，仅高级场景使用
+  #   留空则不启用
+  onExit: "{{ON_EXIT}}"
+  # --on-exit-cwd：on-exit 监听命令的工作目录
+  onExitCwd: "{{ON_EXIT_CWD}}"
 
 # Agent 提示词模板【非官方】
 # 用于生成 message 的内容，避免每个场景重复书写通用 Harness/Loop 约束。
