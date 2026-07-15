@@ -21,7 +21,7 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 - Only manage tasks with `【AAC-` prefix in the name.
 - All scene YAML files live in `~/.openclaw/workspace/awesome-AGENT-configure/cron/<task-name>/<task-name>.yaml`.
 - Rendering goes through `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`.
-- Templates are directory-based: `cron-template/checks/docker-check/docker-check.yaml` + optional `docker-check.js`.
+- Templates are directory-based: `cron-template/checks/docker-check/docker-check.yaml`.（场景专属 .js 暂不可用，见模板注释。）
 - Trigger logic is unified in `trigger-template/trigger.js` (time window). Scene-specific JS is auto-concatenated by `build-cron.py`.
 - Always show config to user and get confirmation before executing.
 - `--test` mode generates a one-off task with `【TEST】` prefix, skips window/dedup checks, and auto-deletes after run.

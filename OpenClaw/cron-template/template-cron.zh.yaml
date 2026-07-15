@@ -103,12 +103,13 @@ command:
 # 触发器配置【OpenClaw 2026.7.1+ 官方特性】
 # 当 trigger 存在时，schedule 到达后先执行 trigger.script，
 # 返回 { fire: true } 时才执行 payload，否则跳过本次唤醒。
-# 推荐做法：
-#   - 基础时间窗口检查 → trigger-template/trigger.js（所有 cron 共用，省 Token）
-#   - 额外条件检测 → 在场景目录下放同名 .js 文件（如 docker-check/docker-check.js），
-#     build-cron.py 自动拼接：trigger.js + 场景 JS，场景 JS 内自行调用 checkTimeWindowOnly()
-# trigger 脚本由 build-cron.py 自动组装并注入环境变量。
+# trigger 脚本由 trigger-template/trigger.js 统一提供（时间窗口检查），
+# build-cron.py 自动组装并注入环境变量。
 # 若 TRIGGER_ENABLED 为 true，Prompt 层省略时间窗口和去重逻辑。
+#
+# ⚠️ 场景专属 .js 暂不可用：OpenClaw trigger 沙箱禁止 child_process / fs 模块，
+#    当前仅通用时间窗口检查可正常工作。build-cron.py 保留场景 JS 拼接脚手架，
+#    待 OpenClaw 优化沙箱策略后启用。
 trigger:
   enabled: "{{TRIGGER_ENABLED}}"      # "true" | "false"
   script: "{{TRIGGER_SCRIPT}}"          # JS 脚本内容，返回 { fire: boolean, reason?: string }

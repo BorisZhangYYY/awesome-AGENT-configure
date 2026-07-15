@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **移除沙箱不可用的场景 trigger JS**：`docker-check.js`、`workspace-check.js` 中使用了 `child_process` 和 `fs` 模块，OpenClaw trigger 沙箱禁止这些 API，导致 trigger 评估失败。移除这两个文件，仅保留通用 `trigger-template/trigger.js`（纯时间窗口检查）。`build-cron.py` 保留场景 JS 拼接脚手架，待 OpenClaw 优化沙箱策略后重新启用。
+
 ## [0.1.0] - 2026-07-15
 
 ### Fixed
