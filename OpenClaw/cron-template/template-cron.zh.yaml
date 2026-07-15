@@ -11,7 +11,7 @@
 # ⚠️ 关于时间窗口、去重与 trigger 的关系
 # OpenClaw cron 在 gateway 重启或 session 重建时，会补发所有错过的任务。
 # 若 cron 调度到达时 trigger 返回 fire: false，则任务被跳过，不会造成开机堆叠。
-# 时间窗口和去重统一由 triggers/trigger.js 处理，所有 cron 任务共用同一份基础逻辑。
+# 时间窗口和去重统一由 trigger-template/trigger.js 处理，所有 cron 任务共用同一份基础逻辑。
 # 场景若有额外条件（如 docker 状态检测、git 变化检测），在场景目录下放同名 .js 文件，
 # 由 build-cron.py 自动拼接。
 #
@@ -104,9 +104,9 @@ command:
 # 当 trigger 存在时，schedule 到达后先执行 trigger.script，
 # 返回 { fire: true } 时才执行 payload，否则跳过本次唤醒。
 # 推荐做法：
-#   - 基础时间窗口 + 去重 → triggers/trigger.js（所有 cron 共用，省 Token）
+#   - 基础时间窗口检查 → trigger-template/trigger.js（所有 cron 共用，省 Token）
 #   - 额外条件检测 → 在场景目录下放同名 .js 文件（如 docker-check/docker-check.js），
-#     build-cron.py 自动拼接：trigger.js + 场景 JS，场景 JS 内自行调用 checkTimeWindowAndDedup()
+#     build-cron.py 自动拼接：trigger.js + 场景 JS，场景 JS 内自行调用 checkTimeWindowOnly()
 # trigger 脚本由 build-cron.py 自动组装并注入环境变量。
 # 若 TRIGGER_ENABLED 为 true，Prompt 层省略时间窗口和去重逻辑。
 trigger:

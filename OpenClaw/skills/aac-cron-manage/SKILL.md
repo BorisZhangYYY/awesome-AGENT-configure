@@ -21,8 +21,8 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 - Only manage tasks with `【AAC-` prefix in the name.
 - All scene YAML files live in `~/.openclaw/workspace/awesome-AGENT-configure/cron/<task-name>/<task-name>.yaml`.
 - Rendering goes through `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`.
-- Templates are directory-based: `checks/docker-check/docker-check.yaml` + optional `docker-check.js`.
-- Trigger logic is unified in `triggers/trigger.js` (time window + dedup). Scene-specific JS is auto-concatenated by `build-cron.py`.
+- Templates are directory-based: `cron-template/checks/docker-check/docker-check.yaml` + optional `docker-check.js`.
+- Trigger logic is unified in `trigger-template/trigger.js` (time window). Scene-specific JS is auto-concatenated by `build-cron.py`.
 - Always show config to user and get confirmation before executing.
 - `--test` mode generates a one-off task with `【TEST】` prefix, skips window/dedup checks, and auto-deletes after run.
 
@@ -34,7 +34,7 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 - **Sync to latest template**: see `references/update-cron.md`
 - **Delete**: `openclaw cron rm <job-id>`
 - **List installed**: `openclaw cron list`
-- **List available templates**: `ls OpenClaw/template/*/*/` (from the AAC repo)
+- **List available templates**: `ls OpenClaw/cron-template/*/*/` (from the AAC repo)
 
 ## Quick commands
 
@@ -57,7 +57,7 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 
 ## Legacy variable cleanup
 
-Do not use these in new YAMLs — they are handled by `triggers/trigger.js`:
+Do not use these in new YAMLs — they are handled by `trigger-template/trigger.js`:
 - `TIME_WINDOW_ENABLED`
 - `DEDUP_ENABLED`
 - `WINDOW_OUT_ACTION`

@@ -4,7 +4,7 @@
 # 若工作区已整洁则静默（NO_REPLY），有变动时汇报并持久化报告。
 #
 # 使用方式：
-#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/checks/workspace-check.yaml
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/cron-template/checks/workspace-check/workspace-check.yaml
 templateRef: "../../template-cron.zh.yaml"
 
 variables:

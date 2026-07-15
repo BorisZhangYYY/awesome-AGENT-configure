@@ -8,7 +8,7 @@
 #   - 任何"正常静默、异常告警"的定时检查任务
 #
 # 使用方式：
-#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/checks/custom-checks.yaml
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/cron-template/checks/custom-checks/custom-checks.yaml
 
 templateRef: "../../template-cron.zh.yaml"
 

@@ -4,7 +4,7 @@
 # 适用于：新特性开发、模块实现、功能增强
 #
 # 使用方式：
-#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/projects/feature.yaml
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/cron-template/projects/feature/feature.yaml
 #
 # 与提醒/巡检场景的区别：
 #   - 项目类任务启用 Loop 模式（LOOP_MODE_ENABLED: "true"）

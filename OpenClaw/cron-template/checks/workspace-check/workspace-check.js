@@ -1,16 +1,24 @@
 /**
  * AAC 场景专属 Trigger：文件/目录变化检测（工作区整理）
  *
- * 组合逻辑：先执行通用时间窗口+去重检查，再执行文件/目录变化检测。
- * 任一条件不满足即跳过本次唤醒。
+ * 执行步骤：
+ *   1. 调用通用时间窗口检查 checkTimeWindowOnly()，若当前时间不在窗口内则直接跳过。
+ *   2. 读取 AAC_WATCH_FILE 路径的文件或目录信息：
+ *      - 文件 → 使用大小 + 修改时间作为哈希。
+ *      - 目录 → 递归汇总总大小与最新修改时间作为哈希。
+ *   3. 将当前哈希与上一次保存的哈希对比：
+ *      - 首次运行 → 只记录基线，不触发。
+ *      - 哈希发生变化 → 触发唤醒。
+ *      - 哈希未变化 → 跳过本次唤醒。
+ *   4. 无论是否触发，都持久化当前哈希到 AAC_FILE_STATE_FILE。
  *
  * 环境变量：
  *   AAC_WATCH_FILE       - 监控的文件/目录路径（默认当前目录）
  *   AAC_FILE_STATE_FILE  - 状态缓存文件路径（默认 /tmp/.aac-file-state.json）
  */
 
-// 先执行通用检查
-const baseResult = checkTimeWindowAndDedup();
+// 步骤 1：通用时间窗口检查
+const baseResult = checkTimeWindowOnly();
 if (!baseResult.fire) {
   return baseResult;
 }

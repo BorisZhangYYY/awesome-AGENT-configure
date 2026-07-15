@@ -584,10 +584,10 @@ def add_trigger(cmd, variables, scene_path, test_mode=False):
 
     构建流程：
     1. 注入环境变量（AAC_TIMEZONE / AAC_WINDOW_START 等）
-    2. 读取通用 trigger.js（时间窗口 + 去重）
+    2. 读取通用 trigger.js（时间窗口检查）
     3. 检测场景目录是否有同名 .js 文件：
-       - 有 → 拼接场景 JS（场景内自行调用 checkTimeWindowAndDedup()）
-       - 无 → 自动追加 `return checkTimeWindowAndDedup();`
+       - 有 → 拼接场景 JS（场景内自行调用 checkTimeWindowOnly()）
+       - 无 → 自动追加 `return checkTimeWindowOnly();`
     4. 若 test_mode → 在脚本头部注入 AAC_TEST_MODE = "true"
     """
     trigger_enabled = parse_bool(variables.get("TRIGGER_ENABLED", "false"))
@@ -620,14 +620,14 @@ def build_trigger_script(scene_path, variables, test_mode=False):
     # 优先通过 AAC_REPO 环境变量定位 trigger.js
     aac_repo = os.environ.get("AAC_REPO", "")
     if aac_repo:
-        trigger_js_path = Path(aac_repo) / "OpenClaw" / "triggers" / "trigger.js"
+        trigger_js_path = Path(aac_repo) / "OpenClaw" / "trigger-template" / "trigger.js"
     else:
-        # fallback: 向上搜索 triggers/trigger.js
+        # fallback: 向上搜索 trigger-template/trigger.js
         script_dir = Path(__file__).parent
         search_dir = script_dir
         trigger_js_path = None
         for _ in range(6):
-            candidate = search_dir / "triggers" / "trigger.js"
+            candidate = search_dir / "trigger-template" / "trigger.js"
             if candidate.exists():
                 trigger_js_path = candidate
                 break
@@ -637,7 +637,7 @@ def build_trigger_script(scene_path, variables, test_mode=False):
             search_dir = parent
 
     if not trigger_js_path or not trigger_js_path.exists():
-        raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path or 'triggers/trigger.js'}")
+        raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path or 'trigger-template/trigger.js'}")
 
     # 1. 环境变量注入
     env_lines = []

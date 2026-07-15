@@ -2,19 +2,6 @@
 
 > 基于 AGENT 常见的 Cron 定时任务机制，结合 Harness 和 Loop 思想，来打造一个**既自律，又准确，还可以自我提升的 AI AGENT**。
 
-## 目录
-
-- [项目简介](#项目简介)
-- [支持的模板](#支持的模板)
-- [安装与依赖](#安装与依赖)
-- [使用方法](#使用方法)
-  - [1. 生成 cron 命令](#1-生成-cron-命令)
-  - [2. JSON 输出](#2-json-输出)
-  - [3. 自定义场景](#3-自定义场景)
-- [项目结构](#项目结构)
-- [设计原则](#设计原则)
-- [链接](#链接)
-
 ## 项目简介
 
 你在使用 OpenClaw、Hermes 等 AI AGENT 工具的时候，是否面临 workspace 杂乱、skills 冗杂，Heartbeat 与 Cron 效果不佳的情况？通过本项目提供的模板，结合自身需求修改后将其应用在 AI AGENT 的 cron 机制内，即可通过严格的提示词系统，如状态机、时间窗口、效果评估等方式，让 AI AGENT 的 Cron 效果可记录、可追踪、可推进。
@@ -50,7 +37,7 @@ pip install pyyaml
 以早安提醒为例：
 
 ```bash
-python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml
+python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/cron-template/reminders/morning/morning.yaml
 ```
 
 输出示例：
@@ -83,12 +70,12 @@ openclaw \
 如果需要程序化调用，可输出 JSON 数组：
 
 ```bash
-python3 OpenClaw/scripts/build-cron.py OpenClaw/template/reminders/morning.yaml --json
+python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/cron-template/reminders/morning/morning.yaml --json
 ```
 
 ### 3. 自定义场景
 
-复制 `OpenClaw/template/reminders/custom-reminders.yaml`，修改 `variables` 中的值即可。
+复制 `OpenClaw/cron-template/reminders/custom-reminders/custom-reminders.yaml`，修改 `variables` 中的值即可。
 
 ## 项目结构
 
@@ -97,23 +84,24 @@ awesome-AGENT-configure/
 ├── AI-ProjConf/              # 通用项目初始化模板（README / TODO / AGENT 等）
 ├── OpenClaw/
 │   ├── conf/                 # OpenClaw 参数与 flag 配置
-│   ├── scripts/              # 模板生成与辅助脚本
+│   ├── cron-template/        # cron 场景模板，按类别分子目录
+│   │   ├── checks/           # 巡检类模板
+│   │   │   ├── cron-check.yaml      # Cron 任务健康巡检
+│   │   │   ├── custom-checks.yaml   # 自定义巡检场景
+│   │   │   ├── docker-check.yaml    # Docker 容器/Compose 巡检
+│   │   │   └── workspace-check.yaml # 工作区整理巡检
+│   │   ├── projects/         # 项目类模板（Loop 方法，基于 template-cron.zh.yaml）
+│   │   │   ├── custom-projects.yaml  # 自定义项目场景
+│   │   │   ├── feature.yaml          # 功能开发场景
+│   │   │   └── maintain.yaml         # 维护会话场景
+│   │   ├── learns/           # 学习类模板
+│   │   │   └── custom-learns.yaml  # AI 自我学习场景
+│   │   ├── reminders/        # 提醒类模板
+│   │   │   └── custom-reminders.yaml  # 自定义提醒场景
+│   │   └── template-cron.zh.yaml  # 通用/Loop 统一父模板
+│   ├── hook-template/        # 通用上下文注入模板
 │   ├── skills/               # 方便管理 AAC cron 封装的 skills
-│   └── template/             # cron 场景模板，按类别分子目录
-│       ├── checks/           # 巡检类模板
-│       │   ├── cron-check.yaml      # Cron 任务健康巡检
-│       │   ├── custom-checks.yaml   # 自定义巡检场景
-│       │   ├── docker-check.yaml    # Docker 容器/Compose 巡检
-│       │   └── workspace-check.yaml # 工作区整理巡检
-│       ├── projects/         # 项目类模板（Loop 方法，基于 template-cron.zh.yaml）
-│       │   ├── custom-projects.yaml  # 自定义项目场景
-│       │   ├── feature.yaml          # 功能开发场景
-│       │   └── maintain.yaml         # 维护会话场景
-│       ├── learns/           # 学习类模板
-│       │   └── custom-learns.yaml  # AI 自我学习场景
-│       ├── reminders/        # 提醒类模板
-│       │   └── custom-reminders.yaml  # 自定义提醒场景
-│       └── template-cron.zh.yaml  # 通用/Loop 统一父模板
+│   └── trigger-template/     # 通用 trigger 脚本库
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── README.md

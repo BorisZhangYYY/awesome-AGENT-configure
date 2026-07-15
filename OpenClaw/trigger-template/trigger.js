@@ -1,7 +1,16 @@
 /**
  * AAC 通用 Trigger：时间窗口检查
  *
- * 本脚本为所有 AAC Cron 任务的通用基础防护层。
+ * 执行步骤：
+ *   1. 若 AAC_TEST_MODE 为 "true"，直接返回 fire: true（测试模式跳过所有检查）。
+ *   2. 根据 AAC_TIMEZONE 获取当前本地时间（默认 Asia/Shanghai）。
+ *   3. 若配置了 AAC_WINDOW_START / AAC_WINDOW_END：
+ *      - 将当前时间转换为当天分钟数。
+ *      - 普通窗口（如 07:00-09:30）：当前分钟在窗口内则放行。
+ *      - 跨午夜窗口（如 22:00-06:00）：当前分钟在窗口前段或后段则放行。
+ *      - 不在窗口内 → 返回 fire: false。
+ *   4. 未配置窗口或检查通过 → 返回 fire: true。
+ *
  * ⚠️ 纯 JavaScript 实现，禁止依赖任何外部模块（fs/path 等），
  *    因为 OpenClaw Gateway trigger 执行环境禁用了 module access。
  * 去重逻辑已移至 Agent Prompt 中执行，trigger 仅负责时间窗口判定。

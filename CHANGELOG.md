@@ -4,32 +4,37 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-15
+
 ### Fixed
 
-- **修复 trigger.js `code mode module access` 错误**：`OpenClaw/triggers/trigger.js` 移除 `require('fs')` / `require('path')` 依赖，改为纯 JavaScript 实现。OpenClaw Gateway 2026.7.1+ 的 trigger 执行环境禁用 Node.js 模块加载，原 `checkDedup()` 函数导致所有 AAC cron 任务 trigger 评估失败。
+- **修复 trigger.js `code mode module access` 错误**：`OpenClaw/trigger-template/trigger.js` 移除 `require('fs')` / `require('path')` 依赖，改为纯 JavaScript 实现。OpenClaw Gateway 2026.7.1+ 的 trigger 执行环境禁用 Node.js 模块加载，原 `checkDedup()` 函数导致所有 AAC cron 任务 trigger 评估失败。
   - 去重逻辑从 trigger 迁移至 Agent Prompt（由 Agent 通过 `exec/read/write` 工具自行维护状态文件）。
   - `build-cron.py` 默认返回值同步改为 `return checkTimeWindowOnly();`。
-  - 受影响任务：docker-check、workspace-check、weekly-version-check 等所有使用 AAC trigger 的定时任务。
+  - 受影响任务：docker-check、workspace-check 等所有使用 AAC trigger 的定时任务。
+- **修复目录重命名后的引用断裂**：`OpenClaw/template/` 重命名为 `OpenClaw/cron-template/`，`OpenClaw/triggers/` 重命名为 `OpenClaw/trigger-template/`，`OpenClaw/hook-pack/` 重命名为 `OpenClaw/hook-template/`。同步更新 `README.md`、`SKILL.md`、references、场景 YAML 注释以及 `build-cron.py` 中的路径引用。
+- **修复场景 JS 调用已废弃函数**：`docker-check.js`、`workspace-check.js` 中将 `checkTimeWindowAndDedup()` 更正为 `checkTimeWindowOnly()`，与通用 trigger 脚本保持一致。
 
 ### Added
 
-- **Trigger 架构重构**：`triggers/trigger.js` 成为唯一通用脚本（时间窗口 + 去重），场景专属 JS（如 `docker-check.js`）自动拼接。`build-cron.py` 新增 `--test` 参数，生成一次性测试任务（跳过窗口/去重，执行后自动删除）。
-- **模板目录化**：所有场景模板从单文件迁移为目录结构（如 `checks/docker-check/docker-check.yaml` + `docker-check.js`），`templateRef` 从 `../` 改为 `../../`。
+- **Trigger 架构重构**：`trigger-template/trigger.js` 成为唯一通用脚本（时间窗口检查），场景专属 JS（如 `docker-check.js`）自动拼接。`build-cron.py` 新增 `--test` 参数，生成一次性测试任务（跳过窗口/去重，执行后自动删除）。
+- **模板目录化**：所有场景模板从单文件迁移为目录结构（如 `cron-template/checks/docker-check/docker-check.yaml` + `docker-check.js`），`templateRef` 从 `../` 改为 `../../`。
 - **Skill 架构重构**：4 个独立 project skill（init-cron / edit-cron / migrate-cron / update-cron）合并为 `aac-cron-manage`，SKILL-GUIDE.md 收归 `references/cron-template-guide.md`。
 - `OpenClaw/skills/aac-cron-manage/` 目录建立，与 workspace skill 结构保持一致。
 
 ### Changed
 
-- `build-cron.py` 重构 `add_trigger()`：自动检测场景目录下是否有同名 `.js` 文件，有则拼接 `trigger.js + 场景 JS`，无则直接 `return checkTimeWindowAndDedup()`。
-- `build-cron.py` 移除 `TRIGGER_LIBRARY_PATH` / `TRIGGER_LIBRARY_ENV_INJECT` / `TRIGGER_SCRIPT` 支持，改为直接读取 `triggers/trigger.js` + 自动检测场景 `.js`。
+- `build-cron.py` 重构 `add_trigger()`：自动检测场景目录下是否有同名 `.js` 文件，有则拼接 `trigger.js + 场景 JS`，无则直接 `return checkTimeWindowOnly()`。
+- `build-cron.py` 移除 `TRIGGER_LIBRARY_PATH` / `TRIGGER_LIBRARY_ENV_INJECT` / `TRIGGER_SCRIPT` 支持，改为直接读取 `trigger-template/trigger.js` + 自动检测场景 `.js`。
 - `build-cron.py` 移除 `TIME_WINDOW_ENABLED` / `DEDUP_ENABLED` / `WINDOW_OUT_ACTION` 默认值。
 - `template-cron.zh.yaml` 移除 `timeWindow.enabled` / `deduplication.enabled` 字段，仅保留 `start` / `end` / `stateFile` / `granularity`。
 - `template-cron.zh.yaml` 更新 trigger 区块注释，说明新架构（trigger.js 通用 + 场景 JS 可选拼接）。
 - 所有场景模板移除 `TRIGGER_LIBRARY_PATH` 和 `DEDUP_ENABLED` / `TIME_WINDOW_ENABLED` 变量。
+- 所有 trigger 文件头部注释改为步骤化说明，明确定时任务是否执行的判定流程。
 
 ### Removed
 
-- `OpenClaw/triggers/` 下旧脚本：`docker_status.js` / `git_changed.js` / `file_changed.js` / `http_changed.js` / `time_window.js`，功能已合并入 `trigger.js` 或场景专属 `.js`。
+- `OpenClaw/triggers/` 下旧脚本：`docker_status.js` / `git_changed.js` / `file_changed.js` / `http_changed.js` / `time_window.js`，功能已合并入 `trigger-template/trigger.js` 或场景专属 `.js`。
 - `OpenClaw/skills/init-cron/` / `edit-cron/` / `migrate-cron/` / `update-cron/` 独立目录，内容已合并入 `aac-cron-manage/references/`。
 - `OpenClaw/skills/aac-skill-manage/` 空目录（项目无其他 skill 需管理）。
 - 旧单文件模板：`checks/cron-check.yaml` / `docker-check.yaml` / `workspace-check.yaml` 等（已目录化）。

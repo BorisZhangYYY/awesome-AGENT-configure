@@ -9,7 +9,7 @@
 #   - 可能涉及多个模块的交叉验证
 #
 # 使用方式：
-#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/projects/maintain.yaml
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/cron-template/projects/maintain/maintain.yaml
 
 templateRef: "../../template-cron.zh.yaml"
 

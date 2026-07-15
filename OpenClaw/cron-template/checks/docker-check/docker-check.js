@@ -1,15 +1,22 @@
 /**
  * AAC 场景专属 Trigger：Docker 容器状态检测
  *
- * 组合逻辑：先执行通用时间窗口+去重检查，再执行 Docker 状态检测。
- * 任一条件不满足即跳过本次唤醒。
+ * 执行步骤：
+ *   1. 调用通用时间窗口检查 checkTimeWindowOnly()，若当前时间不在窗口内则直接跳过。
+ *   2. 执行 docker ps 获取所有容器名称与状态。
+ *   3. 将当前状态哈希与上一次保存的状态哈希对比：
+ *      - 首次运行 → 只记录基线，不触发。
+ *      - 状态发生变化 → 触发唤醒。
+ *      - 状态未变但存在 unhealthy 容器 → 触发唤醒。
+ *      - 状态未变且全部健康 → 跳过本次唤醒。
+ *   4. 无论是否触发，都持久化当前状态到 AAC_DOCKER_STATE_FILE。
  *
  * 环境变量：
  *   AAC_DOCKER_STATE_FILE - Docker 状态缓存文件路径（默认 /tmp/.aac-docker-state.json）
  */
 
-// 先执行通用检查
-const baseResult = checkTimeWindowAndDedup();
+// 步骤 1：通用时间窗口检查
+const baseResult = checkTimeWindowOnly();
 if (!baseResult.fire) {
   return baseResult;
 }

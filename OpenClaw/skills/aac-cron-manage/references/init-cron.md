@@ -13,8 +13,8 @@
 - **1. 询问意图**：确认分类（提醒/巡检/项目/学习）、触发时间、任务内容、送达方式
 - **2. 检查重复**：运行 `openclaw cron list`，发现同类任务建议改用迁移流程
 - **3. 选择模板**：从目录化模板中选取
-  - `OpenClaw/template/reminders/morning/morning.yaml`
-  - `OpenClaw/template/checks/docker-check/docker-check.yaml`
+  - `OpenClaw/cron-template/reminders/morning/morning.yaml`
+  - `OpenClaw/cron-template/checks/docker-check/docker-check.yaml`
   - 等等
 - **4. 填充变量**：自动填充分类推荐值，询问用户确认或微调
   - `JOB_NAME` 强制 `【AAC-分类】任务名`
@@ -26,7 +26,7 @@
   ```
   回退顺序：环境变量 → 当前目录 → $HOME 下搜索
 - **6. 生成 YAML**：写入 `$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml`
-  - `templateRef` 替换为绝对路径 `<AAC_REPO>/OpenClaw/template/template-cron.zh.yaml`
+  - `templateRef` 替换为绝对路径 `<AAC_REPO>/OpenClaw/cron-template/template-cron.zh.yaml`
 - **7. 渲染命令**：
   ```bash
   python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
@@ -52,7 +52,7 @@ python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
 ## 时间窗口与去重说明
 
 - 不再使用 `TIME_WINDOW_ENABLED` / `DEDUP_ENABLED` / `WINDOW_OUT_ACTION` 变量
-- 统一由 `triggers/trigger.js` 处理
+- 统一由 `trigger-template/trigger.js` 处理
 - `build-cron.py` 自动注入 `WINDOW_START` / `WINDOW_END` / `DEDUP_STATE_FILE` / `DEDUP_GRANULARITY` 为环境变量
 
 ## 安全红线

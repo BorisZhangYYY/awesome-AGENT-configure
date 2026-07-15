@@ -3,7 +3,7 @@
 # 若全部正常则静默（NO_REPLY），异常时发出告警并持久化报告。
 #
 # 使用方式：
-#   python3 OpenClaw/scripts/build-cron.py OpenClaw/template/checks/docker-check.yaml
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/cron-template/checks/docker-check/docker-check.yaml
 templateRef: "../../template-cron.zh.yaml"
 
 variables:

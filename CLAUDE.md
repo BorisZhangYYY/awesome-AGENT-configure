@@ -9,8 +9,8 @@
 ## 项目规范
 
 - 项目文档，放到 docs/ 下
-- 模板文件，统一放到 {AGENT}/template/ 下
-- 脚本文件，统一放到 {AGENT}/scripts/ 下
+- 模板文件，统一放到 {AGENT}/*-template/ 下
+- 技能文件，统一放到 {AGENT}/skills/ 下
 - **所有目录下，需要按照类别进行多级子目录分类**
 
 > 其中 {AGENT} 指的是具体的框架，比如 OpenClaw、Hermes等。
