@@ -3,3 +3,5 @@ docs/
 __pycache__/
 *.pyc
 *.pyo
+# build-cron.py 渲染产物，不纳入版本管理
+OpenClaw/cron-template/**/trigger.js
