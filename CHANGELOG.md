@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **修复 trigger.js `code mode module access` 错误**：`OpenClaw/triggers/trigger.js` 移除 `require('fs')` / `require('path')` 依赖，改为纯 JavaScript 实现。OpenClaw Gateway 2026.7.1+ 的 trigger 执行环境禁用 Node.js 模块加载，原 `checkDedup()` 函数导致所有 AAC cron 任务 trigger 评估失败。
+  - 去重逻辑从 trigger 迁移至 Agent Prompt（由 Agent 通过 `exec/read/write` 工具自行维护状态文件）。
+  - `build-cron.py` 默认返回值同步改为 `return checkTimeWindowOnly();`。
+  - 受影响任务：docker-check、workspace-check、weekly-version-check 等所有使用 AAC trigger 的定时任务。
+
 ### Added
 
 - **Trigger 架构重构**：`triggers/trigger.js` 成为唯一通用脚本（时间窗口 + 去重），场景专属 JS（如 `docker-check.js`）自动拼接。`build-cron.py` 新增 `--test` 参数，生成一次性测试任务（跳过窗口/去重，执行后自动删除）。

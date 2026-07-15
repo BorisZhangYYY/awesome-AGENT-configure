@@ -659,6 +659,9 @@ def build_trigger_script(scene_path, variables, test_mode=False):
     dedup_granularity = variables.get("DEDUP_GRANULARITY", "daily")
     env_lines.append(f'process.env.AAC_DEDUP_GRANULARITY = {json.dumps(dedup_granularity)};')
 
+    # ⚠️ 注意：trigger.js 已移除 fs 模块依赖，DEDUP 环境变量保留但不再由 trigger 消费。
+    # 去重逻辑已移至 Agent Prompt 中，由 Agent 自行通过 exec/read/write 工具维护状态文件。
+
     # 场景专属变量
     docker_state = variables.get("DOCKER_STATE_FILE", "")
     if docker_state:
@@ -703,8 +706,8 @@ def build_trigger_script(scene_path, variables, test_mode=False):
         scene_script = scene_js.read_text(encoding="utf-8")
         full_script = preamble + base_script + "\n\n" + scene_script
     else:
-        # 无场景 JS → 直接返回通用检查结果
-        full_script = preamble + base_script + "\n\n// ===== 场景无专属逻辑，直接返回通用检查结果 =====\nreturn checkTimeWindowAndDedup();\n"
+        # 无场景 JS → 直接返回时间窗口检查结果
+        full_script = preamble + base_script + "\n\n// ===== 场景无专属逻辑，直接返回通用检查结果 =====\nreturn checkTimeWindowOnly();\n"
 
     return full_script
 
