@@ -82,17 +82,7 @@ variables:
     ```
     检查 compose 服务是否全部 running。非 running 的服务按步骤 3 的逻辑判定。
 
-    ## 步骤 5：外部 URL 可达性检查（可选）
-
-    若你配置了外部 URL 监控脚本，在此步骤调用：
-    ```bash
-    # 替换为你的实际脚本路径
-    bash /path/to/your/monitor.sh 2>&1
-    ```
-
-    若未配置 URL 监控，跳过此步骤。
-
-    ## 步骤 6：写入巡检报告
+    ## 步骤 5：写入巡检报告
 
     报告路径：用 exec 运行 `date +%Y-%m-%d` 获取当前日期，运行 `date +%H-%M` 获取当前时间（冒号替换为短横线），写入 `{{WORKSPACE}}/docs/reports/docker/<YYYY-MM-DD>-<HH-MM>.md`。
     （因本任务每 6 小时执行，一天可能有多份报告）
@@ -102,7 +92,6 @@ variables:
 
     ## 摘要
     - 容器总数：X | 正常：Y | 主动停用：Z | 异常：W
-    - 外部 URL：正常 / 有变化 / 不可达
     - 一句话：
 
     ## 详情
@@ -115,11 +104,6 @@ variables:
     ### Compose 服务
     - 全部 running / 有 X 个非 running
 
-    ### 外部 URL 检查
-    （若步骤 5 已跳过，省略此节）
-    - 服务名: URL 与状态
-    - 变化/异常记录
-
     ## 历史对比
     - 上次异常容器「zzz」本次已恢复
     - 容器「aaa」连续 3 轮异常，建议关注
@@ -127,7 +111,7 @@ variables:
 
     若全部正常，报告仅保留摘要。
 
-    ## 步骤 7：清理 30 天前的旧报告
+    ## 步骤 6：清理 30 天前的旧报告
 
     ```bash
     mkdir -p {{WORKSPACE}}/.trash/ && find {{WORKSPACE}}/docs/reports/docker/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
