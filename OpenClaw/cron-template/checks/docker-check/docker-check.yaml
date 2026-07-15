@@ -82,20 +82,15 @@ variables:
     ```
     检查 compose 服务是否全部 running。非 running 的服务按步骤 3 的逻辑判定。
 
-    ## 步骤 5：外部 URL 可达性检查（Cloudflare Tunnel）
+    ## 步骤 5：外部 URL 可达性检查（可选）
 
-    调用 monitor-url.sh 进行外部可达性检查（静默模式，不发通知）：
+    若你配置了外部 URL 监控脚本，在此步骤调用：
     ```bash
-    bash /mnt/d/Study_Project/Personal_Deploy_Repo/scripts/monitor-url.sh --silent 2>&1 | tee /tmp/monitor-url-silent.log
+    # 替换为你的实际脚本路径
+    bash /path/to/your/monitor.sh 2>&1
     ```
 
-    检查输出中的关键信息：
-    - `CHANGES_SUMMARY:` — URL 发生变化
-    - `警告: 未能获取以下服务 URL:` — 有服务不可达
-    - `Tunnel: ❌ 不可达` — Tunnel 外部不可达
-
-    若发现 URL 变化或不可达，记录为异常，并纳入报告「外部 URL 检查」章节。
-    注意：monitor-url.sh --silent 会自动尝试重启不可达的 tunnel，因此执行后可能已恢复。
+    若未配置 URL 监控，跳过此步骤。
 
     ## 步骤 6：写入巡检报告
 
@@ -120,9 +115,9 @@ variables:
     ### Compose 服务
     - 全部 running / 有 X 个非 running
 
-    ### 外部 URL 检查（Cloudflare Tunnel）
-    - Siyuan: URL 与状态
-    - Memos: URL 与状态
+    ### 外部 URL 检查
+    （若步骤 5 已跳过，省略此节）
+    - 服务名: URL 与状态
     - 变化/异常记录
 
     ## 历史对比

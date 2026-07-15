@@ -12,8 +12,8 @@
 # OpenClaw cron 在 gateway 重启或 session 重建时，会补发所有错过的任务。
 # 若 cron 调度到达时 trigger 返回 fire: false，则任务被跳过，不会造成开机堆叠。
 # 时间窗口和去重统一由 trigger-template/trigger.js 处理，所有 cron 任务共用同一份基础逻辑。
-# 场景若有额外条件（如 docker 状态检测、git 变化检测），在场景目录下放同名 .js 文件，
-# 由 build-cron.py 自动拼接。
+# ⚠️ 场景专属 .js 暂不可用：OpenClaw trigger 沙箱禁止 child_process / fs 模块。
+# build-cron.py 保留场景 JS 拼接脚手架，待沙箱策略优化后启用。
 #
 # 内置变量：
 #   {{WORKSPACE}} - OpenClaw 工作区目录，默认 ~/.openclaw/workspace，由生成器注入

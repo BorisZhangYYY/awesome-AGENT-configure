@@ -36,9 +36,8 @@ variables:
   WINDOW_END: "{{CUSTOM_WINDOW_END}}"
   DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/check-{{CUSTOM_SCENE_KEY}}.txt"
 
-  # Trigger：启用 trigger.js 时间窗口 + 去重检查
-  # 如需额外检测状态变化（如 URL 响应变化），在场景目录下放同名 .js 文件
-  # build-cron.py 自动拼接：trigger.js + 场景 JS
+  # Trigger：启用 trigger.js 时间窗口检查
+  # ⚠️ 场景专属 .js 暂不可用（沙箱限制），build-cron.py 保留脚手架待后续启用
   TRIGGER_ENABLED: "true"
 
   # 巡检类任务正常时静默，异常时告警
