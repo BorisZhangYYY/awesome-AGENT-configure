@@ -1,29 +1,28 @@
 /**
- * AAC 通用 Trigger：时间窗口检查
+ * AAC 通用 Trigger：时间窗口检查（纯 JS，零外部依赖）
  *
  * 执行步骤：
- *   1. 若 AAC_TEST_MODE 为 "true"，直接返回 fire: true（测试模式跳过所有检查）。
- *   2. 根据 AAC_TIMEZONE 获取当前本地时间（默认 Asia/Shanghai）。
- *   3. 若配置了 AAC_WINDOW_START / AAC_WINDOW_END：
+ *   1. 根据 AAC_TIMEZONE 获取当前本地时间。
+ *   2. 若配置了 AAC_WINDOW_START / AAC_WINDOW_END：
  *      - 将当前时间转换为当天分钟数。
  *      - 普通窗口（如 07:00-09:30）：当前分钟在窗口内则放行。
  *      - 跨午夜窗口（如 22:00-06:00）：当前分钟在窗口前段或后段则放行。
  *      - 不在窗口内 → 返回 fire: false。
- *   4. 未配置窗口或检查通过 → 返回 fire: true。
+ *   3. 未配置窗口或检查通过 → 返回 fire: true。
  *
  * ⚠️ 纯 JavaScript 实现，禁止依赖任何外部模块（fs/path 等），
  *    因为 OpenClaw Gateway trigger 执行环境禁用了 module access。
+ *    禁止使用 process 全局对象（Gateway trigger 沙箱中不可用）。
  * 去重逻辑已移至 Agent Prompt 中执行，trigger 仅负责时间窗口判定。
  *
- * 环境变量：
- *   AAC_TIMEZONE        - 时区（默认 Asia/Shanghai）
+ * 常量（由 build-cron.py 注入）：
+ *   AAC_TIMEZONE        - 时区（如 "Asia/Shanghai"）
  *   AAC_WINDOW_START    - 窗口开始时间 HH:MM
  *   AAC_WINDOW_END      - 窗口结束时间 HH:MM
- *   AAC_TEST_MODE       - "true" 时跳过所有检查（测试模式）
  */
 
 function getNow() {
-  const tz = process.env.AAC_TIMEZONE || "Asia/Shanghai";
+  const tz = AAC_TIMEZONE;
   const now = new Date();
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: tz,
@@ -43,8 +42,8 @@ function getNow() {
 }
 
 function checkTimeWindow(now) {
-  const start = process.env.AAC_WINDOW_START;
-  const end = process.env.AAC_WINDOW_END;
+  const start = AAC_WINDOW_START;
+  const end = AAC_WINDOW_END;
   if (!start || !end) return true;
 
   const currentMin = parseInt(now.hour) * 60 + parseInt(now.minute);
@@ -61,15 +60,10 @@ function checkTimeWindow(now) {
 }
 
 /**
- * 通用时间窗口检查入口
+ * 时间窗口检查入口
  * 场景 JS 可直接调用此函数，或先调用此函数再执行场景专属逻辑。
  */
-function checkTimeWindowOnly() {
-  // 测试模式：直接放行
-  if (process.env.AAC_TEST_MODE === "true") {
-    return { fire: true, reason: "Test mode: bypass all checks" };
-  }
-
+function main() {
   const now = getNow();
 
   if (!checkTimeWindow(now)) {

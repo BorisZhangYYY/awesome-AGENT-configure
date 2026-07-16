@@ -70,15 +70,6 @@ DEFAULTS = {
     "TRIGGER_ENABLED": "false",
     "TRIGGER_SCRIPT": "",
     "TRIGGER_ONCE": "false",
-    # 2026-07-15 补全：覆盖所有 OpenClaw 官方 cron CLI 参数
-    "DISPLAY_NAME": "",
-    "DECLARATION_KEY": "",
-    "ACCOUNT": "",
-    "TIMEOUT_MS": "",
-    "FALLBACKS": "",
-    "EXPECT_FINAL": "false",
-    "ON_EXIT": "",
-    "ON_EXIT_CWD": "",
 }
 
 # ===== CLI 参数映射表 =====
@@ -87,9 +78,6 @@ DEFAULTS = {
 FLAGS = {
     "official": {
         "name": "--name",
-        "description": "--description",
-        "displayName": "--display-name",
-        "declarationKey": "--declaration-key",
         "message": "--message",
         "systemEvent": "--system-event",
         "schedule.timezone": "--tz",
@@ -97,13 +85,10 @@ FLAGS = {
         "delivery.to": "--to",
         "delivery.threadId": "--thread-id",
         "delivery.webhookUrl": "--webhook",
-        "delivery.account": "--account",
         "session.target": "--session",
         "session.timeoutSeconds": "--timeout-seconds",
-        "session.timeoutMs": "--timeout",
         "agent.agentId": "--agent",
         "agent.model": "--model",
-        "agent.fallbacks": "--fallbacks",
         "agent.thinking": "--thinking",
         "agent.tools": "--tools",
         "command.script": "--command",
@@ -115,8 +100,6 @@ FLAGS = {
         "command.outputMaxBytes": "--output-max-bytes",
         "advanced.wake": "--wake",
         "advanced.stagger": "--stagger",
-        "advanced.onExit": "--on-exit",
-        "advanced.onExitCwd": "--on-exit-cwd",
     },
     "special": {
         "schedule.expr": {
@@ -165,12 +148,6 @@ FLAGS = {
         "trigger.once": {
             "type": "boolean_flag",
             "true_flag": "--trigger-once",
-            "false_flag": None,
-        },
-        # 2026-07-15 补全
-        "advanced.expectFinal": {
-            "type": "boolean_flag",
-            "true_flag": "--expect-final",
             "false_flag": None,
         },
     },
@@ -551,9 +528,6 @@ def build_command(variables, flags, scene_path, test_mode=False):
 
     # 基础信息
     add_flag(cmd, "name", variables.get("JOB_NAME", ""), flags)
-    add_flag(cmd, "description", variables.get("DESCRIPTION", ""), flags)
-    add_flag(cmd, "displayName", variables.get("DISPLAY_NAME", ""), flags)
-    add_flag(cmd, "declarationKey", variables.get("DECLARATION_KEY", ""), flags)
 
     # 调度
     add_flag(cmd, "schedule.timezone", variables.get("TIMEZONE", ""), flags)
@@ -564,7 +538,6 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "delivery.to", variables.get("TO", ""), flags)
     add_flag(cmd, "delivery.threadId", variables.get("THREAD_ID", ""), flags)
     add_flag(cmd, "delivery.webhookUrl", variables.get("WEBHOOK_URL", ""), flags)
-    add_flag(cmd, "delivery.account", variables.get("ACCOUNT", ""), flags)
 
     # 会话
     session_target = str(variables.get("SESSION_TARGET", "")).strip()
@@ -578,7 +551,6 @@ def build_command(variables, flags, scene_path, test_mode=False):
     if session_target:
         add_flag(cmd, "session.target", session_target, flags)
     add_flag(cmd, "session.timeoutSeconds", variables.get("TIMEOUT_SECONDS", ""), flags)
-    add_flag(cmd, "session.timeoutMs", variables.get("TIMEOUT_MS", ""), flags)
 
     # 上下文
     add_special_boolean(cmd, "context.lightContext", variables.get("LIGHT_CONTEXT", ""), flags)
@@ -588,7 +560,6 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "agent.model", variables.get("MODEL", ""), flags)
     add_flag(cmd, "agent.thinking", variables.get("THINKING", ""), flags)
     add_flag(cmd, "agent.tools", variables.get("TOOLS", ""), flags)
-    add_flag(cmd, "agent.fallbacks", variables.get("FALLBACKS", ""), flags)
 
     # 高级选项
     add_special_boolean(cmd, "advanced.disabled", variables.get("DISABLED", ""), flags)
@@ -597,9 +568,6 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "advanced.wake", variables.get("WAKE", ""), flags)
     add_special_boolean(cmd, "advanced.exact", variables.get("EXACT", ""), flags)
     add_flag(cmd, "advanced.stagger", variables.get("STAGGER", ""), flags)
-    add_special_boolean(cmd, "advanced.expectFinal", variables.get("EXPECT_FINAL", ""), flags)
-    add_flag(cmd, "advanced.onExit", variables.get("ON_EXIT", ""), flags)
-    add_flag(cmd, "advanced.onExitCwd", variables.get("ON_EXIT_CWD", ""), flags)
 
     # OpenClaw 2026.7.1+ trigger 支持
     add_trigger(cmd, variables, scene_path, test_mode)
@@ -648,83 +616,28 @@ def add_trigger(cmd, variables, scene_path, test_mode=False):
 
 
 def build_trigger_script(scene_path, variables, test_mode=False):
-    """构建完整的 trigger 脚本：环境变量 + 通用 trigger.js + 场景 JS（可选）。"""
-    # 优先通过 AAC_REPO 环境变量定位 trigger.js
-    aac_repo = os.environ.get("AAC_REPO", "")
-    if aac_repo:
-        trigger_js_path = Path(aac_repo) / "OpenClaw" / "trigger-template" / "trigger.js"
-    else:
-        # fallback: 向上搜索 trigger-template/trigger.js
-        script_dir = Path(__file__).parent
-        search_dir = script_dir
-        trigger_js_path = None
-        for _ in range(6):
-            candidate = search_dir / "trigger-template" / "trigger.js"
-            if candidate.exists():
-                trigger_js_path = candidate
-                break
-            parent = search_dir.parent
-            if parent == search_dir:
-                break
-            search_dir = parent
+    """构建完整的 trigger 脚本：常量声明 + 通用 trigger.js + 场景 JS（可选）。"""
+    # 定位 trigger.js 模板：与 build-cron.py 同级目录
+    script_dir = Path(__file__).parent
+    trigger_js_path = script_dir / "trigger.js"
 
-    if not trigger_js_path or not trigger_js_path.exists():
-        raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path or 'trigger-template/trigger.js'}")
+    if not trigger_js_path.exists():
+        raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path}")
 
-    # 1. 环境变量注入
-    env_lines = []
+    # 1. 常量声明（纯 JS，不依赖 process）
+    const_lines = []
     timezone = variables.get("TIMEZONE", "")
     if timezone:
-        env_lines.append(f'process.env.AAC_TIMEZONE = {json.dumps(timezone)};')
+        const_lines.append(f'const AAC_TIMEZONE = {json.dumps(timezone)};')
 
     window_start = variables.get("WINDOW_START", "")
     window_end = variables.get("WINDOW_END", "")
     if window_start:
-        env_lines.append(f'process.env.AAC_WINDOW_START = {json.dumps(window_start)};')
+        const_lines.append(f'const AAC_WINDOW_START = {json.dumps(window_start)};')
     if window_end:
-        env_lines.append(f'process.env.AAC_WINDOW_END = {json.dumps(window_end)};')
+        const_lines.append(f'const AAC_WINDOW_END = {json.dumps(window_end)};')
 
-    dedup_file = variables.get("DEDUP_STATE_FILE", "")
-    if dedup_file:
-        env_lines.append(f'process.env.AAC_DEDUP_FILE = {json.dumps(dedup_file)};')
-
-    dedup_granularity = variables.get("DEDUP_GRANULARITY", "daily")
-    env_lines.append(f'process.env.AAC_DEDUP_GRANULARITY = {json.dumps(dedup_granularity)};')
-
-    # ⚠️ 注意：trigger.js 已移除 fs 模块依赖，DEDUP 环境变量保留但不再由 trigger 消费。
-    # 去重逻辑已移至 Agent Prompt 中，由 Agent 自行通过 exec/read/write 工具维护状态文件。
-
-    # 场景专属变量
-    docker_state = variables.get("DOCKER_STATE_FILE", "")
-    if docker_state:
-        env_lines.append(f'process.env.AAC_DOCKER_STATE_FILE = {json.dumps(docker_state)};')
-
-    git_dir = variables.get("GIT_DIR", "")
-    if git_dir:
-        env_lines.append(f'process.env.AAC_GIT_DIR = {json.dumps(git_dir)};')
-    git_state = variables.get("GIT_STATE_FILE", "")
-    if git_state:
-        env_lines.append(f'process.env.AAC_GIT_STATE_FILE = {json.dumps(git_state)};')
-
-    watch_file = variables.get("WATCH_FILE", "")
-    if watch_file:
-        env_lines.append(f'process.env.AAC_WATCH_FILE = {json.dumps(watch_file)};')
-    file_state = variables.get("FILE_STATE_FILE", "")
-    if file_state:
-        env_lines.append(f'process.env.AAC_FILE_STATE_FILE = {json.dumps(file_state)};')
-
-    watch_url = variables.get("WATCH_URL", "")
-    if watch_url:
-        env_lines.append(f'process.env.AAC_WATCH_URL = {json.dumps(watch_url)};')
-    http_state = variables.get("HTTP_STATE_FILE", "")
-    if http_state:
-        env_lines.append(f'process.env.AAC_HTTP_STATE_FILE = {json.dumps(http_state)};')
-
-    # 测试模式
-    if test_mode:
-        env_lines.append('process.env.AAC_TEST_MODE = "true";')
-
-    preamble = "// ===== AAC Trigger 环境变量注入 =====\n" + "\n".join(env_lines) + "\n\n"
+    preamble = "// ===== AAC Trigger 配置（纯 JS 常量，不依赖 process）=====\n" + "\n".join(const_lines) + "\n\n"
 
     # 2. 通用 trigger.js
     base_script = trigger_js_path.read_text(encoding="utf-8")
@@ -739,7 +652,7 @@ def build_trigger_script(scene_path, variables, test_mode=False):
         full_script = preamble + base_script + "\n\n" + scene_script
     else:
         # 无场景 JS → 直接返回时间窗口检查结果
-        full_script = preamble + base_script + "\n\n// ===== 场景无专属逻辑，直接返回通用检查结果 =====\nreturn checkTimeWindowOnly();\n"
+        full_script = preamble + base_script + "\n\n// ===== 场景无专属逻辑，直接返回通用检查结果 =====\nreturn main();\n"
 
     return full_script
 

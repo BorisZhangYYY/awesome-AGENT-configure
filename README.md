@@ -100,8 +100,7 @@ awesome-AGENT-configure/
 │   │   │   └── custom-reminders.yaml  # 自定义提醒场景
 │   │   └── template-cron.zh.yaml  # 通用/Loop 统一父模板
 │   ├── hook-template/        # 通用上下文注入模板
-│   ├── skills/               # 方便管理 AAC cron 封装的 skills
-│   └── trigger-template/     # 通用 trigger 脚本库
+│   └── skills/               # AAC cron 管理 skill（含 build-cron.py + trigger 模板）
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── README.md
