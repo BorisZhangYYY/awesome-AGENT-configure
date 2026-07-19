@@ -20,6 +20,7 @@
 - 设计模板时，要基于实际的 AGENT 框架进行，如果不了解则需要调研官方文档
 - 模板文件要使用占位符，通用化，不要具体化
 - 模板变量名仅使用大写字母、数字和下划线（`[A-Z][A-Z0-9_]*`），禁止连字符；`{{#IF VAR}}` 条件块中的变量名同理（`\w+` 仅匹配 `[a-zA-Z0-9_]`）
+- **Trigger 脚本（trigger.js / 场景 .js）只允许 ES2022 纯 JavaScript**：OpenClaw trigger 沙箱为 QuickJS-WASI 隔离环境，禁用 `Intl` / `require` / `import` / `process` / Node 模块 / 网络 / 定时器，详见 `OpenClaw/skills/aac-cron-manage/references/trigger-sandbox.md`。时区换算由 `build-cron.py` 构建期注入 UTC 偏移（`AAC_TZ_OFFSET_MINUTES`），禁止运行期换算。
 - 脚本设计要简约，旨在用最少的代码实现具体功能
 - 如果一个配置可能包含多种选项，要展示所有的选项
 - 所有的改动要以用户的修改为主，不允许擅自恢复

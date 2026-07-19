@@ -17,6 +17,7 @@
 
 ### P3：
 
+- trigger.js 时区偏移构建期固化（`AAC_TZ_OFFSET_MINUTES`）：夏令时时区（如 America/New_York）在 DST 切换后需重新构建任务刷新偏移；无夏令时时区（如 Asia/Shanghai）不受影响。
 
 
 ## 已完成

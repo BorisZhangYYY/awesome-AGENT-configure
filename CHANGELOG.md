@@ -6,7 +6,24 @@
 
 ### Fixed
 
-- **移除沙箱不可用的场景 trigger JS**：`docker-check.js`、`workspace-check.js` 中使用了 `child_process` 和 `fs` 模块，OpenClaw trigger 沙箱禁止这些 API，导致 trigger 评估失败。移除这两个文件，仅保留通用 `trigger-template/trigger.js`（纯时间窗口检查）。`build-cron.py` 保留场景 JS 拼接脚手架，待 OpenClaw 优化沙箱策略后重新启用。
+- **修复 trigger.js `Intl is not defined` 沙箱错误**：`OpenClaw/skills/aac-cron-manage/scripts/trigger.js` 的 `getNow()` 使用 `Intl.DateTimeFormat` 做时区换算，但 OpenClaw trigger 沙箱为 QuickJS-WASI 环境（无 ICU），`Intl` 未定义，导致所有 AAC cron 任务 trigger 评估失败（error 4x~7x），Agent 会话无法启动。修复方案：`build-cron.py` 构建期通过 Python `zoneinfo` 计算时区 UTC 偏移，注入 `AAC_TZ_OFFSET_MINUTES` 常量；trigger.js 改用纯 `Date` 偏移运算（未注入时回退 Gateway 主机本地时间）。⚠️ 夏令时时区在切换后需重新构建任务刷新偏移。
+- **修复 `--test` 模式不跳过时间窗口**：`build_trigger_script()` docstring 声称注入 `AAC_TEST_MODE` 但代码未实现，窗口外运行测试任务时 trigger 返回 `fire: false` 导致测试无法触发。现 test 模式正确注入 `const AAC_TEST_MODE = true;`，trigger.js `main()` 检测到该标记时直接放行。
+- **修复陈旧 `trigger-template/trigger.js` 路径引用**：`SKILL.md`、`references/init-cron.md`、`template-cron.zh.yaml` 中 4 处引用指向已移除的目录，统一更正为 `OpenClaw/skills/aac-cron-manage/scripts/trigger.js`。
+- **修复 `workspace_example/USER.md` 硬编码用户身份**：示例模板中的真实用户名与称呼替换为占位符，避免使用者直接拷贝后泄漏个人身份。
+
+### Added
+
+- **`--test` 模式可观测性**：测试构建自动在 message 末尾追加 TEST 运行说明，要求 Agent 无论结果正常与否都输出简要摘要（禁止 NO_REPLY），确保 announce 投递链路可被验收。
+- **投递陷阱构建期校验**：`build-cron.py` 检测 `DELIVERY_MODE=announce + CHANNEL=last + isolated 会话` 组合（isolated 无最近渠道上下文，必然 fail-closed），构建期直接报错并给出修复指引。
+- **`references/trigger-sandbox.md`**：完整记录 OpenClaw trigger 沙箱（QuickJS-WASI）限制清单——禁用 `Intl`/`require`/`import`/`process`/Node 模块/网络/定时器，时区换算正确姿势，故障表现与排查命令，历史事故存档。`SKILL.md` 与 `CLAUDE.md` 开发规范均已链接。
+
+### Changed
+
+- `template-cron.zh.yaml` channel 注释增加 isolated + "last" 投递陷阱警告。
+
+### Fixed
+
+- **移除沙箱不可用的场景 trigger JS**：`docker-check.js`、`workspace-check.js` 中使用了 `child_process` 和 `fs` 模块，OpenClaw trigger 沙箱禁止这些 API，导致 trigger 评估失败。移除这两个文件，仅保留通用 `trigger.js`（纯时间窗口检查）。`build-cron.py` 保留场景 JS 拼接脚手架，待 OpenClaw 优化沙箱策略后重新启用。
 
 ## [0.1.0] - 2026-07-15
 

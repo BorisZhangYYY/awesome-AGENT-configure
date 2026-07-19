@@ -52,7 +52,7 @@ python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
 ## 时间窗口与去重说明
 
 - 不再使用 `TIME_WINDOW_ENABLED` / `DEDUP_ENABLED` / `WINDOW_OUT_ACTION` 变量
-- 统一由 `trigger-template/trigger.js` 处理
+- 统一由 `OpenClaw/skills/aac-cron-manage/scripts/trigger.js` 处理
 - `build-cron.py` 自动注入 `WINDOW_START` / `WINDOW_END` / `DEDUP_STATE_FILE` / `DEDUP_GRANULARITY` 为环境变量
 
 ## 安全红线

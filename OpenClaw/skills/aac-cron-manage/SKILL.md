@@ -22,7 +22,8 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 - All scene YAML files live in `~/.openclaw/workspace/awesome-AGENT-configure/cron/<task-name>/<task-name>.yaml`.
 - Rendering goes through `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`.
 - Templates are directory-based: `cron-template/checks/docker-check/docker-check.yaml`.（场景专属 .js 暂不可用，见模板注释。）
-- Trigger logic is unified in `trigger-template/trigger.js` (time window). Scene-specific JS is auto-concatenated by `build-cron.py`.
+- Trigger logic is unified in `OpenClaw/skills/aac-cron-manage/scripts/trigger.js` (time window). Scene-specific JS is auto-concatenated by `build-cron.py`.
+- Trigger scripts run in a QuickJS-WASI sandbox: pure ES2022 JS only — no `Intl`, no `require`/`import`, no `process`, no Node modules. See `references/trigger-sandbox.md` before touching any trigger code.
 - Always show config to user and get confirmation before executing.
 - `--test` mode generates a one-off task with `【TEST】` prefix, skips window/dedup checks, and auto-deletes after run.
 
@@ -57,7 +58,7 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 
 ## Legacy variable cleanup
 
-Do not use these in new YAMLs — they are handled by `trigger-template/trigger.js`:
+Do not use these in new YAMLs — they are handled by `OpenClaw/skills/aac-cron-manage/scripts/trigger.js`:
 - `TIME_WINDOW_ENABLED`
 - `DEDUP_ENABLED`
 - `WINDOW_OUT_ACTION`

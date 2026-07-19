@@ -520,6 +520,14 @@ def build_command(variables, flags, scene_path, test_mode=False):
     else:
         # Agent 模式：渲染 --message / --system-event
         message = variables.get("MESSAGE", "")
+        if message and test_mode:
+            # 测试模式可观测性：场景 Prompt 通常约定"正常即静默（NO_REPLY）",
+            # 但测试运行的目的就是验证投递链路，必须强制输出摘要。
+            message += (
+                "\n\n---\n【TEST 运行说明】本次为 --test 测试运行（跳过时间窗口与去重检查）。"
+                "无论结果正常与否，都必须在结尾输出一段简要结果摘要（禁止输出 NO_REPLY），"
+                "用于验证投递链路与报告生成。"
+            )
         if message:
             add_flag(cmd, "message", message, flags)
         system_event = variables.get("SYSTEM_EVENT", "")
@@ -550,6 +558,23 @@ def build_command(variables, flags, scene_path, test_mode=False):
             session_target = "isolated"
     if session_target:
         add_flag(cmd, "session.target", session_target, flags)
+
+    # 投递陷阱校验：isolated 会话无 "last" 路由，announce + CHANNEL=last 必然 fail-closed。
+    # 参照 references/trigger-sandbox.md 同类思路：部署前拦截，避免任务静默失败。
+    delivery_mode = str(variables.get("DELIVERY_MODE", "")).strip()
+    channel = str(variables.get("CHANNEL", "")).strip()
+    if (
+        delivery_mode == "announce"
+        and channel == "last"
+        and session_target == "isolated"
+    ):
+        raise ValueError(
+            "投递配置冲突：isolated 会话没有最近渠道上下文，"
+            "announce + CHANNEL=\"last\" 必然投递失败。"
+            "请将 CHANNEL 改为显式平台（如 feishu/telegram），并用 TO 指定接收目标；"
+            "或改用 PERSISTENT_ID 持久会话。"
+        )
+
     add_flag(cmd, "session.timeoutSeconds", variables.get("TIMEOUT_SECONDS", ""), flags)
 
     # 上下文
@@ -583,12 +608,12 @@ def add_trigger(cmd, variables, scene_path, test_mode=False):
     """处理 trigger 配置：构建组合脚本并添加 --trigger-script 参数。
 
     构建流程：
-    1. 注入环境变量（AAC_TIMEZONE / AAC_WINDOW_START 等）
+    1. 注入环境变量（AAC_TIMEZONE / AAC_TZ_OFFSET_MINUTES / AAC_WINDOW_START 等）
     2. 读取通用 trigger.js（时间窗口检查）
     3. 检测场景目录是否有同名 .js 文件：
-       - 有 → 拼接场景 JS（场景内自行调用 checkTimeWindowOnly()）
-       - 无 → 自动追加 `return checkTimeWindowOnly();`
-    4. 若 test_mode → 在脚本头部注入 AAC_TEST_MODE = "true"
+       - 有 → 拼接场景 JS（场景内自行调用 main()）
+       - 无 → 自动追加 `return main();`
+    4. 若 test_mode → 注入 AAC_TEST_MODE = true（trigger 跳过窗口检查直接放行）
     """
     trigger_enabled = parse_bool(variables.get("TRIGGER_ENABLED", "false"))
     if not trigger_enabled:
@@ -615,6 +640,24 @@ def add_trigger(cmd, variables, scene_path, test_mode=False):
         cmd.append("--trigger-once")
 
 
+def tz_offset_minutes(tz_name):
+    """计算 IANA 时区当前的 UTC 偏移分钟数（如 Asia/Shanghai → 480）。
+
+    未知/非法时区返回 None，trigger.js 将回退为 Gateway 主机本地时间。
+    ⚠️ 偏移在构建期固化：夏令时时区切换后需重新构建任务刷新偏移。
+    """
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        offset = datetime.now(ZoneInfo(tz_name)).utcoffset()
+        if offset is None:
+            return None
+        return int(offset.total_seconds() // 60)
+    except Exception:
+        return None
+
+
 def build_trigger_script(scene_path, variables, test_mode=False):
     """构建完整的 trigger 脚本：常量声明 + 通用 trigger.js + 场景 JS（可选）。"""
     # 定位 trigger.js 模板：与 build-cron.py 同级目录
@@ -625,10 +668,15 @@ def build_trigger_script(scene_path, variables, test_mode=False):
         raise FileNotFoundError(f"通用 trigger 脚本不存在：{trigger_js_path}")
 
     # 1. 常量声明（纯 JS，不依赖 process）
+    #    ⚠️ trigger 沙箱（QuickJS-WASI）无 Intl/process/require，
+    #    时区换算只能通过注入固定 UTC 偏移实现，禁止在 JS 侧做 IANA 换算。
     const_lines = []
     timezone = variables.get("TIMEZONE", "")
     if timezone:
         const_lines.append(f'const AAC_TIMEZONE = {json.dumps(timezone)};')
+        offset = tz_offset_minutes(timezone)
+        if offset is not None:
+            const_lines.append(f"const AAC_TZ_OFFSET_MINUTES = {offset};")
 
     window_start = variables.get("WINDOW_START", "")
     window_end = variables.get("WINDOW_END", "")
@@ -636,6 +684,10 @@ def build_trigger_script(scene_path, variables, test_mode=False):
         const_lines.append(f'const AAC_WINDOW_START = {json.dumps(window_start)};')
     if window_end:
         const_lines.append(f'const AAC_WINDOW_END = {json.dumps(window_end)};')
+
+    # 测试模式：注入标记，trigger.js 跳过窗口检查直接放行
+    if test_mode:
+        const_lines.append("const AAC_TEST_MODE = true;")
 
     preamble = "// ===== AAC Trigger 配置（纯 JS 常量，不依赖 process）=====\n" + "\n".join(const_lines) + "\n\n"
 
