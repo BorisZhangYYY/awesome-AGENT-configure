@@ -6,33 +6,40 @@
 
 本项目是一个模板项目，存放一些适用于 AGENT 的 Cron 模板配置，目的是希望通过 Harness 和 Loop 手段，让 AI AGENT 更加可靠。
 
-## 项目规范
+## 架构规范
 
-- 项目文档，放到 docs/ 下
-- 模板文件，统一放到 {AGENT}/*-template/ 下
-- 技能文件，统一放到 {AGENT}/skills/ 下
+- 项目文档，放到 `docs/` 下
+- 模板文件，统一放到 `{AGENT}/*-template/` 下
+- 技能文件，统一放到 `{AGENT}/skills/` 下
 - **所有目录下，需要按照类别进行多级子目录分类**
 
-> 其中 {AGENT} 指的是具体的框架，比如 OpenClaw、Hermes等。
+> 其中 `{AGENT}` 指的是具体的框架，比如 OpenClaw、Hermes 等。
 
 ## 开发规范
-- 每次开发前，先阅读一遍，TODO.md 和 CHANGELOG.md 了解项目最新进展
-- 设计模板时，要基于实际的 AGENT 框架进行，如果不了解则需要调研官方文档
+
+- 每次开发前，先阅读一遍 `TODO.md` 和 `CHANGELOG.md`，了解项目最新进展
+- 设计模板时，要基于实际的 AGENT 框架进行；如果不了解，则需要调研官方文档
 - 模板文件要使用占位符，通用化，不要具体化
 - 模板变量名仅使用大写字母、数字和下划线（`[A-Z][A-Z0-9_]*`），禁止连字符；`{{#IF VAR}}` 条件块中的变量名同理（`\w+` 仅匹配 `[a-zA-Z0-9_]`）
-- **Trigger 脚本（trigger.js / 场景 .js）只允许 ES2022 纯 JavaScript**：OpenClaw trigger 沙箱为 QuickJS-WASI 隔离环境，禁用 `Intl` / `require` / `import` / `process` / Node 模块 / 网络 / 定时器，详见 `OpenClaw/skills/aac-cron-manage/references/trigger-sandbox.md`。时区换算由 `build-cron.py` 构建期注入 UTC 偏移（`AAC_TZ_OFFSET_MINUTES`），禁止运行期换算。
+- **Trigger 脚本（`trigger.js` / 场景 `.js`）只允许 ES2022 纯 JavaScript**：OpenClaw trigger 沙箱为 QuickJS-WASI 隔离环境，禁用 `Intl` / `require` / `import` / `process` / Node 模块 / 网络 / 定时器，详见 `OpenClaw/skills/aac-cron-manage/references/trigger-sandbox.md`。时区换算由 `build-cron.py` 构建期注入 UTC 偏移（`AAC_TZ_OFFSET_MINUTES`），禁止运行期换算
 - 脚本设计要简约，旨在用最少的代码实现具体功能
 - 如果一个配置可能包含多种选项，要展示所有的选项
 - 所有的改动要以用户的修改为主，不允许擅自恢复
-- 如果每次开发结束后，还有待讨论的事项内容，需要在 TODO.md 中进行记录
+- 如果每次开发结束后，还有待讨论的事项内容，需要在 `TODO.md` 中进行记录
 
 ## 提交规范
-- 不提交 AI 相关内容，如 superpowers/
-- 不提交中间产物与辅助文档，如 docs/ 下的文档
-- 每次提交需要清晰说明开发内容，还需要在 CHANGELOG.md 中进行说明
+
+- 不提交 AI 相关内容，如 `superpowers/`
+- 不提交中间产物与辅助文档，如 `docs/` 下的文档
+- 每次提交需要清晰说明开发内容，还需要在 `CHANGELOG.md` 中进行说明
+
+## 其他
+
+- 可随项目迭代补充依赖、测试、部署等规范
+- 冗长完整开发规范统一放入 `.project/`，本文件仅做索引指向，例：[发布说明规范](.project/release-note.md)
 
 ## 链接
 
 - OpenClaw 官方文档：https://docs.openclaw.ai/
-- Hermes 官方文档：
-- Claude Code 官方文档：
+- Hermes 官方文档：（待补充）
+- Claude Code 官方文档：（待补充）

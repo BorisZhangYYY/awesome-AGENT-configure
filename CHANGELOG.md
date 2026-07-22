@@ -6,6 +6,16 @@
 
 ### Fixed
 
+### Added
+
+### Changed
+
+### Removed
+
+## [0.1.1] - 2026-07-22
+
+### Fixed
+
 - **修复 trigger.js `Intl is not defined` 沙箱错误**：`OpenClaw/skills/aac-cron-manage/scripts/trigger.js` 的 `getNow()` 使用 `Intl.DateTimeFormat` 做时区换算，但 OpenClaw trigger 沙箱为 QuickJS-WASI 环境（无 ICU），`Intl` 未定义，导致所有 AAC cron 任务 trigger 评估失败（error 4x~7x），Agent 会话无法启动。修复方案：`build-cron.py` 构建期通过 Python `zoneinfo` 计算时区 UTC 偏移，注入 `AAC_TZ_OFFSET_MINUTES` 常量；trigger.js 改用纯 `Date` 偏移运算（未注入时回退 Gateway 主机本地时间）。⚠️ 夏令时时区在切换后需重新构建任务刷新偏移。
 - **修复 `--test` 模式不跳过时间窗口**：`build_trigger_script()` docstring 声称注入 `AAC_TEST_MODE` 但代码未实现，窗口外运行测试任务时 trigger 返回 `fire: false` 导致测试无法触发。现 test 模式正确注入 `const AAC_TEST_MODE = true;`，trigger.js `main()` 检测到该标记时直接放行。
 - **修复陈旧 `trigger-template/trigger.js` 路径引用**：`SKILL.md`、`references/init-cron.md`、`template-cron.zh.yaml` 中 4 处引用指向已移除的目录，统一更正为 `OpenClaw/skills/aac-cron-manage/scripts/trigger.js`。
@@ -16,9 +26,14 @@
 - **`--test` 模式可观测性**：测试构建自动在 message 末尾追加 TEST 运行说明，要求 Agent 无论结果正常与否都输出简要摘要（禁止 NO_REPLY），确保 announce 投递链路可被验收。
 - **投递陷阱构建期校验**：`build-cron.py` 检测 `DELIVERY_MODE=announce + CHANNEL=last + isolated 会话` 组合（isolated 无最近渠道上下文，必然 fail-closed），构建期直接报错并给出修复指引。
 - **`references/trigger-sandbox.md`**：完整记录 OpenClaw trigger 沙箱（QuickJS-WASI）限制清单——禁用 `Intl`/`require`/`import`/`process`/Node 模块/网络/定时器，时区换算正确姿势，故障表现与排查命令，历史事故存档。`SKILL.md` 与 `CLAUDE.md` 开发规范均已链接。
+- **`LICENSE`**：新增 MIT 许可证文件。
+- **`AGENTS.md`**：新增 AGENT 引导文件，指向 `CLAUDE.md`。
 
 ### Changed
 
+- **升级 `AI-ProjConf/zh_CN/README.md.example` 骨架**：参考 [awesome-readme](https://github.com/matiassingers/awesome-readme)、[Make a README](https://www.makeareadme.com/) 与 [AutoGPT](https://github.com/Significant-Gravitas/AutoGPT) 等大型开源项目 README 结构，新增 Hero 区域、目录、适用场景、快速开始、核心概念、配置说明、路线图、贡献指南、常见问题、支持与致谢等章节，并补充占位符填写说明，使通用 AGENT 项目骨架更贴近工程实践。
+- **重构根目录 `README.md`**：基于新版骨架组织内容，保留原有 OpenClaw 示例与项目结构，新增核心特性、适用场景、快速开始、核心概念、路线图、FAQ 等章节，替换所有占位符为实际值，并补充 MIT License Badge、Issue 链接、Hermes 与 Claude Code 官方文档链接。
+- **重组根目录 `CLAUDE.md`**：按 AI-ProjConf 模板结构分为项目简介、架构规范、开发规范、提交规范、其他、链接，完整保留原有特殊约定。
 - `template-cron.zh.yaml` channel 注释增加 isolated + "last" 投递陷阱警告。
 
 ### Fixed
