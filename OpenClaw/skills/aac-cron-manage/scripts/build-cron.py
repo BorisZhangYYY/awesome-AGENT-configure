@@ -89,6 +89,7 @@ FLAGS = {
         "session.timeoutSeconds": "--timeout-seconds",
         "agent.agentId": "--agent",
         "agent.model": "--model",
+        "agent.fallbacks": "--fallbacks",
         "agent.thinking": "--thinking",
         "agent.tools": "--tools",
         "command.script": "--command",
@@ -583,6 +584,7 @@ def build_command(variables, flags, scene_path, test_mode=False):
     # Agent 配置
     add_flag(cmd, "agent.agentId", variables.get("AGENT_ID", ""), flags)
     add_flag(cmd, "agent.model", variables.get("MODEL", ""), flags)
+    add_flag(cmd, "agent.fallbacks", variables.get("FALLBACKS", ""), flags)
     add_flag(cmd, "agent.thinking", variables.get("THINKING", ""), flags)
     add_flag(cmd, "agent.tools", variables.get("TOOLS", ""), flags)
 
