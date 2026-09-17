@@ -19,7 +19,9 @@ variables:
 
   DELIVERY_MODE: "announce"
   BEST_EFFORT: "true"
-  CHANNEL: "last"
+  # ⚠️ 使用前按平台填写投递目标（isolated 会话不能用 "last"，构建期会被拦截）：
+  # CHANNEL: "feishu"        # telegram | slack | discord | whatsapp | feishu | ...
+  # TO: "<chat_id 或 open_id>"
   LIGHT_CONTEXT: "true"
   THINKING: "medium"
   TOOLS: "exec,read,write"

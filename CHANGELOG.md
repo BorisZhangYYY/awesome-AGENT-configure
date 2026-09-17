@@ -4,13 +4,44 @@
 
 ## [Unreleased]
 
-### Fixed
-
 ### Added
 
 ### Changed
 
+### Fixed
+
 ### Removed
+
+## [0.2.0] - 2026-09-17
+
+### Added
+
+- **`scripts/check.py`：发版前自检脚本（新增）**：5 项检查 —— YAML 可解析 / Python、Shell 语法 / cron 模板渲染 / Markdown 格式（尾随空格、未闭合代码块，YAML 块标量内自动跳过）/ CHANGELOG 结构（Unreleased 段 + 版本头格式）。支持“设计如此”豁免白名单（如占位符模板），退出码 0/1。
+- **`.github/workflows/check.yml`：CI 检查工作流（新增）**：push 到 main、PR、手动触发时运行 `scripts/check.py`。
+- **`AI-ProjConf/zh_CN/multi-repo/`（微服务工作区模板，新增）**：面向“根目录不做版本控制、子目录为独立 git 仓库”的大型项目场景。与 `single-repo/`（单仓库、独立开发者）并列。
+  - `CLAUDE.md.example`：骨架级（项目概述 / Agent 规范 / 环境索引 / 其他），本机工作台账定位。
+  - `AGENTS.md.example`：AGENT 引导文件。
+  - 目录占位：`.docs/`、`.project/`、`.project/env/` 均以 `.gitkeep` 标记，不预置任何文档模板。
+- **`AI-ProjConf/README.md`**：说明 `single-repo/` 与 `multi-repo/` 两类模板的适用场景与目录结构。
+- **`build-cron.py` 支持 `--fallbacks`**：新增 `agent.fallbacks` flag 映射与渲染（`FALLBACKS` 变量），支持为 cron 任务指定模型回退链。
+
+### Changed
+
+- **`AI-ProjConf/zh_CN/` 目录重构（破坏性）**：原有 5 个模板（AGENTS / CHANGELOG / CLAUDE / README / TODO）以 `git mv` 迁入 **`single-repo/`** 子目录，文件内容未变，git 历史保留。引用旧路径 `AI-ProjConf/zh_CN/*.example` 的使用者需更新为 `AI-ProjConf/zh_CN/single-repo/*.example`。
+- **`workspace_example/AGENTS.md`：移除对 `TOOLS.md` 的引用**，并新增 `## Tools` 段作为本地环境笔记的**索引位**（每项一行 + `docs/references/` 链接），避免身份文件随使用不断膨胀。同步移除遗留的 ElevenLabs `sag` 具体依赖描述（改为通用的「有 TTS 时」）。
+- **`workspace_example/SOUL.md`：长内容外置规范改写**。原文强依赖 `TOOLS.md`，现改为：身份文件与 `AGENTS.md` §Tools 只写一行索引，详情放 `docs/references/{主题}/`。根目录白名单同步补充 `memory/`、`skills/`，并移除 `TOOLS.md`。
+- **`cron-template/checks/workspace-check`：目录分类表与白名单同步**（移除 `TOOLS.md`，改为「身份文件引用附录」的通用表述）。
+- **`cron-template/checks/docker-check`：新增「用户主动停机」判定分支**。容器 `restart: no` 的 compose 项目被使用者主动停掉（如腾资源玩游戏）后，次日巡检不应误报：应先 `docker compose up -d` 原位恢复，已确认属常规行为的不计异常。通用判据：有 compose 的常驻服务 → 恢复；无 compose 的孤儿容器 → 按主动停用处理。
+
+### Fixed
+
+- **修正两个模板的投递配置死值**：`checks/cron-check.yaml` 与 `checks/workspace-check.yaml` 硬编码 `CHANNEL: "last"`，在 isolated 会话下会触发 `build-cron.py` 构建期拦截（isolated 无最近渠道上下文）。改为注释形式给出 `CHANNEL` / `TO` 填写指引，与 `docker-check` / `custom-checks` 保持一致。
+- **修正 `TOOLS.md` 已废弃但模板仍在使用的问题**：OpenClaw 官方已将 `TOOLS.md` 内容并入 `AGENTS.md` 的 `## Tools` 段（参见官方 `docs/reference/templates/TOOLS.md`："TOOLS.md is retired"）。
+- **清理 Markdown 尾随空格**：`CHANGELOG.md`、`OpenClaw/hook-template/context.md`、`OpenClaw/workspace_example/IDENTITY.md`。
+
+### Removed
+
+- **`OpenClaw/workspace_example/TOOLS.md`**：官方已退役该文件，模板随之移除。
 
 ## [0.1.1] - 2026-07-22
 
@@ -172,7 +203,7 @@
 - `README.md`：重构为目录导航结构，新增安装与依赖、项目结构、贡献指南等章节，修正章节标题笔误。
 - `TODO.md`：精简为“待实现 / 已完成”两栏，按 P0~P3 优先级分组，删除历史已决策条目。
 - `README.md`：补充项目结构、使用方法、设计原则和开机堆叠问题说明。
-- `TODO.md`：关闭 `#3`/`#4`/`#7`/`#8`/`#10`。 
+- `TODO.md`：关闭 `#3`/`#4`/`#7`/`#8`/`#10`。
 - `OpenClaw/skills/SKILL-GUIDE.md`、`init-cron/SKILL.md`、`migrate-cron/SKILL.md`：将任务分类从 7 类（提醒/巡检/汇报/开发/学习/整理/系统）精简为 4 类（提醒/巡检/开发/学习）。
 - `OpenClaw/skills/init-cron/SKILL.md`、`migrate-cron/SKILL.md`：调整步骤顺序，先定位项目仓库（`AAC_REPO`）再生成场景 YAML，并明确要求将 `templateRef` 修正为仓库绝对路径。
 - `OpenClaw/workspace_example/SOUL.md.example`：调整目录结构规范，将 IDENTITY.md 引用资源从 `assets/` 拆分为 `avatars/`，用户资源仍放 `assets/`，并增加 `.trash` 回收站规范。

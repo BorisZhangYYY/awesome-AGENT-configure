@@ -102,7 +102,7 @@ openclaw \
 
 ```
 awesome-AGENT-configure/
-├── AI-ProjConf/              # 通用项目初始化模板（README / TODO / AGENTS 等）
+├── AI-ProjConf/              # 通用项目初始化模板（按单仓库 / 微服务工作区两类）
 ├── OpenClaw/
 │   ├── conf/                 # OpenClaw 参数与 flag 配置
 │   ├── cron-template/        # cron 场景模板，按类别分子目录

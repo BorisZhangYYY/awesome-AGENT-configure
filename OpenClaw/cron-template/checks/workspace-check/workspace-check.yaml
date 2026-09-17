@@ -17,7 +17,9 @@ variables:
 
   DELIVERY_MODE: "announce"
   BEST_EFFORT: "true"
-  CHANNEL: "last"
+  # ⚠️ 使用前按平台填写投递目标（isolated 会话不能用 "last"，构建期会被拦截）：
+  # CHANNEL: "feishu"        # telegram | slack | discord | whatsapp | feishu | ...
+  # TO: "<chat_id 或 open_id>"
   LIGHT_CONTEXT: "true"
   THINKING: "medium"
   TOOLS: "exec,read,write"
@@ -80,7 +82,7 @@ variables:
     对每个散落在根目录（不在任何子目录中）的非核心文件，**读取其内容**判断主题归属：
 
     **核心文件白名单**（不移动，保持在根目录）：
-    SOUL.md / AGENTS.md / IDENTITY.md / USER.md / MEMORY.md / TOOLS.md / HEARTBEAT.md / CLAUDE.md / README.md
+    SOUL.md / AGENTS.md / IDENTITY.md / USER.md / MEMORY.md / HEARTBEAT.md / CLAUDE.md / README.md
     
     **允许的系统目录**（不移动）：
     `.git/` / `.clawhub/` / `.state/` / `.trash/` / `awesome-AGENT-configure/`
@@ -90,7 +92,7 @@ variables:
     | 文件主题 | 目标目录 | 说明 |
     |----------|----------|------|
     | 某个技术/业务主题的笔记、分析、方案 | `docs/<主题名>/` | 如 `docs/OpenClaw/`、`docs/Docker/` |
-    | 属于 MEMORY.md 或 TOOLS.md 的引用/附录 | `docs/references/<主题名>/` | **仅限** MEMORY/TOOLS 明确引用的详细文档 |
+    | 属于身份文件（AGENTS.md §Tools / MEMORY.md 等）的引用/附录 | `docs/references/<主题名>/` | **仅限**身份文件明确引用的详细文档 |
     | 某主题的脚本/工具 | `scripts/<主题名>/` | 如 `scripts/deploy/`、`scripts/backup/` |
     | 用户自己的图片、音频、字体等资源 | `assets/<类型>/` | 如 `assets/images/`、`assets/fonts/`，与 avatars/ 区分 |
     | OpenClaw 自身的头像/形象资源 | `avatars/` | IDENTITY.md 引用的头像等，与用户 assets 区分 |
