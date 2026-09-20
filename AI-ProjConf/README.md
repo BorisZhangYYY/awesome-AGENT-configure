@@ -27,6 +27,7 @@ zh_CN/
 └── multi-repo/           # 微服务工作区模板
     ├── AGENTS.md.example
     ├── CLAUDE.md.example
+    ├── TODO.md.example
     ├── .docs/.gitkeep
     └── .project/
         ├── .gitkeep

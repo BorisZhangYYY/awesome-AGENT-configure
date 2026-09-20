@@ -6,7 +6,12 @@
 
 ### Added
 
+- **`AI-ProjConf/zh_CN/multi-repo/TODO.md.example`（新增）**：微服务工作区模板补齐 todo 索引骨架，与 `single-repo/` 对齐。
+- **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 新增「任务跟踪规范」**：明确待办事项「一处登记（根目录 `TODO.md` 索引）、一处展开（`.project/` 正文）」的三条规则 —— 建 `YYYYMMDD-<主题>/` 目录、在「未完成」下加链接行、完成后移入「已完成/归档」并加 `### ✅` 前缀。
+
 ### Changed
+
+- **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 日期目录格式统一为 8 位**：`YYMMDD-主题/` → `YYYYMMDD-主题/`（示例同步为 `20260831-HIVE建表语句/`），与「任务跟踪规范」及 `single-repo/`、`OpenClaw/workspace_example` 的 8 位口径保持一致。
 
 ### Fixed
 

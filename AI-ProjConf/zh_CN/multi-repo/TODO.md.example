@@ -1,0 +1,11 @@
+# TODO
+
+> 本文件只做索引，正文放 `.project/`。规范见 `CLAUDE.md` 的「任务跟踪规范」。
+
+## 未完成
+
+### {{待办事项}}，见 [{{YYYYMMDD-主题}}](.project/{{YYYYMMDD-主题}})
+
+## 已完成/归档
+
+### ✅ {{已完成事项}}，见 [{{YYYYMMDD-主题}}](.project/{{YYYYMMDD-主题}})
