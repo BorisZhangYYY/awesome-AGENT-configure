@@ -8,6 +8,7 @@ templateRef: "../../template-cron.zh.yaml"
 
 variables:
   JOB_NAME: "【AAC-巡检】Docker 容器健康"
+  AGENT_ID: "main"
   CATEGORY: "巡检"
   DESCRIPTION: "检查 Docker 容器与 Compose 项目的运行状态、健康状态及近期日志"
 

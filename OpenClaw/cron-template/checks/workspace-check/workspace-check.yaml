@@ -9,6 +9,7 @@ templateRef: "../../template-cron.zh.yaml"
 
 variables:
   JOB_NAME: "【AAC-巡检】工作区整理"
+  AGENT_ID: "main"
   CATEGORY: "巡检"
   DESCRIPTION: "每日按工作区规范整理文件，按主题分类归位，验证脚本可执行性"
 

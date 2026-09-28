@@ -20,6 +20,7 @@ variables:
 
   # ========== 基础信息 ==========
   JOB_NAME: "【AAC-项目】XXX 维护会话"
+  AGENT_ID: "main"
   CATEGORY: "项目"
   DESCRIPTION: "定期维护项目：测试验证、债务清理、健康检查，按维护阶段推进"
 

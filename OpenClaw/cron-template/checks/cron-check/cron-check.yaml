@@ -9,6 +9,7 @@ templateRef: "../../template-cron.zh.yaml"
 
 variables:
   JOB_NAME: "【AAC-巡检】Cron 任务健康"
+  AGENT_ID: "main"
   CATEGORY: "巡检"
   DESCRIPTION: "每日巡检 cron 任务运行状态，结合历史报告区分新故障与已知问题"
 

@@ -86,6 +86,7 @@
 | `delivery.threadId` | `--thread-id` | Telegram topic ID | 论坛话题 ID |
 | `delivery.webhookUrl` | `--webhook` | webhook URL | webhook 模式必填 |
 | `delivery.bestEffort` | `--best-effort-deliver` / `--no-best-effort-deliver` | 投递失败是否导致任务失败 | 提醒类 `true` |
+| `delivery.accountId` | `--account` | 多渠道账号选择 | 多账号平台必填 |
 
 **delivery.mode 说明：**
 
@@ -99,6 +100,7 @@
 |-----------|----------|------|--------|
 | `session.target` | `--session` | 执行会话 | 绝大多数用 `isolated` |
 | `session.persistentId` | `--session` | 持久命名会话 ID | 需要历史积累时用 `session:xxx` |
+| `session.sessionKey` | `--session-key` | 会话路由键 | 与命名会话配合 |
 | `session.timeoutSeconds` | `--timeout-seconds` | 超时时间 | 提醒 120s，开发 4h |
 
 **session.target 选择：**
@@ -112,10 +114,20 @@
 
 | YAML 字段 | CLI 参数 | 说明 | 推荐值 |
 |-----------|----------|------|--------|
-| `agent.agentId` | `--agent` | 绑定特定 agent | 默认不填 |
+| `agent.agentId` | `--agent` | 绑定特定 agent | **默认 `main`**（见下） |
 | `agent.model` | `--model` | 模型覆盖 | 按任务复杂度选择 |
+| `agent.fallbacks` | `--fallbacks` | 模型降级链 | 主模型不可用时按序降级 |
+| `agent.expectFinal` | `--expect-final` | 等待 Agent 最终回复才标记完成 | 开发/学习类 `true` |
 | `agent.thinking` | `--thinking` | 思考级别 | 提醒类 `off`，开发类 `medium/high` |
 | `agent.tools` | `--tools` | 限制作业可用工具 | 按任务需求限定 |
+
+**⚠️ agentId 必须显式绑定（2026-09-28 事故修复）：**
+
+多 Agent 环境（如 `main` + `nangongwan`）下，未绑定 agent 的 cron 任务会在
+trigger 评估阶段报 `AGENT_SELECTION_REQUIRED`（"Multiple agents are configured,
+but this operation has no explicit owner"），**任务永远不触发**。
+`build-cron.py` 的 `DEFAULTS` 已将 `AGENT_ID` 默认设为 `"main"`，渲染命令必然携带
+`--agent main`；场景 YAML 仅在需要非 main Agent 时覆盖 `AGENT_ID`。
 
 **thinking 推荐：**
 
@@ -168,6 +180,17 @@
 | `advanced.wake` | `--wake` | 立即执行或等下次心跳 | `now` / `next-heartbeat` |
 | `advanced.exact` | `--exact` | 禁用自动 stagger | 提醒类 `true` |
 | `advanced.stagger` | `--stagger` | 显式错峰窗口 | `30s` |
+| `advanced.pacingMin` | `--pacing-min` | 动态节奏下限 | 自适应轮询任务 |
+| `advanced.pacingMax` | `--pacing-max` | 动态节奏上限 | 自适应轮询任务 |
+
+**基础信息参数**（`--name` 之外，build-cron.py 同样渲染）：
+
+| 变量 | CLI 参数 | 说明 |
+|------|----------|------|
+| `JOB_NAME` | `--name` | 任务名（强制 `【AAC-` 前缀） |
+| `DESCRIPTION` | `--description` | 任务描述，cron list 中可识别 |
+| `DISPLAY_NAME` | `--display-name` | UI 人类可读标签 |
+| `DECLARATION_KEY` | `--declaration-key` | 幂等声明键，防重复创建 |
 
 ---
 

@@ -22,6 +22,7 @@ variables:
   # ========== 基础信息 ==========
   # 任务名称，建议使用：【AAC-学习】主题名
   JOB_NAME: "【AAC-学习】{{CUSTOM_TOPIC_NAME}}"
+  AGENT_ID: "main"
   CATEGORY: "学习"
   DESCRIPTION: "定时学习 {{CUSTOM_TOPIC_NAME}}，输出学习笔记并更新知识库"
 

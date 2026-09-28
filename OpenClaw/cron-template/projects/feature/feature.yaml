@@ -23,6 +23,7 @@ variables:
   LOOP_MODE_ENABLED: "true"
   # 任务名称，建议使用：【AAC-项目】项目名-功能名
   JOB_NAME: "【AAC-项目】XXX 功能开发"
+  AGENT_ID: "main"
   CATEGORY: "项目"
   DESCRIPTION: "通过 Loop 方法定时推进项目功能开发，按里程碑推进，达成目标后自动停用"
 

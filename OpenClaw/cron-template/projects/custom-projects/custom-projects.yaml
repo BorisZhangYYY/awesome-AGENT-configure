@@ -20,6 +20,7 @@ variables:
   # ========== 基础信息 ==========
   # 任务名称，建议使用：【AAC-项目】项目名-任务名
   JOB_NAME: "【AAC-项目】XXX 自定义项目任务"
+  AGENT_ID: "main"
   CATEGORY: "项目"
   DESCRIPTION: "通过 Loop 方法定时推进项目任务，按里程碑推进，达成目标后可自动停用"
 

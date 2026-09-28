@@ -128,6 +128,9 @@ session:
   #   current：绑定当前创建时的会话
   #   session:<id>：持久命名会话，适合需要历史积累的 Loop 任务
   target: "{{SESSION_TARGET}}"
+  # --session-key：会话路由键，把任务路由到指定命名会话（与 --session session:<id> 配合）
+  #   留空则不指定
+  sessionKey: "{{SESSION_KEY}}"
   # 持久会话 ID（仅填写 ID 即可，生成器自动拼成 session:<ID> 传给 --session）
   # 当 SESSION_TARGET 不以 session: 开头时，若 PERSISTENT_ID 非空则自动拼接
   persistentId: "{{PERSISTENT_ID}}"
@@ -137,6 +140,8 @@ session:
   # --timeout：毫秒级超时（可选）。若同时设置 timeoutSeconds 和 timeoutMs，
   #   OpenClaw 以更严格的为准。大多数场景用 timeoutSeconds 即可，
   #   需要亚秒级精度控制时使用 timeoutMs
+  # ⚠️ build-cron.py 不映射本变量：CLI 的 --timeout 是 Gateway RPC 请求超时（默认 30000ms），
+  #   并非任务超时。任务超时请只用 TIMEOUT_SECONDS（--timeout-seconds）。
   timeoutMs: "{{TIMEOUT_MS}}"
 
 # ===== 执行上下文 =====
@@ -149,7 +154,12 @@ context:
 # ===== Agent 配置 =====
 # 控制执行任务的 Agent 身份、模型与能力。留空则使用 Gateway 默认值。
 agent:
-  # --agent：绑定特定 Agent ID，不填则使用默认 Agent
+  # --agent：绑定特定 Agent ID。
+  # ⚠️ 多 Agent 环境（如 main + nangongwan）下，此参数必须显式指定：
+  #   未绑定 agent 的任务会在 trigger 评估阶段报 AGENT_SELECTION_REQUIRED
+  #   （"Multiple agents are configured, but this operation has no explicit owner"），
+  #   导致任务永远不触发。build-cron.py 已内置默认值 "main"，
+  #   场景 YAML 仅在需要非 main Agent（如 nangongwan）时才覆盖此变量。
   agentId: "{{AGENT_ID}}"
   # --model：模型覆盖。格式为 provider/model 或别名
   #   示例：kimi-for-coding/kimi-for-coding | datagrand/deepseek-v4-pro
@@ -220,12 +230,18 @@ advanced:
   # --stagger：显式错峰窗口，如 "30s"、"5m"
   #   与 exact 互斥：exact=true 时 stagger 无效
   stagger: "{{STAGGER}}"
+  # --pacing-min / --pacing-max：动态节奏区间（如 "15m"、"4h"），
+  #   配合 trigger 的 next_check 实现自适应轮询：活跃时收紧、安静时回退。
+  #   至少填一个；仅 pacing 型任务需要，普通任务留空
+  pacingMin: "{{PACING_MIN}}"
+  pacingMax: "{{PACING_MAX}}"
   # --expect-final：等待 Agent 最终回复后才标记任务完成
   #   true：适合需要保证输出质量的开发/学习类任务
   #   false：Agent 启动即标记完成（默认，适合提醒/巡检类）
   expectFinal: "{{EXPECT_FINAL}}"
   # --on-exit：监听进程退出事件。填写要监控的命令（如 "docker compose up"），
   #   该命令退出时触发一次性回调。与普通 cron 互斥，仅高级场景使用
+  #   ⚠️ build-cron.py 不映射本变量：on-exit 属于独立调度类型，需手工编写命令
   #   留空则不启用
   onExit: "{{ON_EXIT}}"
   # --on-exit-cwd：on-exit 监听命令的工作目录

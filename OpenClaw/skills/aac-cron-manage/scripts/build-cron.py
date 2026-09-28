@@ -33,6 +33,10 @@ except ImportError as exc:
 # 场景 YAML 中未提供的变量使用以下默认值。
 
 DEFAULTS = {
+    # 多 Agent 环境（如 main + nangongwan）下，未绑定 agent 的 cron 任务
+    # 会在 trigger 评估阶段报 AGENT_SELECTION_REQUIRED 而永远不触发。
+    # 因此 AGENT_ID 必须有显式默认值；场景 YAML 可覆盖（如 "nangongwan"）。
+    "AGENT_ID": "main",
     "SCHEDULE_TYPE": "cron",
     "TIMEZONE": "Asia/Shanghai",
     "DELIVERY_MODE": "announce",
@@ -44,6 +48,14 @@ DEFAULTS = {
     "EXACT": "false",
     "TIMEOUT_SECONDS": "300",
     "THINKING": "off",
+    "DESCRIPTION": "",
+    "DISPLAY_NAME": "",
+    "DECLARATION_KEY": "",
+    "EXPECT_FINAL": "false",
+    "PACING_MIN": "",
+    "PACING_MAX": "",
+    "SESSION_KEY": "",
+    "ACCOUNT": "",
     "DEDUP_STATE_FILE": "{{WORKSPACE}}/.state/dedup.txt",
     "DEDUP_GRANULARITY": "daily",
     "LOOP_MODE_ENABLED": "false",
@@ -85,7 +97,12 @@ FLAGS = {
         "delivery.to": "--to",
         "delivery.threadId": "--thread-id",
         "delivery.webhookUrl": "--webhook",
+        "delivery.accountId": "--account",
+        "job.description": "--description",
+        "job.displayName": "--display-name",
+        "job.declarationKey": "--declaration-key",
         "session.target": "--session",
+        "session.sessionKey": "--session-key",
         "session.timeoutSeconds": "--timeout-seconds",
         "agent.agentId": "--agent",
         "agent.model": "--model",
@@ -101,6 +118,8 @@ FLAGS = {
         "command.outputMaxBytes": "--output-max-bytes",
         "advanced.wake": "--wake",
         "advanced.stagger": "--stagger",
+        "advanced.pacingMin": "--pacing-min",
+        "advanced.pacingMax": "--pacing-max",
     },
     "special": {
         "schedule.expr": {
@@ -123,6 +142,11 @@ FLAGS = {
         "context.lightContext": {
             "type": "boolean_flag",
             "true_flag": "--light-context",
+            "false_flag": None,
+        },
+        "agent.expectFinal": {
+            "type": "boolean_flag",
+            "true_flag": "--expect-final",
             "false_flag": None,
         },
         "advanced.disabled": {
@@ -537,6 +561,9 @@ def build_command(variables, flags, scene_path, test_mode=False):
 
     # 基础信息
     add_flag(cmd, "name", variables.get("JOB_NAME", ""), flags)
+    add_flag(cmd, "job.description", variables.get("DESCRIPTION", ""), flags)
+    add_flag(cmd, "job.displayName", variables.get("DISPLAY_NAME", ""), flags)
+    add_flag(cmd, "job.declarationKey", variables.get("DECLARATION_KEY", ""), flags)
 
     # 调度
     add_flag(cmd, "schedule.timezone", variables.get("TIMEZONE", ""), flags)
@@ -547,6 +574,7 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "delivery.to", variables.get("TO", ""), flags)
     add_flag(cmd, "delivery.threadId", variables.get("THREAD_ID", ""), flags)
     add_flag(cmd, "delivery.webhookUrl", variables.get("WEBHOOK_URL", ""), flags)
+    add_flag(cmd, "delivery.accountId", variables.get("ACCOUNT", ""), flags)
 
     # 会话
     session_target = str(variables.get("SESSION_TARGET", "")).strip()
@@ -559,6 +587,7 @@ def build_command(variables, flags, scene_path, test_mode=False):
             session_target = "isolated"
     if session_target:
         add_flag(cmd, "session.target", session_target, flags)
+    add_flag(cmd, "session.sessionKey", variables.get("SESSION_KEY", ""), flags)
 
     # 投递陷阱校验：isolated 会话无 "last" 路由，announce + CHANNEL=last 必然 fail-closed。
     # 参照 references/trigger-sandbox.md 同类思路：部署前拦截，避免任务静默失败。
@@ -585,6 +614,7 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "agent.agentId", variables.get("AGENT_ID", ""), flags)
     add_flag(cmd, "agent.model", variables.get("MODEL", ""), flags)
     add_flag(cmd, "agent.fallbacks", variables.get("FALLBACKS", ""), flags)
+    add_special_boolean(cmd, "agent.expectFinal", variables.get("EXPECT_FINAL", ""), flags)
     add_flag(cmd, "agent.thinking", variables.get("THINKING", ""), flags)
     add_flag(cmd, "agent.tools", variables.get("TOOLS", ""), flags)
 
@@ -595,6 +625,8 @@ def build_command(variables, flags, scene_path, test_mode=False):
     add_flag(cmd, "advanced.wake", variables.get("WAKE", ""), flags)
     add_special_boolean(cmd, "advanced.exact", variables.get("EXACT", ""), flags)
     add_flag(cmd, "advanced.stagger", variables.get("STAGGER", ""), flags)
+    add_flag(cmd, "advanced.pacingMin", variables.get("PACING_MIN", ""), flags)
+    add_flag(cmd, "advanced.pacingMax", variables.get("PACING_MAX", ""), flags)
 
     # OpenClaw 2026.7.1+ trigger 支持
     add_trigger(cmd, variables, scene_path, test_mode)
