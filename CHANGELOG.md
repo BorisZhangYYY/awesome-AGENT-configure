@@ -6,6 +6,8 @@
 
 ### Added
 
+- **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 新增「一个主题一个目录」约束**：同一主题的任务共用一个 `YYYYMMDD-主题/` 目录；复杂任务在目录内用 `01-问题讨论` 这样的序号子目录区分步骤，不得另建主题目录。
+- **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example`「任务跟踪规范」补充并入规则**：同一主题的后续任务并入已有主题目录，不另建主题目录。
 - **`AI-ProjConf/zh_CN/multi-repo/TODO.md.example`（新增）**：微服务工作区模板补齐 todo 索引骨架，与 `single-repo/` 对齐。
 - **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 新增「任务跟踪规范」**：明确待办事项「一处登记（根目录 `TODO.md` 索引）、一处展开（`.project/` 正文）」的三条规则 —— 建 `YYYYMMDD-<主题>/` 目录、在「未完成」下加链接行、完成后移入「已完成/归档」并加 `### ✅` 前缀。
 
