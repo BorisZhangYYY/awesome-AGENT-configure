@@ -44,6 +44,11 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
   python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml"
   ```
+- Render a scene YAML as an argv array (**use this for edit**):
+  ```bash
+  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+    "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" --json
+  ```
 - Render a scene YAML (test mode):
   ```bash
   python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
@@ -55,6 +60,14 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
   export AAC_REPO=$(python3 -c "import os,sys; ...")
   ```
   Fallback order: `AAC_REPO` env → current directory → search under `$HOME`.
+
+## ⛔ Edit 时必须用 `--json`
+
+`build-cron.py` 的默认输出是**反斜杠续行**格式，用字符串替换拼 `openclaw cron edit` 会静默失败，
+实际执行成 `openclaw cron create` → 产生重复 job，还可能误删带改动的副本（2026-10-19/21 实测事故）。
+
+编辑步骤见 `references/edit-cron.md`。核心：渲染加 `--json` 拿 argv 数组 → 只传 `--message` 做最小编辑
+→ edit 后**必须核对 live job 的 payload 真的变了**。
 
 ## Legacy variable cleanup
 
