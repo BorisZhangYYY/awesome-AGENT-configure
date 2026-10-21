@@ -22,7 +22,16 @@
   - 模型能力 → `THINKING` / `MODEL` / `TOOLS`
   - 超时 → `TIMEOUT_SECONDS`
 - **6. 修改 YAML**：更新对应变量值
-- **7. 重新渲染（必须用 `--json`）**：
+- **7. 重新渲染**：
+  ```bash
+  # 推荐：--edit <job-id> 直接生成 openclaw cron edit <job-id> ... 命令
+  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+    "$AAC_WORKSPACE/cron/<job-name>.yaml" --edit <job-id> --json
+  ```
+  `--edit` 模式会：位置参数用 job id（不是 cron 表达式）、cron 表达式走 `--cron`、
+  其余 flag 与 create 一致。**直接执行该命令即可原地更新，不会新建 job。**
+
+  旧版脚本无 `--edit` 时，退化为只取 `--message` 做最小编辑：
   ```bash
   python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml" --json
@@ -34,7 +43,15 @@
   - 命令模式（用 `--command`）：不支持 `edit`，只能 `rm` + `create`，ID 会变
 - **9. 用户确认**：展示修改前后差异、更新方式、对应命令
 - **10. 执行更新**：
-  - 方式 A（推荐，最小编辑）：只传 `--message`，其余字段由 live job 原样保留
+  - 方式 A（推荐）：用 `--edit <job-id>` 渲染后直接执行
+    ```bash
+    python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+      "$AAC_WORKSPACE/cron/<job-name>.yaml" --edit <job-id> --json > /tmp/edit-argv.json
+    python3 -c "import json,subprocess; subprocess.run(json.load(open('/tmp/edit-argv.json')))"
+    ```
+    （2026-10-21 实测：job id 保留、内容原地更新、无副本产生。）
+
+  - 方式 A'（旧版脚本回退）：只传 `--message`，其余字段由 live job 原样保留
     ```python
     import json, subprocess
     arr = json.loads(subprocess.run(

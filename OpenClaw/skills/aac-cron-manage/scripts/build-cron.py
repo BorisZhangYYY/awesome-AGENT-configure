@@ -207,7 +207,9 @@ def main():
     # 检查是否残留未解析的模板标记
     check_unresolved(message)
 
-    cmd = build_command(variables, FLAGS, str(scene_path), args.test)
+    cmd = build_command(
+        variables, FLAGS, str(scene_path), args.test, edit_job_id=args.edit
+    )
 
     if args.preview:
         print("=== 渲染后的 MESSAGE（前500字符）===")
@@ -236,6 +238,12 @@ def parse_args():
     )
     parser.add_argument(
         "--test", action="store_true", help="测试模式：跳过时间窗口和去重，任务名称加【TEST】前缀，创建后自动删除"
+    )
+    parser.add_argument(
+        "--edit",
+        metavar="JOB_ID",
+        default=None,
+        help="生成 openclaw cron edit <JOB_ID> 命令（保留 job id，不新建任务）",
     )
     return parser.parse_args()
 
@@ -505,15 +513,25 @@ def build_persona_prompt(template, variables):
     return ""
 
 
-def build_command(variables, flags, scene_path, test_mode=False):
-    """根据变量和 flags 映射表构建 openclaw cron create 命令数组。"""
-    cmd = ["openclaw", "cron", "create"]
+def build_command(variables, flags, scene_path, test_mode=False, edit_job_id=None):
+    """根据变量和 flags 映射表构建 openclaw cron create/edit 命令数组。
 
-    # 位置参数：schedule.expr
+    edit_job_id 非空时生成 `openclaw cron edit <job-id> ...`：
+    - 位置参数是 job id（不是 cron 表达式）
+    - cron 表达式改用 --cron 传递（edit 的位置参数已被 job id 占用）
+    - 其余 flag 与 create 一致（edit 支持 --name/--description/--tz 等）
+    """
+    is_edit = bool(edit_job_id)
+    cmd = ["openclaw", "cron", "edit" if is_edit else "create"]
+
+    # 位置参数：edit 传 job id，create 传 schedule.expr
     schedule_expr = variables.get("SCHEDULE_EXPR")
     if not schedule_expr:
         raise ValueError("缺少必要变量：SCHEDULE_EXPR")
-    cmd.append(str(schedule_expr))
+    if is_edit:
+        cmd.append(str(edit_job_id))
+    else:
+        cmd.append(str(schedule_expr))
 
     # 测试模式：任务名称加前缀，自动删除
     job_name = variables.get("JOB_NAME", "")
@@ -567,6 +585,9 @@ def build_command(variables, flags, scene_path, test_mode=False):
 
     # 调度
     add_flag(cmd, "schedule.timezone", variables.get("TIMEZONE", ""), flags)
+    # edit 模式下 cron 表达式需走 --cron（位置参数已被 job id 占用）
+    if is_edit:
+        cmd.extend(["--cron", str(schedule_expr)])
 
     # 投递
     add_special_delivery(cmd, variables, flags)
