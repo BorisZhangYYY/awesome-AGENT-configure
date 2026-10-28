@@ -42,7 +42,7 @@
 - **Cron 模板化**：将通用约束沉淀在 `template-cron.zh.yaml`，场景文件只需填写变量。
 - **Harness 与 Loop 机制**：通过时间窗口、去重、状态机等手段约束 AGENT 行为，提升稳定性。
 - **构建期校验**：`build-cron.py` 在生成 CLI 命令时检测投递陷阱、注入时区偏移，减少运行期错误。
-- **多框架扩展**：当前支持 OpenClaw，Hermes 与 Claude Code 模板持续补充中。
+- **多框架扩展**：已提供 OpenClaw Cron 模板和 [Hermes 工作区基础模板](Hermes/README.md)；Hermes Cron 与 Claude Code 模板持续补充中。
 
 ## 适用场景
 
@@ -103,6 +103,9 @@ openclaw \
 ```
 awesome-AGENT-configure/
 ├── AI-ProjConf/              # 通用项目初始化模板（按单仓库 / 微服务工作区两类）
+├── Hermes/
+│   ├── README.md             # 工作区模板使用说明
+│   └── workspace-template/  # SOUL.md + memories/{USER,MEMORY}.md
 ├── OpenClaw/
 │   ├── conf/                 # OpenClaw 参数与 flag 配置
 │   ├── cron-template/        # cron 场景模板，按类别分子目录

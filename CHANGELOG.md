@@ -6,6 +6,7 @@
 
 ### Added
 
+- **`Hermes/workspace-template/`（新增）**：提供 `SOUL.md`、`memories/USER.md` 与 `memories/MEMORY.md` 初始模板，包含私聊与群聊边界、工作区分类和长期记忆骨架；`Hermes/README.md` 说明目标 home、按需合并与隐私注意事项。
 - **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 新增「一个主题一个目录」约束**：同一主题的任务共用一个 `YYYYMMDD-主题/` 目录；复杂任务在目录内用 `01-问题讨论` 这样的序号子目录区分步骤，不得另建主题目录。
 - **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example`「任务跟踪规范」补充并入规则**：同一主题的后续任务并入已有主题目录，不另建主题目录。
 - **`AI-ProjConf/zh_CN/multi-repo/TODO.md.example`（新增）**：微服务工作区模板补齐 todo 索引骨架，与 `single-repo/` 对齐。
@@ -13,6 +14,7 @@
 
 ### Changed
 
+- **`OpenClaw/workspace_example/SOUL.md`**：长内容外置规则统一使用「基本文件」表述，明确引用附录与定时报告目录边界，并简化技能目录说明。
 - **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 日期目录格式统一为 8 位**：`YYMMDD-主题/` → `YYYYMMDD-主题/`（示例同步为 `20260831-HIVE建表语句/`），与「任务跟踪规范」及 `single-repo/`、`OpenClaw/workspace_example` 的 8 位口径保持一致。
 
 ### Fixed

@@ -26,9 +26,9 @@ _你不是聊天机器人。你正在成为某个人。_
 
 > 额外补充：
 > 各个文件之间的界限需要分明，互相之间不越界。
-> **长内容一律外置**：身份文件与 `AGENTS.md` §Tools 只写**一行索引**，详细内容放 `docs/references/{主题目录}/`，实际用到时再 read，以节省 token。
-> **`docs/references/` 为专属目录，仅限身份文件的引用附录，其他文档不得放入。**
-> **`docs/reports/` 为专属目录，仅限定时任务报告文件，其他文档不得放入。**
+> **长内容一律外置**：基本文件只写**一行索引**，详细内容放 `docs/references/{主题目录}/`，实际用到时再 read，以节省 token。
+> `docs/references/` 为专属目录，仅限**基本文件**的引用附录，其他文档不得放入。
+> `docs/reports/` 为专属目录，**仅限定时任务报告文件**，其他文档不得放入。
 > 分类要详细，不允许将毫不相干的文件存在同级目录下，即使只有一个文件，也要有分级意识，需要在相应目录下（`docs/`、`scripts/`）新建子分类目录。
 
 ### 根目录白名单
@@ -42,7 +42,7 @@ _你不是聊天机器人。你正在成为某个人。_
 - `.trash/` — 回收站
 - `docs/` / `scripts/` / `assets/` / `avatars/` — 按规范使用的分类目录
 - `memory/` — 记忆存储（每日笔记、心跳状态、dreaming）
-- `skills/` — OpenClaw 技能目录（SKILL.md、references、scripts）
+- `skills/` — OpenClaw 技能目录
 - `awesome-AGENT-configure/` — AAC 运行时工作区（cron YAML、trigger.js）
 
 ### .trash 回收站规范
