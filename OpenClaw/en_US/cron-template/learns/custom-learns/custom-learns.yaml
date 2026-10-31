@@ -1,0 +1,110 @@
+# Custom learning scene (AI self-improvement)
+# ============================================================
+# This scene lets an AI AGENT study autonomously, accumulate knowledge, and improve its own capabilities through scheduled tasks.
+# Suitable for:
+#   - Learning new technologies, frameworks, and tools
+#   - Reading documentation and distilling knowledge
+#   - Practicing specific skills and recording takeaways
+#   - Adding to the knowledge base or MEMORY.md as project needs arise
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/learns/custom-learns/custom-learns.yaml
+#
+# Design principles:
+#   1. Learn one concrete topic per run; do not overreach
+#   2. Always produce reusable notes or a summary
+#   3. Link the learning outcome to an existing project or MEMORY.md
+#   4. Use deduplication so the same topic is not studied twice in one day
+
+templateRef: "../../template-cron.yaml"
+
+variables:
+  # ========== Basic information ==========
+  # Task name; recommended format: 【AAC-Learn】Topic name
+  JOB_NAME: "【AAC-Learn】{{CUSTOM_TOPIC_NAME}}"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  CATEGORY: "Learn"
+  DESCRIPTION: "Study {{CUSTOM_TOPIC_NAME}} on a schedule, produce study notes, and update the knowledge base"
+
+  # ========== Schedule configuration ==========
+  # Learning tasks are best triggered at a fixed time daily, for example 7:00
+  TRIGGER_ENABLED: "true"
+  SCHEDULE_EXPR: "0 7 * * *"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "06:00"
+  WINDOW_END: "23:00"
+
+  # ========== Learning topic configuration ==========
+  # Topic name for this run
+  CUSTOM_TOPIC_NAME: "XXX technology/tool/concept"
+  # Learning goal: one sentence describing how far to go
+  CUSTOM_LEARNING_GOAL: "Understand the core concepts of XXX and use them correctly in the project"
+  # Learning sources: documentation URLs, local file paths, book chapters, etc.
+  CUSTOM_SOURCES: |
+    - https://example.com/docs
+    - /path/to/local/note.md
+    - Other sources...
+  # Output format: notes, example code, comparison tables, mind-map text, etc.
+  CUSTOM_OUTPUT_FORMAT: "Markdown notes covering core concepts, usage examples, and common pitfalls"
+  # Where to save the learning outcome
+  CUSTOM_OUTPUT_FILE: "{{WORKSPACE}}/docs/learning/{{CUSTOM_TOPIC_KEY}}.md"
+  # Short topic key (used in file names, state files, etc.; kebab-case recommended)
+  CUSTOM_TOPIC_KEY: "xxx-topic"
+
+  # ========== Delivery configuration ==========
+  # Learning tasks stay silent when normal; may deliver a summary after producing notes
+  DELIVERY_MODE: "none"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+
+  # ========== Session configuration ==========
+  SESSION_TARGET: "isolated"
+  TIMEOUT_SECONDS: "3600"  # 1 hour
+
+  # ========== Agent configuration ==========
+  # Learning needs full context (reads MEMORY.md, SOUL.md, etc.) and reasoning capability
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  TOOLS: "exec,read,write,edit,bash"
+
+  # ========== Persona configuration ==========
+  PERSONA_MODE: "file"
+  PERSONA_FILE: "{{WORKSPACE}}/SOUL.md"
+
+  # ========== Time window ==========
+
+  # ========== Deduplication configuration ==========
+  # Study the same topic only once per day
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/learning-{{CUSTOM_TOPIC_KEY}}.txt"
+
+  # ========== Advanced options ==========
+  EXACT: "false"
+
+  # ========== Scene-specific instructions ==========
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    You are responsible for studying **{{CUSTOM_TOPIC_NAME}}** autonomously. Goal: {{CUSTOM_LEARNING_GOAL}}.
+
+    **Learning sources**:
+    {{CUSTOM_SOURCES}}
+
+    **Learning requirements**:
+    1. Focus on one subtopic per run; do not overreach
+    2. Prefer official documentation or authoritative sources
+    3. Use exec to run necessary commands for hands-on practice (install, run examples, check versions, etc.)
+    4. Record key findings and open questions during the process
+
+    **Output requirements**:
+    - Format: {{CUSTOM_OUTPUT_FORMAT}}
+    - Save path: `{{CUSTOM_OUTPUT_FILE}}`
+    - Must include: core concepts, usage examples, common pitfalls, and links to existing projects
+    - If the file already exists, append this run's notes; do not overwrite earlier content
+
+    **Link to the knowledge base**:
+    - Read `{{WORKSPACE}}/MEMORY.md` (if present)
+    - If the learning outcome is worth keeping long-term, use the edit tool to update the relevant section of MEMORY.md
+    - If the outcome relates to a project, record follow-up items in the project's TODO.md
+
+    **Termination conditions**:
+    - Finish normally after completing the study and saving notes
+    - If sources are unreadable or learning cannot continue, record the reason in `{{CUSTOM_OUTPUT_FILE}}` and output `NO_REPLY`

@@ -1,0 +1,104 @@
+# Custom check scene (copy this file and edit as needed)
+# ============================================================
+# This is a generic check template for inspecting any target and alerting on anomalies.
+# Suitable for:
+#   - Service health checks
+#   - Resource usage monitoring (disk, memory, CPU)
+#   - Custom metric checks
+#   - Any scheduled check that should be "silent when healthy, alert when abnormal"
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/custom-checks/custom-checks.yaml
+
+templateRef: "../../template-cron.yaml"
+
+variables:
+  # ========== Custom placeholders (copy and edit as needed) ==========
+  CUSTOM_SCENE_NAME: "Custom check"
+  CUSTOM_SCENE_KEY: "custom"
+  CUSTOM_DESCRIPTION: "Custom check scene"
+  CUSTOM_SCHEDULE_EXPR: "0 */6 * * *"
+  CUSTOM_WINDOW_START: "00:00"
+  CUSTOM_WINDOW_END: "23:59"
+  CUSTOM_EMOJI: "🔍"
+  # Check target: URL, file path, command, or resource name
+  CUSTOM_CHECK_TARGET: "https://example.com/health"
+  # Healthy criteria (stay silent when met)
+  CUSTOM_NORMAL_CRITERIA: "HTTP 200 and response time < 1s"
+  # Abnormal criteria (alert when met)
+  CUSTOM_ABNORMAL_CRITERIA: "HTTP status other than 200, response time >= 1s, or connection failure"
+
+  JOB_NAME: "【AAC-Check】{{CUSTOM_SCENE_NAME}}"
+  CATEGORY: "Check"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  DESCRIPTION: "{{CUSTOM_DESCRIPTION}}"
+
+  SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"
+  WINDOW_START: "{{CUSTOM_WINDOW_START}}"
+  WINDOW_END: "{{CUSTOM_WINDOW_END}}"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/check-{{CUSTOM_SCENE_KEY}}.txt"
+
+  # Trigger: enable the trigger.js time-window check
+  # ⚠️ Scene-specific .js is currently unavailable (sandbox limitation); build-cron.py keeps the scaffolding for later
+  TRIGGER_ENABLED: "true"
+
+  # Check tasks stay silent when healthy and alert on anomalies
+  DELIVERY_MODE: "announce"
+  BEST_EFFORT: "true"
+  LIGHT_CONTEXT: "true"
+  THINKING: "low"
+  TOOLS: "exec,read,write"
+  EXACT: "false"
+  TIMEOUT_SECONDS: "300"
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    You are responsible for running the **{{CUSTOM_SCENE_NAME}}** check task.
+
+    **Check target**: `{{CUSTOM_CHECK_TARGET}}`
+    **Report directory**: `{{WORKSPACE}}/docs/reports/check-{{CUSTOM_SCENE_KEY}}/`
+
+    ---
+
+    ## Step 1: Run the check
+
+    Use an appropriate tool to get the current status based on the check target:
+    - URL health check: use exec to run `curl -s -o /dev/null -w "%{http_code} %{time_total}" {{CUSTOM_CHECK_TARGET}}`
+    - Local resource check: use exec to run `df -h`, `free -m`, `ps aux`, etc.
+    - Custom script check: use exec to run the predefined command
+
+    ## Step 2: Judge the result
+
+    - **Healthy**: {{CUSTOM_NORMAL_CRITERIA}}
+    - **Abnormal**: {{CUSTOM_ABNORMAL_CRITERIA}}
+
+    ## Step 3: Write the check report
+
+    Report path: use exec to run `date +%Y-%m-%d` for the current date, then write to `{{WORKSPACE}}/docs/reports/check-{{CUSTOM_SCENE_KEY}}/<YYYY-MM-DD>.md`.
+
+    ```markdown
+    # {{CUSTOM_EMOJI}} 【AAC-Check】{{CUSTOM_SCENE_NAME}} — <current date via exec> <current time via exec>
+
+    ## Summary
+    - Check target: {{CUSTOM_CHECK_TARGET}}
+    - Result: healthy / abnormal
+    - One-liner:
+
+    ## Details
+    (If abnormal)
+    - Abnormal metric:
+    - Suggested action:
+    ```
+
+    ## Step 4: Clean up old reports
+
+    Keep the last 30 days of reports and move older ones to `.trash/`:
+    ```bash
+    mkdir -p {{WORKSPACE}}/.trash/ && find {{WORKSPACE}}/docs/reports/check-{{CUSTOM_SCENE_KEY}}/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
+    ```
+
+    ---
+
+    **Result handling**:
+    - Healthy: output `NO_REPLY` and send no message.
+    - Abnormal: output a Markdown alert with anomaly details and suggested actions.

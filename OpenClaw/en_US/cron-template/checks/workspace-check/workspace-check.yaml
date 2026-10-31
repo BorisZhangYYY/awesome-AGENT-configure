@@ -1,0 +1,180 @@
+# Workspace organization check scene
+# This task reads the workspace rules and historical check reports every day, compares them with the actual file layout,
+# moves non-compliant files into topic directories, and verifies script executability after moving.
+# If the workspace is already tidy, stay silent (NO_REPLY); otherwise report and persist a report.
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/workspace-check/workspace-check.yaml
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-Check】Workspace organization"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  CATEGORY: "Check"
+  DESCRIPTION: "Organize workspace files daily per workspace rules, file them by topic, and verify script executability"
+
+  SCHEDULE_EXPR: "0 23 * * *"
+  TIMEZONE: "Asia/Shanghai"
+
+  DELIVERY_MODE: "announce"
+  BEST_EFFORT: "true"
+  # ⚠️ Fill in the delivery target for your platform before use (isolated sessions cannot use "last"; the build blocks it):
+  # CHANNEL: "feishu"        # telegram | slack | discord | whatsapp | feishu | ...
+  # TO: "<chat_id or open_id>"
+  LIGHT_CONTEXT: "true"
+  THINKING: "medium"
+  TOOLS: "exec,read,write"
+  EXACT: "false"
+  TIMEOUT_SECONDS: "300"
+
+  # Time window: run in the evening
+  WINDOW_START: "22:00"
+  WINDOW_END: "23:59"
+  # Deduplication granularity: daily (organize once per day)
+  DEDUP_GRANULARITY: "daily"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/workspace-check.txt"
+
+  # Scene-specific state file
+  GIT_DIR: "{{WORKSPACE}}"
+  GIT_STATE_FILE: "{{WORKSPACE}}/.state/workspace-git.json"
+
+  TRIGGER_ENABLED: "true"
+
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    You are responsible for checking and organizing the AGENT workspace every day to ensure the file layout matches the current rules.
+
+    **Check task**: {{JOB_NAME}}
+    **Workspace path**: `{{WORKSPACE}}`
+    **Report directory**: `{{WORKSPACE}}/docs/reports/workspace-check/`
+
+    ---
+
+    ## Step 1: Read historical reports
+
+    List the report files from the last 3 days (if any):
+    ```bash
+    ls -t {{WORKSPACE}}/docs/reports/workspace-check/ 2>/dev/null | head -3
+    ```
+    Read these reports to understand:
+    - Which files were moved last time and into which topic directory
+    - Which issues needed manual handling last time (path references, missing rules, etc.)
+    - Whether any unresolved issue persists
+
+    If the report directory does not exist or is empty, treat this as the first check.
+
+    ## Step 2: Read the workspace rules
+
+    Use the read tool to read the following files (skip any that do not exist):
+    - `{{WORKSPACE}}/SOUL.md` → directory structure rules
+    - `{{WORKSPACE}}/AGENTS.md` → file behavior rules (trash vs rm, etc.)
+
+    Extract the **currently effective directory conventions** from the rules as the basis for this organization run.
+    If neither file defines any directory structure rules, output a notice and stop:
+    > ℹ️ The current workspace does not define directory structure rules. Add them to SOUL.md before this task can take effect.
+
+    ## Step 3: Scan the workspace
+
+    List all non-hidden content at the root:
+    ```bash
+    ls -1F {{WORKSPACE}}/
+    ```
+
+    For each non-core file scattered at the root (not inside any subdirectory), **read its contents** to determine its topic:
+
+    **Core file allowlist** (do not move; keep at the root):
+    SOUL.md / AGENTS.md / IDENTITY.md / USER.md / MEMORY.md / HEARTBEAT.md / CLAUDE.md / README.md
+
+    **Allowed system directories** (do not move):
+    `.git/` / `.clawhub/` / `.state/` / `.trash/` / `awesome-AGENT-configure/`
+
+    **Classification principle**: classify by file topic (what it does), not by file type (what format it is).
+
+    | File topic | Target directory | Notes |
+    |------------|------------------|-------|
+    | Notes, analysis, plans on a technical/business topic | `docs/<topic>/` | e.g. `docs/OpenClaw/`, `docs/Docker/` |
+    | References/appendices belonging to identity files (AGENTS.md §Tools / MEMORY.md, etc.) | `docs/references/<topic>/` | **Only** documents explicitly referenced by identity files |
+    | Scripts/tools for a topic | `scripts/<topic>/` | e.g. `scripts/deploy/`, `scripts/backup/` |
+    | The user's own images, audio, fonts, and other assets | `assets/<type>/` | e.g. `assets/images/`, `assets/fonts/`, separate from avatars/ |
+    | OpenClaw's own avatar/identity assets | `avatars/` | Avatars referenced by IDENTITY.md, separate from user assets |
+
+    **Topic naming rules**:
+    - Use short English names in kebab-case (e.g. `docker-health`, `data-export`)
+    - Prefer reusing an existing topic directory (e.g. if `docs/OpenClaw/` exists, file new OpenClaw docs there)
+    - Create a new directory if no matching topic exists
+
+    ## Step 4: Perform the organization
+
+    Principles:
+    - Move only; never delete (AGENTS.md: `trash > rm`)
+    - Use `mkdir -p` if the target directory does not exist
+    - Do not touch hidden files/directories
+    - Do not touch files under `.state/`
+    - Do not move files in the core file allowlist
+
+    Move with exec:
+    ```bash
+    mv {{WORKSPACE}}/<file> {{WORKSPACE}}/<target directory>/
+    ```
+
+    ## Step 5: Verify moved scripts
+
+    For every moved script file (`.py` / `.sh` / `.js` / `.ts`), at the new location:
+
+    1. **Syntax check**:
+       - `.py`: `python3 -c "import ast; ast.parse(open('<new path>').read()); print('OK')"`
+       - `.sh`: `bash -n <new path>`
+    2. **Path reference check**: use read to check whether the script hard-codes old paths. Search patterns:
+       - Old directory names (e.g. the parent directory name before the move)
+       - Relative path references (`../`, `./`)
+       - Path-related keywords such as `sys.path`, `source`, `import`
+    3. If old path references are found, **do not modify them automatically**; list them in the report:
+       ```
+       ⚠️ <script name> has N possible references to the old location; manual check required:
+         - Line X: import xxx from '../old-location/...'
+         - Line Y: source /old/path/config
+       ```
+
+    ## Step 6: Write the check report
+
+    Report path: use exec to run `date +%Y-%m-%d` for the current date, then write to `{{WORKSPACE}}/docs/reports/workspace-check/<YYYY-MM-DD>.md`.
+
+    ```markdown
+    # 【AAC-Check】Workspace organization — <current date via exec> <current time via exec>
+
+    ## Summary
+    - Result: (nothing to organize / moved X files)
+    - One-liner:
+
+    ## Details
+    (If files were moved)
+    | File | Old location | New location | Topic | Verification |
+    |------|--------------|--------------|-------|--------------|
+    | xxx.py | root | scripts/deploy/ | Deployment tools | ✅ Syntax OK, no path issues |
+    | yyy.md | root | docs/Docker/ | Docker notes | — |
+
+    (If a script has path issues)
+    ### ⚠️ Manual check required
+    - `scripts/deploy/deploy.sh`: line 12 hard-codes `/old/path/config`; confirm
+
+    ## Historical comparison
+    (Compared with the latest report)
+    - The X files organized last time are still in place and in good shape.
+    ```
+
+    If nothing needs moving, keep only the summary line in the report:
+    > 🧹 Workspace organization check complete; the current file layout complies with the rules.
+
+    ## Step 7: Clean up reports older than 30 days
+
+    ```bash
+    mkdir -p {{WORKSPACE}}/.trash/ && find {{WORKSPACE}}/docs/reports/workspace-check/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
+    ```
+    If `{{WORKSPACE}}/.trash/` does not exist, create it with `mkdir -p` first.
+
+    ---
+
+    **Result handling**:
+    - Nothing to organize (workspace already tidy): output `NO_REPLY` and send no message.
+    - Changes made (files moved): send the "Details" section from the Step 6 report.

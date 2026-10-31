@@ -1,0 +1,141 @@
+# Docker container/Compose check scene
+# This task checks Docker container run status, health status, and recent logs, using historical reports
+# to distinguish intentional shutdowns from anomalies.
+# Stay silent when everything is healthy (NO_REPLY); alert and persist a report on anomalies.
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/docker-check/docker-check.yaml
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-Check】Docker containers"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  CATEGORY: "Check"
+  DESCRIPTION: "Check Docker container and Compose project run status, health status, and recent logs"
+
+  SCHEDULE_EXPR: "0 */6 * * *"
+  TIMEZONE: "Asia/Shanghai"
+
+  # Check tasks stay silent when healthy and alert on anomalies
+  DELIVERY_MODE: "announce"
+  BEST_EFFORT: "true"
+  LIGHT_CONTEXT: "true"
+  THINKING: "low"
+  EXACT: "false"
+  TIMEOUT_SECONDS: "300"
+  TOOLS: "exec,read,write"
+
+  # Time window: runs all day (every 6 hours)
+  WINDOW_START: "00:00"
+  WINDOW_END: "23:59"
+  # Deduplication granularity: per-run (run every 6 hours, never skip)
+  DEDUP_GRANULARITY: "per-run"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/docker-check.txt"
+
+  # Scene-specific state file
+  DOCKER_STATE_FILE: "{{WORKSPACE}}/.state/docker-check.json"
+
+  TRIGGER_ENABLED: "true"
+
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    You are a Docker container check expert responsible for checking the health of local Docker containers and Compose projects.
+
+    **Check task**: {{JOB_NAME}}
+    **Report directory**: `{{WORKSPACE}}/docs/reports/docker/`
+
+    ---
+
+    ## Step 1: Read historical reports
+
+    List the latest 3 report files (if any):
+    ```bash
+    ls -t {{WORKSPACE}}/docs/reports/docker/ 2>/dev/null | head -3
+    ```
+    Read these reports to understand:
+    - Which containers were abnormal last time and whether the issue persists
+    - Which containers were previously marked "possibly intentionally stopped"
+    - Whether the same issue has persisted across multiple runs
+
+    If the report directory does not exist or is empty, treat this as the first check.
+
+    ## Step 2: Get the container list
+
+    Use exec to run:
+    ```bash
+    docker ps -a --format '{{.Names}}: {{.Status}}'
+    ```
+    to get **all** containers (including stopped ones).
+
+    ## Step 3: Judge each container
+
+    For each container, use the historical report context:
+
+    - **Rule out intentional shutdowns first**: if the status is `Exited (0)` and the last run was more than 24 hours ago, mark it "possibly intentionally stopped"; do not treat it as an anomaly and skip further checks.
+      - If historical reports already marked this container as "possibly intentionally stopped" multiple times, do not alert again.
+    - **User-initiated shutdown (a pitfall this project has hit)**: the user may temporarily stop an entire core service stack (a compose project with `restart: no`) to free resources, for example to play games. The next morning's check finds them all `Exited`/removed.
+      - In this case **do not delete containers**; restore in place with compose first: `docker compose -f <compose path> up -d`, wait 5 seconds, then confirm the status.
+      - If this was confirmed as normal behavior in the most recent interaction, **do not count it as an anomaly and do not alert**; just note "manual shutdown → restored" in the report.
+      - General rule: a container that is a **long-running service with a compose file** → restore it; an **orphan container without compose** → treat it as intentionally stopped.
+    - **Anomaly criteria**: if the status contains `Exited` (non-zero exit code), `unhealthy`, `dead`, or `restarting`, record an anomaly.
+    - For abnormal containers, run `docker logs --tail 100 <container name>` to get recent logs (do not use `--since`, which returns empty logs for containers stopped more than 10 minutes ago), and search for error/fatal/panic/exception keywords to help determine the root cause.
+
+    ## Step 4: Check Compose services
+
+    If a docker-compose.yml is detected (at the root or a common location), run:
+    ```bash
+    docker compose -f <path> ps
+    ```
+    Check whether all compose services are running. Judge non-running services by the logic in Step 3.
+
+    ## Step 5: Write the check report
+
+    Report path: use exec to run `date +%Y-%m-%d` for the current date and `date +%H-%M` for the current time (colons replaced with hyphens), then write to `{{WORKSPACE}}/docs/reports/docker/<YYYY-MM-DD>-<HH-MM>.md`.
+    (This task runs every 6 hours, so there may be multiple reports per day.)
+
+    ```markdown
+    # 【AAC-Check】Docker containers — <current date via exec> <current time via exec>
+
+    ## Summary
+    - Total containers: X | Healthy: Y | Intentionally stopped: Z | Abnormal: W
+    - One-liner:
+
+    ## Details
+    (If abnormal)
+    | Container | Status | Key logs | Verdict |
+    |-----------|--------|----------|---------|
+    | xxx | unhealthy | error: connection refused | Abnormal |
+    | yyy | Exited (0) | — | Possibly intentionally stopped |
+
+    ### Compose services
+    - All running / X non-running
+
+    ## Historical comparison
+    - Container "zzz", abnormal last time, has recovered
+    - Container "aaa" abnormal for 3 consecutive runs; attention recommended
+    ```
+
+    If everything is healthy, keep only the summary in the report.
+
+    ## Step 6: Clean up reports older than 30 days
+
+    ```bash
+    mkdir -p {{WORKSPACE}}/.trash/ && find {{WORKSPACE}}/docs/reports/docker/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
+    ```
+    If `{{WORKSPACE}}/.trash/` does not exist, create it with `mkdir -p` first.
+
+    ---
+
+    **Result handling**:
+    - All healthy: output `NO_REPLY` and send no message.
+    - Anomalies found: output a Markdown alert with the abnormal containers, status, key log excerpts, and suggested actions, in this format:
+
+    ```markdown
+    🚨 Docker check found anomalies
+
+    - Container: xxx
+      - Status: unhealthy
+      - Key logs: xxx
+    - Suggestion: check service dependencies or restart the container
+    ```

@@ -4,14 +4,15 @@
 
 ## 项目简介
 
-本项目是一个模板项目，存放一些适用于 AGENT 的 Cron 模板配置，目的是希望通过 Harness 和 Loop 手段，让 AI AGENT 更加可靠。
+本项目是一个 Harness 与 Loop 的 AGENT 模板仓库，按功能分为 AI 项目模板、Agent 身份模板、定时任务模板与上下文注入模板，目的是让 AI AGENT 更可靠、可持续推进。
 
 ## 架构规范
 
 - 项目文档，放到 `docs/` 下
-- 模板文件，统一放到 `{AGENT}/*-template/` 下
-- 技能文件，统一放到 `{AGENT}/skills/` 下
+- 模板文件，统一放到 `{AGENT}/{zh_CN,en_US}/{模板目录}/` 下
+- 技能文件，统一放到 `{AGENT}/skills/` 下（共享，不按语言拆分）
 - **所有目录下，需要按照类别进行多级子目录分类**
+- **中英文同步维护**：README 使用 `README.md`（中文，首页）与 `README.en.md`（英文）；所有模板必须同时提供 `zh_CN/` 与 `en_US/` 两个版本，修改时同步更新
 
 > 其中 `{AGENT}` 指的是具体的框架，比如 OpenClaw、Hermes 等。
 
@@ -21,7 +22,7 @@
 - 设计模板时，要基于实际的 AGENT 框架进行；如果不了解，则需要调研官方文档
 - 模板文件要使用占位符，通用化，不要具体化
 - 模板变量名仅使用大写字母、数字和下划线（`[A-Z][A-Z0-9_]*`），禁止连字符；`{{#IF VAR}}` 条件块中的变量名同理（`\w+` 仅匹配 `[a-zA-Z0-9_]`）
-- **Trigger 脚本（`trigger.js` / 场景 `.js`）只允许 ES2022 纯 JavaScript**：OpenClaw trigger 沙箱为 QuickJS-WASI 隔离环境，禁用 `Intl` / `require` / `import` / `process` / Node 模块 / 网络 / 定时器，详见 `OpenClaw/skills/aac-cron-manage/references/trigger-sandbox.md`。时区换算由 `build-cron.py` 构建期注入 UTC 偏移（`AAC_TZ_OFFSET_MINUTES`），禁止运行期换算
+- **Trigger 脚本（`trigger.js` / 场景 `.js`）只允许 ES2022 纯 JavaScript**：OpenClaw trigger 沙箱为 QuickJS-WASI 隔离环境，禁用 `Intl` / `require` / `import` / `process` / Node 模块 / 网络 / 定时器，详见 `OpenClaw/skills/aac-cron-manage/references/{zh_CN,en_US}/trigger-sandbox.md`。时区换算由 `build-cron.py` 构建期注入 UTC 偏移（`AAC_TZ_OFFSET_MINUTES`），禁止运行期换算
 - 脚本设计要简约，旨在用最少的代码实现具体功能
 - 如果一个配置可能包含多种选项，要展示所有的选项
 - 所有的改动要以用户的修改为主，不允许擅自恢复

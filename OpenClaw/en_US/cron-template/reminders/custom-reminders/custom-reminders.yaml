@@ -1,0 +1,62 @@
+# Custom reminder scene (copy this file and edit as needed)
+# This file is an example configuration; see ../../template-cron.yaml for more fields to override as needed.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  # ========== Custom placeholders (copy and edit as needed) ==========
+  CUSTOM_SCENE_NAME: "Custom reminder"
+  CUSTOM_SCENE_KEY: "custom"
+  CUSTOM_DESCRIPTION: "Custom reminder scene"
+  CUSTOM_SCHEDULE_EXPR: "0 9 * * *"
+  CUSTOM_WINDOW_START: "08:00"
+  CUSTOM_WINDOW_END: "22:00"
+  CUSTOM_EMOJI: "📝"
+  CUSTOM_PERSONA_ROLE: "a thoughtful intelligent assistant"
+  CUSTOM_TONE: "warm and natural"
+  CUSTOM_REMARK: "This is the custom reminder content"
+
+  JOB_NAME: "【AAC-Reminder】{{CUSTOM_SCENE_NAME}}"
+  CATEGORY: "Reminder"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  DESCRIPTION: "{{CUSTOM_DESCRIPTION}}"
+
+  SCHEDULE_EXPR: "{{CUSTOM_SCHEDULE_EXPR}}"
+  WINDOW_START: "{{CUSTOM_WINDOW_START}}"
+  WINDOW_END: "{{CUSTOM_WINDOW_END}}"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-{{CUSTOM_SCENE_KEY}}.txt"
+
+  # Trigger: use the built-in time_window.js script library to check time windows and deduplication outside the Prompt
+  TRIGGER_ENABLED: "true"
+
+  # Reminder tasks disable thinking to save tokens
+  THINKING: "off"
+  # Reminder tasks need to fire on time; disable automatic stagger
+  EXACT: "true"
+
+  SCENE_NAME: "{{CUSTOM_SCENE_NAME}}"
+  EMOJI: "{{CUSTOM_EMOJI}}"
+  PERSONA_ROLE: "{{CUSTOM_PERSONA_ROLE}}"
+  TONE: "{{CUSTOM_TONE}}"
+  REMARK: "{{CUSTOM_REMARK}}"  # Extra content appended to the reminder message
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    You are responsible for delivering the {{SCENE_NAME}} reminder at the appropriate time.
+
+    **Greeting rules**
+    - Tone: {{TONE}}
+    - Length: 2-3 sentences; do not write an essay
+    - Must include: the current time, today's date, and the day of the week
+    - May include: {{REMARK}}
+
+    **Output example**
+    ```
+    {{EMOJI}} {{SCENE_NAME}}!
+    It is now <current time from `date +%H:%M` via exec>, <current date from `date +%Y-%m-%d` via exec>, <weekday from `LC_TIME=C date +%A` via exec>.
+    {{REMARK}}
+    ```
+
+  # Override defaults as needed, for example:
+  # DELIVERY_MODE: "announce"
+  # CHANNEL: "telegram"
+  # TO: "-1001234567890"

@@ -26,8 +26,8 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD_CRON = "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py"
-TEMPLATE_ROOT = "OpenClaw/cron-template"
-SKIP_TEMPLATE = "template-cron.zh.yaml"
+TEMPLATE_ROOT = "OpenClaw/*/cron-template"
+SKIP_TEMPLATE = "template-cron.yaml"
 
 # 设计上就以占位符形式提供的模板：DEV_PROJECT_DIR 必须由使用者填写。
 # 这类模板渲染失败属预期行为，不计为错误。

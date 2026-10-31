@@ -1,0 +1,131 @@
+# Custom project scene (copy this file and edit as needed)
+# ============================================================
+# This is a generic project template for advancing any software project task automatically with the Loop method.
+# Suitable for:
+#   - New feature development
+#   - Code refactoring
+#   - Technical debt cleanup
+#   - Any project work that needs state resumption and milestone-based progress
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/custom-projects/custom-projects.yaml
+
+templateRef: "../../template-cron.yaml"
+
+variables:
+  # ========== Mode switch ==========
+  # Enable Loop mode (state-driven iteration)
+  LOOP_MODE_ENABLED: "true"
+  LOOP_TASK_TYPE: "software project"
+
+  # ========== Basic information ==========
+  # Task name; recommended format: 【AAC-Project】Project-Name-Task-Name
+  JOB_NAME: "【AAC-Project】XXX custom project task"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  CATEGORY: "Project"
+  DESCRIPTION: "Advance project tasks on a schedule with the Loop method, progress by milestone, and auto-disable when the goal is reached"
+
+  # ========== Schedule configuration ==========
+  # Project tasks are best triggered on weekday mornings/afternoons
+  TRIGGER_ENABLED: "true"
+  SCHEDULE_EXPR: "0 10 * * 1-5"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "09:00"
+  WINDOW_END: "12:00"
+
+  # ========== Project task configuration ==========
+  # Project name (used in reports and logs)
+  DEV_PROJECT_NAME: "MyProject"
+  # Absolute project path (must be changed to your actual path)
+  DEV_PROJECT_DIR: "/path/to/your/project"
+  # Current phase identifier (used in commit messages)
+  DEV_PHASE: "Phase 1"
+  # Development branch name
+  DEV_BRANCH: "main"
+  # State file path (used for resumption)
+  DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-custom-session.json"
+  # Test file matching pattern
+  DEV_TEST_PATTERN: "test_*.py"
+  # Git commit prefix (common: feat/fix/refactor/maint/docs/test/chore)
+  DEV_COMMIT_PREFIX: "feat"
+
+  # Project docs directory (used to read/update architecture docs, etc.)
+  DEV_DOCS_DIR: "{{DEV_PROJECT_DIR}}/docs"
+
+  # ========== Goal and milestones ==========
+  # Overall goal: one sentence describing the final outcome to achieve
+  DEV_GOAL: "Complete the XXX project task"
+  # Milestone list: break down the goal in order; each milestone should be independently verifiable
+  # Must be a valid JSON array string, e.g. '["Milestone 1: ...", "Milestone 2: ..."]'
+  DEV_MILESTONES: '["Milestone 1: Task analysis and preparation", "Milestone 2: Core implementation", "Milestone 3: Verification and wrap-up"]'
+  # Current milestone name (display only; the real index comes from the state file)
+  DEV_CURRENT_MILESTONE: "Milestone 1: Task analysis and preparation"
+  # Whether to auto-disable the cron task after reaching the final goal (true for one-off sprints; false for ongoing maintenance)
+  DEV_AUTO_DISABLE_ON_GOAL_REACHED: "true"
+
+  # ========== Scene-specific instructions ==========
+  # Define the concrete execution instructions for the current project task here
+  # Fill in the following based on your actual project
+  DEV_TASK_INSTRUCTIONS: |
+    ### Current project task: XXX
+
+    **Task goal**:
+    1. ...
+    2. ...
+
+    **Execution steps** (iterate; complete only a small step each run):
+
+    #### Iteration 1: Analysis and preparation
+    - Read relevant docs and code
+    - Define acceptance criteria
+    - Update TODO.md
+
+    #### Iteration 2: Core implementation
+    - ...
+
+    #### Iteration 3: Verification and wrap-up
+    - Run tests
+    - Update docs
+    - git commit (do not push)
+
+    **Current milestone completion criteria** (all must be met):
+    1. The core code for this milestone is committed
+    2. All relevant tests pass
+    3. The corresponding tasks in TODO.md are marked complete
+
+  # ========== Delivery configuration ==========
+  # Project tasks stay silent when normal and report on progress or blockers
+  DELIVERY_MODE: "none"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+
+  # ========== Session configuration ==========
+  SESSION_TARGET: "isolated"
+  TIMEOUT_SECONDS: "14400"  # 4 hours
+
+  # ========== Agent configuration ==========
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  TOOLS: "exec,read,write,edit,bash"
+
+  # ========== Persona configuration ==========
+  PERSONA_MODE: "file"
+  PERSONA_FILE: "{{WORKSPACE}}/SOUL.md"
+
+  # ========== Time window ==========
+
+  # ========== Deduplication configuration ==========
+  # Project tasks usually do not need daily deduplication because there may be multiple iterations per day
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/dev-custom-dedup.txt"
+
+  # ========== Advanced options ==========
+  EXACT: "false"
+
+  # ========== Scene-specific supplementary instructions ==========
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    **Project discipline**:
+    1. Focus on the current task; make no unrelated changes
+    2. Reuse existing code first; do not reinvent the wheel
+    3. Report before any operation involving external repositories
+    4. Do not start a new goal automatically after reaching the goal; wait for user intervention

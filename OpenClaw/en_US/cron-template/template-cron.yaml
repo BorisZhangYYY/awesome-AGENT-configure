@@ -1,0 +1,614 @@
+# Generic OpenClaw cron task template
+# This file maps official OpenClaw CLI parameters and adds template-layer Harness/Loop extensions.
+# Fields marked [Non-official] are not native OpenClaw parameters; this template implements them through Prompt tool calls.
+# Scene files (e.g. reminders/morning.yaml) only provide variables; the generator fills defaults for anything missing.
+#
+# This template supports two execution modes:
+#   - Normal mode (default): single-run tasks such as reminders, inspections, and learning
+#   - Loop mode (LOOP_MODE_ENABLED: "true"): iterative tasks such as development, maintenance, and refactoring
+#     Loop mode adds a state machine, goals/milestones, auto-disable, and related mechanisms on top of normal mode.
+#
+# ⚠️ About the relationship between time windows, deduplication, and trigger
+# OpenClaw cron replays all missed tasks when the gateway restarts or a session is rebuilt.
+# If trigger returns fire: false when the cron schedule fires, the task is skipped and no startup pile-up occurs.
+# Time windows and deduplication are handled uniformly by OpenClaw/skills/aac-cron-manage/scripts/trigger.js; all cron tasks share the same base logic.
+# ⚠️ Scene-specific .js is currently unavailable: the OpenClaw trigger sandbox forbids child_process / fs modules.
+# build-cron.py keeps the scene JS concatenation scaffolding for when the sandbox policy improves.
+#
+# Built-in variables:
+#   {{WORKSPACE}} - OpenClaw workspace directory, default ~/.openclaw/workspace, injected by the generator
+
+# ===== Basic information =====
+# --name: task name, required format 【AAC-Category】Task name
+#   Categories: Reminder | Check | Project | Learn
+#   Example: 【AAC-Check】Docker container health
+name: "{{JOB_NAME}}"
+# Internal category label (Reminder/Check/Project/Learn), not an OpenClaw CLI parameter; used only for docs and skill routing
+category: "{{CATEGORY}}"
+# --description: short description of the task, for quick identification in cron list
+#   Example: Check Docker container status and alert on anomalies
+description: "{{DESCRIPTION}}"
+# --display-name: human-readable declarative label for UI display (optional; uses name when empty)
+#   Difference from name: name is used for machine matching (with the 【AAC-】 prefix); displayName is for humans
+#   Example: Docker check
+displayName: "{{DISPLAY_NAME}}"
+# --declaration-key: idempotent declaration key; create operations with the same key do not create duplicates
+#   Set a fixed value in scene YAML to prevent the skill from accidentally creating duplicate tasks
+#   Leave empty to disable idempotent protection
+declarationKey: "{{DECLARATION_KEY}}"
+
+# ===== Task payload (choose Agent mode or command mode) =====
+# --message: Agent prompt text for isolated / current / session:<id> modes
+# --system-event: system event text for main mode
+# message is filled by rendering the template below; if template is not configured, this field is used directly
+message: "{{MESSAGE}}"
+systemEvent: "{{SYSTEM_EVENT}}"
+
+# ===== Schedule configuration =====
+# OpenClaw supports three schedule types.
+schedule:
+  # Schedule type: cron (expression) | at (one-off) | every (fixed interval)
+  type: "{{SCHEDULE_TYPE}}"
+  # Schedule expression:
+  #   cron type: 5-field cron expression, e.g. "0 8 * * *" (daily at 8:00)
+  #   at type: ISO-8601 timestamp or relative time, e.g. "+1h"
+  #   every type: interval, e.g. "10m", "1h"
+  expr: "{{SCHEDULE_EXPR}}"
+  # --tz: IANA timezone. Uses the Gateway host's local timezone when empty
+  #   Examples: Asia/Shanghai | America/New_York | Europe/London
+  timezone: "{{TIMEZONE}}"
+
+# ===== Time window (trigger environment variables) =====
+# Used by trigger.js; injected as environment variables by build-cron.py.
+# Tasks fired outside the window are intercepted by trigger (fire: false), preventing startup pile-up after a Gateway restart.
+timeWindow:
+  # Window start time, HH:MM, e.g. "07:00"
+  start: "{{WINDOW_START}}"
+  # Window end time, HH:MM, e.g. "23:59"
+  end: "{{WINDOW_END}}"
+
+# ===== Deduplication (trigger environment variables) =====
+# Used by trigger.js; injected as environment variables by build-cron.py.
+# Prevents the same task from running repeatedly in a short period.
+deduplication:
+  # Deduplication state file path, e.g. {{WORKSPACE}}/.state/reminder-morning.txt
+  stateFile: "{{DEDUP_STATE_FILE}}"
+  # Deduplication granularity: daily (once per day) | half-day (per half day) | hourly (per hour) | per-run (no deduplication)
+  granularity: "{{DEDUP_GRANULARITY}}"
+
+# ===== Persona/identity (non-official extension) =====
+# OpenClaw natively injects persona through workspace bootstrap files (SOUL.md / IDENTITY.md).
+# This template provides an explicit configuration layer so scene files can choose an inline role or an external persona file.
+# LOCALE controls the language of the generated persona prompt: zh_CN (default) | en_US
+persona:
+  # Injection mode: inline (inline role description) | file (reference an external persona file)
+  mode: "{{PERSONA_MODE}}"
+  # External persona file path for file mode, e.g. {{WORKSPACE}}/SOUL.md
+  file: "{{PERSONA_FILE}}"
+  # Role description for inline mode, e.g. "a helpful intelligent assistant"; may be empty in file mode
+  role: "{{PERSONA_ROLE}}"
+
+# ===== Delivery configuration =====
+# Controls which channel receives the task result/report. Check tasks can use none (silent when healthy); reminders use announce (guaranteed delivery).
+delivery:
+  # --announce / --webhook / --no-deliver
+  #   announce: if the Agent sends nothing, the Runner delivers as a fallback; suitable for reminders that must arrive
+  #   webhook: POST to webhookUrl; suitable for integrating external systems
+  #   none: no Runner fallback; suitable for check tasks (silent when healthy, Agent delivers on anomalies)
+  mode: "{{DELIVERY_MODE}}"
+  # --channel: delivery channel. Use the platform identifier: telegram | slack | discord | whatsapp | feishu | ...
+  #   Special value "last" reuses the channel from the most recent session.
+  #   ⚠️ isolated sessions (the default) have no recent channel context: announce + "last" always fails delivery,
+  #   and build-cron.py blocks it at build time. isolated scenes must set an explicit platform + TO.
+  channel: "{{CHANNEL}}"
+  # --to: recipient target. Format varies by platform:
+  #   Telegram: -100xxx (group chat) or numeric ID (direct message), supports a topic:123 suffix
+  #   Discord: channelId or user:ID
+  #   Feishu: chat_id or open_id
+  to: "{{TO}}"
+  # --thread-id: Telegram forum topic ID; only valid on Telegram
+  threadId: "{{THREAD_ID}}"
+  # --webhook: webhook receiver URL; only effective when delivery.mode = webhook
+  webhookUrl: "{{WEBHOOK_URL}}"
+  # --best-effort-deliver / --no-best-effort-deliver
+  #   true: delivery failure does not mark the cron job as failed (recommended for reminders)
+  #   false: delivery failure marks the job as failed too
+  bestEffort: "{{BEST_EFFORT}}"
+  # --account: multi-account selection. When several accounts exist for the same platform, choose one
+  #   Leave empty to use the default account
+  account: "{{ACCOUNT}}"
+  # [Non-official] fallback delivery target for failure notifications. Not currently injected into the prompt in Agent mode; reserved.
+  failureDestination: "{{FAILURE_DESTINATION}}"
+
+# ===== Session configuration =====
+# Controls which session the cron task runs in. Most tasks should use isolated (a separate session that does not pollute the main session).
+session:
+  # --session: execution session target
+  #   main: main session; suitable for reminders that need to interrupt the user immediately
+  #   isolated: separate session; does not pollute the main session (recommended)
+  #   current: bind to the session that created the task
+  #   session:<id>: persistent named session; suitable for Loop tasks that need accumulated history
+  target: "{{SESSION_TARGET}}"
+  # --session-key: session routing key that routes the task to a named session (pair with --session session:<id>)
+  #   Leave empty to omit
+  sessionKey: "{{SESSION_KEY}}"
+  # Persistent session ID (fill in the ID only; the generator prepends session:<ID> for --session)
+  # When SESSION_TARGET does not start with session:, a non-empty PERSISTENT_ID is prepended automatically
+  persistentId: "{{PERSISTENT_ID}}"
+  # --timeout-seconds: timeout in seconds for Agent/command tasks
+  #   Reminder: 120s | Check: 300s | Development: 14400s (4h) | Learning: 3600s (1h)
+  timeoutSeconds: "{{TIMEOUT_SECONDS}}"
+  # --timeout: millisecond timeout (optional). If both timeoutSeconds and timeoutMs are set,
+  #   OpenClaw enforces the stricter one. Most scenarios only need timeoutSeconds;
+  #   use timeoutMs when sub-second precision is required.
+  # ⚠️ build-cron.py does not map this variable: the CLI --timeout is the Gateway RPC request timeout (default 30000ms),
+  #   not the task timeout. Use TIMEOUT_SECONDS (--timeout-seconds) for task timeouts only.
+  timeoutMs: "{{TIMEOUT_MS}}"
+
+# ===== Execution context =====
+context:
+  # --light-context: whether to skip workspace bootstrap file injection
+  #   true: do not load AGENTS.md/SOUL.md/IDENTITY.md etc.; saves tokens (recommended for reminders/checks)
+  #   false: load all system files (required for development/organization/learning)
+  lightContext: "{{LIGHT_CONTEXT}}"
+
+# ===== Agent configuration =====
+# Controls the Agent identity, model, and capabilities that run the task. Empty values use Gateway defaults.
+agent:
+  # --agent: bind a specific Agent ID.
+  # ⚠️ In multi-Agent environments (e.g. main + nangongwan), this parameter must be set explicitly:
+  #   tasks without an agent fail trigger evaluation with AGENT_SELECTION_REQUIRED
+  #   ("Multiple agents are configured, but this operation has no explicit owner"),
+  #   so the task never fires. build-cron.py defaults this to "main";
+  #   only override it in scene YAML when a non-main Agent is needed (e.g. nangongwan).
+  agentId: "{{AGENT_ID}}"
+  # --model: model override. Format is provider/model or an alias
+  #   Examples: kimi-for-coding/kimi-for-coding | datagrand/deepseek-v4-pro
+  model: "{{MODEL}}"
+  # --fallbacks: model fallback chain. Tries fallback models in order when the primary is unavailable
+  #   Format: comma-separated model list, e.g. "datagrand/deepseek-v4-pro,openai/gpt-4o"
+  #   Leave empty to disable fallbacks
+  fallbacks: "{{FALLBACKS}}"
+  # --thinking: thinking level. Controls reasoning depth and token usage
+  #   off: no thinking (recommended for reminders/greetings) | low: simple checks | medium: development/learning | high: complex analysis
+  thinking: "{{THINKING}}"
+  # --tools: tool allowlist, restricting the tools available to the Agent
+  #   Comma-separated, e.g. "exec,read,write". Leave empty to allow all tools
+  tools: "{{TOOLS}}"
+
+# ===== Command mode (choose one with Agent mode) =====
+# Command mode is enabled when command.script is non-empty; otherwise Agent mode is used.
+# Command mode suits deterministic tasks that need no Agent reasoning, such as pure-script checks and data exports.
+command:
+  # --command: shell command to execute
+  script: "{{COMMAND_SCRIPT}}"
+  # --command-cwd: working directory for the command
+  cwd: "{{COMMAND_CWD}}"
+  # --command-argv: exact argument array (JSON) to avoid shell escaping issues
+  #   Example: ["node", "scripts/export.mjs", "--format=json"]
+  argv: "{{COMMAND_ARGV}}"
+  # --command-input: standard input content
+  input: "{{COMMAND_INPUT}}"
+  # --command-env: environment variable overrides in KEY=VALUE format (repeatable)
+  env: "{{COMMAND_ENV}}"
+  # --no-output-timeout-seconds: kill the process after this many seconds without output
+  noOutputTimeoutSeconds: "{{COMMAND_NO_OUTPUT_TIMEOUT}}"
+  # --output-max-bytes: stdout/stderr capture limit (bytes)
+  outputMaxBytes: "{{COMMAND_OUTPUT_MAX_BYTES}}"
+
+# ===== Trigger configuration (OpenClaw 2026.7.1+ official feature) =====
+# After the schedule fires, the trigger script runs first; the payload runs only when it returns { fire: true }.
+# The script is provided by OpenClaw/skills/aac-cron-manage/scripts/trigger.js (time-window check);
+# build-cron.py assembles it and injects environment variables.
+# When TRIGGER_ENABLED is true, the Prompt layer omits time-window and deduplication logic.
+#
+# ⚠️ Scene-specific .js is currently unavailable: the OpenClaw trigger sandbox forbids child_process / fs modules,
+#    so only the generic time-window check works today. build-cron.py keeps the scene JS concatenation scaffolding
+#    for when OpenClaw improves the sandbox policy.
+trigger:
+  # Whether to enable the trigger mechanism (true/false)
+  enabled: "{{TRIGGER_ENABLED}}"
+  # Trigger script content (filled automatically by build-cron.py; scene YAML should not set it)
+  script: "{{TRIGGER_SCRIPT}}"
+  # --trigger-once: expire after the first successful fire (true/false)
+  once: "{{TRIGGER_ONCE}}"
+
+# ===== Advanced options =====
+# Controls task lifecycle, execution precision, and hooks.
+advanced:
+  # --disabled: create the task disabled; enable manually (debug/pre-release scenarios)
+  disabled: "{{DISABLED}}"
+  # --delete-after-run: delete the task after a successful run (one-off tasks)
+  deleteAfterRun: "{{DELETE_AFTER_RUN}}"
+  # --keep-after-run: keep the task after a successful run (default behavior)
+  keepAfterRun: "{{KEEP_AFTER_RUN}}"
+  # --wake: run immediately after creation or wait for the next heartbeat
+  #   now: run immediately | next-heartbeat: wait for the next heartbeat
+  wake: "{{WAKE}}"
+  # --exact: disable automatic cron stagger; fire exactly on the cron expression
+  #   true: fire on time (recommended for reminders) | false: allow Gateway staggering
+  exact: "{{EXACT}}"
+  # --stagger: explicit stagger window, e.g. "30s", "5m"
+  #   Mutually exclusive with exact: stagger has no effect when exact=true
+  stagger: "{{STAGGER}}"
+  # --pacing-min / --pacing-max: dynamic pacing range (e.g. "15m", "4h"),
+  #   paired with trigger's next_check for adaptive polling: tighter when active, looser when quiet.
+  #   Set at least one; only pacing tasks need these, leave empty for normal tasks
+  pacingMin: "{{PACING_MIN}}"
+  pacingMax: "{{PACING_MAX}}"
+  # --expect-final: wait for the Agent's final reply before marking the task complete
+  #   true: suitable for development/learning tasks that need output quality guarantees
+  #   false: mark complete as soon as the Agent starts (default; suitable for reminders/checks)
+  expectFinal: "{{EXPECT_FINAL}}"
+  # --on-exit: listen for a process exit event. Set the command to monitor (e.g. "docker compose up");
+  #   a one-off callback fires when that command exits. Mutually exclusive with normal cron; advanced use only.
+  #   ⚠️ build-cron.py does not map this variable: on-exit is a separate schedule type and requires a hand-written command.
+  #   Leave empty to disable.
+  onExit: "{{ON_EXIT}}"
+  # --on-exit-cwd: working directory for the on-exit monitored command
+  onExitCwd: "{{ON_EXIT_CWD}}"
+
+# Agent prompt template [Non-official]
+# Used to generate the message content, avoiding repeated generic Harness/Loop constraints in every scene.
+# The generator renders this template with scene variables, fills the result into message, and passes it to OpenClaw as --message.
+# If this template is not configured, the message field content is used directly.
+# ⚠️ Scene files must not define a top-level template field to override this template, so that Loop state machines, Harness,
+#    and other mechanisms apply consistently. Scene-specific content belongs in the {{SCENE_SPECIFIC_INSTRUCTIONS}} placeholder,
+#    injected through the scene YAML's SCENE_SPECIFIC_INSTRUCTIONS variable.
+# {{PERSONA_PROMPT}} is rendered by the generator from the persona configuration:
+# - If persona.file is non-empty: renders as "Please use the persona defined in {{PERSONA_FILE}}."
+# - Otherwise (inline mode): renders as "You are {{PERSONA_ROLE}}."
+template: |
+  {{PERSONA_PROMPT}}
+
+  {{#NON_LOOP_ONLY}}
+  You are responsible for executing this task.
+  {{/NON_LOOP_ONLY}}
+
+  {{#LOOP_ONLY}}
+  You are responsible for advancing {{LOOP_TASK_TYPE}} tasks automatically through scheduled runs.
+
+  **Task information**
+  - Task name: {{DEV_PROJECT_NAME}}
+  - Working directory: `{{DEV_PROJECT_DIR}}`
+  - Current phase: {{DEV_PHASE}}
+  - Working branch: {{DEV_BRANCH}}
+  - Overall goal: {{DEV_GOAL}}
+  - Milestones: {{DEV_MILESTONES}}
+  - Current milestone: {{DEV_CURRENT_MILESTONE}}
+  - Disable cron automatically when the goal is reached: {{DEV_AUTO_DISABLE_ON_GOAL_REACHED}}
+  {{/LOOP_ONLY}}
+
+  {{#LOOP_ONLY}}
+  ---
+
+  ## PHASE 1: START — session startup
+
+  > Read first, think second, act last. Sharpening the axe does not delay the work.
+
+  ### Step 1.1: Ensure the state file directory exists
+
+  State file path: `{{DEV_STATE_FILE}}`
+  ⚠️ **Warning**: every Loop task must use its own state file. If multiple tasks share one `DEV_STATE_FILE`, states overwrite each other, milestones get mixed up, and the goal may be marked reached early. Configure a different state file path for each task in scene YAML (e.g. `dev-session.json` and `maintain-session.json`).
+  If its parent directory does not exist, first run `mkdir -p $(dirname {{DEV_STATE_FILE}})` with exec.
+
+  ### Step 1.2: Read the state
+
+  Read the state file: `{{DEV_STATE_FILE}}`
+
+  The state file is JSON. **Core fields** (common to all Loop tasks):
+  - `status`: `ready` | `in_progress` | `blocked` | `goal_reached`
+  - `current_card`: identifier of the task currently in progress
+  - `last_session`: time of the last session (ISO-8601)
+  - `next_step`: what to do next (specific and actionable)
+  - `blockers`: list of blockers
+  - `dev_log`: execution log (appended every session)
+  - `goal`: overall goal (must match `{{DEV_GOAL}}`)
+  - `milestones`: milestone list
+  - `current_milestone_index`: current milestone index (starting from 0)
+
+  **Default extension fields** (software development: `tech_debt` records technical debt, `test_coverage` records test coverage):
+  - `tech_debt`: []
+  - `test_coverage`: "not evaluated"
+
+  **Custom extension fields**: if `{{LOOP_STATE_SCHEMA}}` is non-empty, parse the field definitions and maintain them when initializing or updating the state file.
+
+  If the state file does not exist, treat this as the first session and initialize the state:
+  ```json
+  {
+    "status": "ready",
+    "current_card": null,
+    "last_session": null,
+    "next_step": "Claim the first task",
+    "blockers": [],
+    "tech_debt": [],
+    "test_coverage": "not evaluated",
+    "dev_log": [],
+    "goal": "{{DEV_GOAL}}",
+    "milestones": {{DEV_MILESTONES}},
+    "current_milestone_index": 0
+  }
+  ```
+
+  If `{{LOOP_STATE_SCHEMA}}` is non-empty, merge its fields into the JSON above before writing.
+  Before writing the state file, run:
+  ```bash
+  mkdir -p $(dirname {{DEV_STATE_FILE}})
+  ```
+  to ensure the parent directory exists.
+
+  ### Step 1.3: Determine the session type (state machine core)
+
+  Based on the `status` field:
+
+  ```
+  status = "ready"
+    → New task: claim the highest-priority todo item
+    → Set current_card to that task identifier
+    → Change status to "in_progress"
+
+  status = "in_progress"
+    → Resume: read current_card and next_step, continue the work
+    → Load the context from the previous interruption
+
+  status = "blocked"
+    → Unblock first: inspect the blocker
+    → Resolve within a time limit (≤15 minutes); if it times out, record it and skip
+    → If unblocked, change status to "in_progress"
+
+  status = "goal_reached"
+    → The overall goal has been reached
+    → Run the auto-disable step in PHASE 3 and send the final report
+    → Output `NO_REPLY` and end the run
+  ```
+
+  ---
+
+  ## PHASE 2: EXEC — execute the task
+
+  > This is the business execution phase. The LOOP_EXEC_INSTRUCTIONS variable can replace all of it.
+
+  {{#IF LOOP_EXEC_INSTRUCTIONS}}
+  {{LOOP_EXEC_INSTRUCTIONS}}
+  {{#ELSE}}
+  ### Step 2.1: Read the project TODO
+
+  Read `{{DEV_PROJECT_DIR}}/TODO.md` (if present) to understand:
+  - Completed items (marked `[x]`)
+  - Incomplete items (marked `[ ]`)
+  - The highest-priority task right now
+
+  ### Step 2.2: Read recent commit history
+
+  Run:
+  ```bash
+  cd {{DEV_PROJECT_DIR}} && git log --oneline -5
+  ```
+  to understand the latest code progress.
+
+  ### Step 2.3: Load development context
+
+  Based on the current task, read the relevant code files:
+  - Source files related to the current task
+  - Corresponding test files (`test_*.py` or the matching pattern)
+  - `requirements.txt` or dependency configuration
+  - Architecture docs (e.g. `{{DEV_DOCS_DIR}}/architecture*.md`)
+
+  Before reading architecture docs, run:
+  ```bash
+  mkdir -p {{DEV_DOCS_DIR}}
+  ```
+  If no architecture doc exists there, skip it; this is not an error.
+
+  ---
+
+  ### Development discipline (mandatory)
+
+  1. **Minimal change**: touch only code directly related to the task
+  2. **Match existing style**: even when your own habits differ
+  3. **Clean up orphan code**: unused imports/variables/functions caused by your change must be removed
+  4. **Verify the loop**:
+     - Fixing a bug → reproduce first, fix second, verify third
+     - Adding a feature → define success criteria first, verify after completion
+  5. **Simplicity first**: if 50 lines will do, do not write 200
+  6. **Respect phase boundaries**: do not automatically start the next milestone when the current one is done; update state in the EXIT phase
+
+  ### Execution steps
+
+  {{DEV_TASK_INSTRUCTIONS}}
+
+  ### Test verification
+
+  Run tests after development:
+  ```bash
+  cd {{DEV_PROJECT_DIR}}
+  # Syntax check
+  python -m py_compile <modified files>
+  # Run relevant tests
+  python -m pytest {{DEV_TEST_PATTERN}} -v
+  ```
+  Record the test results (passed/total).
+
+  ---
+
+  ### Code wrap-up
+
+  - [ ] Run `python -m py_compile` to check for syntax errors
+  - [ ] Run relevant tests: `python -m pytest {{DEV_TEST_PATTERN}} -v`
+  - [ ] `git diff` — confirm the change scope is reasonable and no unexpected files were modified
+  - [ ] `git status` — confirm there are no important uncommitted changes
+
+  ### Security review
+
+  Check added/modified files:
+  - [ ] **No hard-coded API keys** — search for `api_key`, `token`, `password`, `secret`
+  - [ ] **No private path leaks** — search for `/home/`, `/Users/`, `C:\`, absolute paths
+  - [ ] **No accidental deletions** — confirm via git diff that no rm operations occurred
+  - [ ] **No large binary files** — confirm no file >1MB is committed
+
+  ### Git commit
+
+  ```bash
+  cd {{DEV_PROJECT_DIR}}
+  git add -A
+  git commit -m "{{DEV_COMMIT_PREFIX}}: [{{DEV_PHASE}}] <summary of this session> — $(date +%Y-%m-%d) session"
+  ```
+
+  Fill in `<summary of this session>` based on the actual changes, for example:
+  - `feat: [P2-T3] Query extensions and intent classification`
+  - `fix: [P2-T1] Fix empty-result exception in vector retrieval`
+  - `refactor: [P2] Extract shared utility functions`
+  - `test: [P2-T3] Add boundary tests`
+  - `maint: 2026-06-26 maintenance session — test verification`
+
+  > ⚠️ **Do not run `git push`** — per the safety red line, pushes require human review
+
+  ### Update TODO.md
+
+  Update `{{DEV_PROJECT_DIR}}/TODO.md`:
+  - Mark completed items as `[x]`
+  - Add newly discovered todo items
+  - Update "In Progress" and "Next Plan"
+  {{/IF}}
+
+  ---
+
+  ## PHASE 3: EXIT — session exit
+
+  > Save state, write the log, and wait for tomorrow. State is the only permanence.
+
+  ### Step 3.1: Determine whether the milestone/goal is complete
+
+  Based on the PHASE 2 results and the completion criteria for each milestone in {{DEV_GOAL}}, judge the current milestone's completion status.
+
+  {{#IF LOOP_EXEC_INSTRUCTIONS}}
+  (Judge according to the task completion criteria you defined in PHASE 2)
+  {{#ELSE}}
+  Software-development criteria (all must be met):
+  1. The core code/files produced this session are written to disk
+  2. This session's changes pass the `python -m py_compile` syntax check
+  3. All relevant tests pass (or failures are recorded and judged acceptable)
+  4. Tasks related to this milestone in `{{DEV_PROJECT_DIR}}/TODO.md` are marked `[x]`
+  5. `git status` shows no important uncommitted changes (this session's changes are committed)
+  {{/IF}}
+
+  Update the state based on the judgment:
+  - **Current milestone incomplete**: keep status `in_progress`; set next_step to the specific next action
+  - **Current milestone complete and another milestone remains**:
+    - `current_milestone_index` + 1
+    - Change `status` to `ready`
+    - Set `current_card` to the first task of the next milestone
+    - Set `next_step` to "Start the next milestone: xxx"
+  - **Current milestone complete and it was the last milestone**:
+    - Change `status` to `goal_reached`
+    - Set `current_card` to null or "goal reached"
+    - Set `next_step` to "Goal reached; waiting for the user to take over operations"
+
+  ### Step 3.2: Update the state file
+
+  Update `{{DEV_STATE_FILE}}`:
+  - `last_session` → current time (ISO-8601, obtained via exec)
+  - `current_card` → the card completed/in progress this session
+  - `status` → the result determined in 3.1
+  - `next_step` → what to do next (specific and actionable)
+  - `blockers` → unresolved blockers from this session
+  - `dev_log` → append this session's record (time, task, summary, result)
+  - `goal` / `milestones` / `current_milestone_index` → update in sync
+  {{#IF LOOP_EXEC_INSTRUCTIONS}}
+  - Custom fields: update according to the fields defined in {{LOOP_STATE_SCHEMA}}
+  {{#ELSE}}
+  - `tech_debt` → technical debt created this session
+  - `test_coverage` → current test coverage
+  {{/IF}}
+
+  Ensure the parent directory exists before writing.
+
+  ### Step 3.3: Report (when delivery is configured)
+
+  If `{{DELIVERY_MODE}}` is `announce`, send a report. The report content must be read from the latest state file values:
+
+  ```
+  Report title: 【{{DEV_PROJECT_NAME}}】Task execution report
+
+  Time: <current date and time via exec>
+  Current milestone: <milestone corresponding to current_milestone_index in the state file>
+  Task: <current_card in the state file>
+  Status: <status in the state file>
+
+  Completed:
+  - <fill in from the last dev_log entry>
+
+  Next: <next_step in the state file>
+  ```
+
+  If status is `goal_reached`, change the report title to `🎯 【{{DEV_PROJECT_NAME}}】Goal reached` and explain that the user should take over operations.
+
+  ### Step 3.4: Auto-disable the cron task after reaching the goal (optional)
+
+  If both conditions hold:
+  1. `status` in the state file is `goal_reached`
+  2. `{{DEV_AUTO_DISABLE_ON_GOAL_REACHED}}` is `true`
+
+  try to disable this cron task in the following order:
+
+  **Method 1: disable through the cron_job_id recorded in the state file (recommended, most reliable)**
+  Read the state file; if a `cron_job_id` field exists, run:
+  ```bash
+  openclaw cron edit <cron_job_id> --disabled
+  ```
+
+  **Method 2: find and disable by task name**
+  If the state file has no `cron_job_id`, run with exec:
+  ```bash
+  openclaw cron list --format json
+  ```
+  In the JSON output, match the task whose `name` equals `{{JOB_NAME}}` exactly, extract its `id`, then run:
+  ```bash
+  openclaw cron edit <task ID> --disabled
+  ```
+
+  **Failure handling**:
+  - If both methods fail, append to the report: "⚠️ Auto-disable failed. Please run `openclaw cron edit <task ID> --disabled` manually."
+  - Record the failure reason in `dev_log` in the state file for the user to handle.
+
+  If disabling succeeds, append to the report: "This task has been disabled automatically and is waiting for the user to take over."
+
+  ---
+
+  **Scene-specific instructions**
+  {{SCENE_SPECIFIC_INSTRUCTIONS}}
+  {{/LOOP_ONLY}}
+
+  {{#NON_LOOP_ONLY}}
+  **Scene-specific instructions**
+  {{SCENE_SPECIFIC_INSTRUCTIONS}}
+  {{/NON_LOOP_ONLY}}
+
+  {{#LOOP_ONLY}}
+  ---
+
+  ## State machine transition diagram
+
+  ```
+  +--------+     claim new task     +-------------+
+  | ready  | ---------------------> | in_progress |
+  +--------+                        +-------------+
+       ^                                 | complete / partially complete
+       |                                 v
+       +--------------------------+  blocked
+       |                          +---------+
+       |                          | blocked | ——→ resolve within time limit (≤15min)
+       |                          +---------+      keep blocked on timeout
+       |
+  milestone complete and another phase remains
+       |
+       v
+  +--------+     last milestone complete      +-------------+
+  | ready  | --------------------------------> | goal_reached |
+  +--------+                                   +-------------+
+                                                      |
+                                                      v
+                                                auto-disable cron
+                                                user takes over ops
+  ```
+  {{/LOOP_ONLY}}

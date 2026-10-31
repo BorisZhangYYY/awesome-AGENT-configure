@@ -5,6 +5,8 @@ description: "Manage AAC-normalized OpenClaw cron tasks: create, edit, migrate, 
 
 # AAC Cron Manager
 
+English | [简体中文](SKILL.zh_CN.md)
+
 Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks with the `【AAC-` prefix.
 
 ## When to use
@@ -21,21 +23,21 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 - Only manage tasks with `【AAC-` prefix in the name.
 - All scene YAML files live in `~/.openclaw/workspace/awesome-AGENT-configure/cron/<task-name>/<task-name>.yaml`.
 - Rendering goes through `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`.
-- Templates are directory-based: `cron-template/checks/docker-check/docker-check.yaml`.（场景专属 .js 暂不可用，见模板注释。）
+- Templates are directory-based: `{zh_CN|en_US}/cron-template/checks/docker-check/docker-check.yaml`. (Scene-specific .js is currently unavailable; see the template comments.)
 - Trigger logic is unified in `OpenClaw/skills/aac-cron-manage/scripts/trigger.js` (time window). Scene-specific JS is auto-concatenated by `build-cron.py`.
-- Trigger scripts run in a QuickJS-WASI sandbox: pure ES2022 JS only — no `Intl`, no `require`/`import`, no `process`, no Node modules. See `references/trigger-sandbox.md` before touching any trigger code.
-- Always show config to user and get confirmation before executing.
-- `--test` mode generates a one-off task with `【TEST】` prefix, skips window/dedup checks, and auto-deletes after run.
+- Trigger scripts run in a QuickJS-WASI sandbox: pure ES2022 JS only — no `Intl`, no `require`/`import`, no `process`, no Node modules. See `references/en_US/trigger-sandbox.md` before touching any trigger code.
+- Always show the configuration to the user and get confirmation before executing.
+- `--test` mode generates a one-off task with a `【TEST】` prefix, skips window/dedup checks, and auto-deletes after running.
 
 ## Workflow selection
 
-- **Create**: see `references/init-cron.md`
-- **Edit**: see `references/edit-cron.md`
-- **Migrate**: see `references/migrate-cron.md`
-- **Sync to latest template**: see `references/update-cron.md`
+- **Create**: see `references/en_US/init-cron.md`
+- **Edit**: see `references/en_US/edit-cron.md`
+- **Migrate**: see `references/en_US/migrate-cron.md`
+- **Sync to latest template**: see `references/en_US/update-cron.md`
 - **Delete**: `openclaw cron rm <job-id>`
 - **List installed**: `openclaw cron list`
-- **List available templates**: `ls OpenClaw/cron-template/*/*/` (from the AAC repo)
+- **List available templates**: `ls OpenClaw/{zh_CN,en_US}/cron-template/*/*/` (from the AAC repo)
 
 ## Quick commands
 
@@ -49,7 +51,7 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
   python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" --json
   ```
-- Render a scene YAML as an **edit** command (保留 job id，不新建任务）:
+- Render a scene YAML as an **edit** command (keep the job id; do not create a new task):
   ```bash
   python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" --edit <job-id> --json
@@ -60,23 +62,26 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" \
     --test
   ```
-- Locate AAC repo:
+- Locate the AAC repo:
   ```bash
   export AAC_REPO=$(python3 -c "import os,sys; ...")
   ```
   Fallback order: `AAC_REPO` env → current directory → search under `$HOME`.
 
-## ⛔ Edit 时必须用 `--edit` 或 `--json`
+## ⛔ Edit must use `--edit` or `--json`
 
-`build-cron.py` 的默认输出是**反斜杠续行**格式，用字符串替换拼 `openclaw cron edit` 会静默失败，
-实际执行成 `openclaw cron create` → 产生重复 job，还可能误删带改动的副本（2026-10-19/21 实测事故）。
+`build-cron.py`'s default output uses **backslash line continuations**. Assembling an
+`openclaw cron edit` command with string replacement silently fails: it actually runs
+`openclaw cron create`, creates duplicate jobs, and may delete the copy that contains the
+changes (incidents verified on 2026-10-19/21).
 
-**首选**：`build-cron.py <yaml> --edit <job-id> --json` —— 直接生成 `openclaw cron edit <job-id> ...`，
-保留 job id、原地更新内容、不新建 job（2026-10-21 实测通过）。
+**Preferred**: `build-cron.py <yaml> --edit <job-id> --json` — directly generates
+`openclaw cron edit <job-id> ...`, keeps the job id, updates the content in place, and
+creates no new job (verified 2026-10-21).
 
-**次选**：加 `--json` 拿 argv 数组，只传 `--message` 做最小编辑。
+**Fallback**: add `--json` to get the argv array and pass only `--message` for a minimal edit.
 
-两者都不可省略：**edit 后必须核对 live job 的 payload 真的变了**。
+Neither option can be skipped: **after editing, verify that the live job's payload actually changed.**
 
 ## Legacy variable cleanup
 

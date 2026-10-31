@@ -1,0 +1,196 @@
+# {{PROJECT_NAME}}
+
+> {{PROJECT_ONE_LINE_DESCRIPTION}}
+
+<!--
+  Hero area: consider adding a logo, banner, or key badges.
+  Common badges: build status, version, license, downloads, docs.
+  Generator: https://shields.io/
+-->
+
+{{BADGES}}
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Use Cases](#use-cases)
+- [Getting Started](#getting-started)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [Minimal Example](#minimal-example)
+- [Project Structure](#project-structure)
+- [Core Concepts](#core-concepts)
+- [Usage](#usage)
+  - [Basic Usage](#basic-usage)
+  - [Advanced Usage](#advanced-usage)
+  - [Custom Scenarios](#custom-scenarios)
+- [Configuration](#configuration)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [FAQ](#faq)
+- [Support and Acknowledgements](#support-and-acknowledgements)
+- [License](#license)
+- [Related Links](#related-links)
+
+---
+
+## Overview
+
+{{PROJECT_DESCRIPTION}}
+
+<!--
+  Answer three questions:
+  1. What is this project?
+  2. What pain point does it solve?
+  3. Who is it for?
+-->
+
+## Key Features
+
+- **{{FEATURE_1_NAME}}**: {{FEATURE_1_DESC}}
+- **{{FEATURE_2_NAME}}**: {{FEATURE_2_DESC}}
+- **{{FEATURE_3_NAME}}**: {{FEATURE_3_DESC}}
+
+<!--
+  Highlight what makes the project different. Each item should pair a capability with its value.
+  For AGENT projects, consider organizing by perception, decision, execution, and feedback.
+-->
+
+## Use Cases
+
+{{SCENARIO_DESCRIPTION}}
+
+<!--
+  Use 2-3 concrete scenarios to help readers decide whether the project fits:
+  1. Scenario A: ...
+  2. Scenario B: ...
+  3. Scenario C: ...
+-->
+
+## Getting Started
+
+### Requirements
+
+- {{DEPENDENCY_1}}
+- {{DEPENDENCY_2}}
+
+<!--
+  List the minimum environment: language version, OS, required tools, etc.
+-->
+
+### Installation
+
+```bash
+{{INSTALL_COMMAND}}
+```
+
+### Minimal Example
+
+```bash
+{{MINIMAL_RUN_EXAMPLE}}
+```
+
+<!--
+  Provide a copy-paste example with expected output.
+  Goal: let readers see results within five minutes.
+-->
+
+## Project Structure
+
+```text
+{{PROJECT_NAME}}/
+├── {{DIR_1}}/          # {{DIR_1_DESC}}
+├── {{DIR_2}}/          # {{DIR_2_DESC}}
+├── {{CONFIG_FILE}}     # {{CONFIG_FILE_DESC}}
+└── README.md
+```
+
+## Core Concepts
+
+{{CORE_CONCEPTS}}
+
+<!--
+  Explain key terms or architectural components.
+  Mermaid diagrams, flowcharts, or state machines work well here.
+  Common AGENT concepts: Harness, Loop, Cron, Trigger, Memory, Tool Use.
+-->
+
+## Usage
+
+### Basic Usage
+
+```bash
+{{BASIC_USAGE_EXAMPLE}}
+```
+
+### Advanced Usage
+
+```bash
+{{ADVANCED_USAGE_EXAMPLE}}
+```
+
+### Custom Scenarios
+
+{{CUSTOMIZATION_GUIDE}}
+
+## Configuration
+
+{{CONFIG_DESCRIPTION}}
+
+<!--
+  Describe config file locations, key environment variables, required/optional fields, and defaults.
+  Consider linking to a .env.example or config template.
+-->
+
+## Roadmap
+
+{{ROADMAP}}
+
+<!--
+  List planned but unimplemented features, optionally by version:
+  - [ ] v0.2.0: ...
+  - [ ] v0.3.0: ...
+-->
+
+## Contributing
+
+PRs and Issues are welcome.
+
+<!--
+  If there is a detailed guide, link to CONTRIBUTING.md:
+  See [CONTRIBUTING.md](CONTRIBUTING.md).
+-->
+
+{{CONTRIBUTING_DESCRIPTION}}
+
+## FAQ
+
+### {{FAQ_QUESTION_1}}
+
+{{FAQ_ANSWER_1}}
+
+### {{FAQ_QUESTION_2}}
+
+{{FAQ_ANSWER_2}}
+
+<!--
+  List the 2-3 questions users hit most often to lower the entry barrier.
+-->
+
+## Support and Acknowledgements
+
+- Issues: [Issues]({{ISSUE_URL}})
+- Discussions: [Discussions]({{DISCUSSION_URL}})
+- Acknowledgements: {{ACKNOWLEDGEMENTS}}
+
+## License
+
+{{LICENSE}}
+
+## Related Links
+
+- {{RESOURCE_1_NAME}}: {{RESOURCE_1_URL}}
+- {{RESOURCE_2_NAME}}: {{RESOURCE_2_URL}}

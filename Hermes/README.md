@@ -1,18 +1,21 @@
 # Hermes 工作区模板
 
-本目录提供人格、用户画像与长期记忆的初始模板，不包含 Hermes Cron 配置。
+> 人格、用户画像与长期记忆的初始模板，不包含 Hermes Cron 配置。
 
-## 目录结构
+简体中文 | [English](README.en.md)
 
-```text
-Hermes/
-├── README.md
-└── workspace-template/
-    ├── SOUL.md
-    └── memories/
-        ├── USER.md
-        └── MEMORY.md
-```
+## 语言版本
+
+| 版本 | 目录 |
+|------|------|
+| 简体中文 | `zh_CN/workspace-template/` |
+| English | `en_US/workspace-template/` |
+
+## 文件职责
+
+- `SOUL.md`：人格、交流方式与工作区管理约定；其中的目录分类与保留周期是本模板的约定，不代表框架强制要求，也不会自动创建目录或定时任务。
+- `memories/USER.md`：用户画像和偏好，发布模板时只保留通用骨架或占位符。
+- `memories/MEMORY.md`：长期保留的环境事实与约定，后续可由 Hermes 的 `memory` 工具维护。
 
 ## 使用方式
 
@@ -23,11 +26,8 @@ Hermes/
 
 目标路径分别为 `$HERMES_HOME/SOUL.md`、`$HERMES_HOME/memories/USER.md` 和 `$HERMES_HOME/memories/MEMORY.md`。`SOUL.md` 中的 `~/.hermes` 是默认 home 示例，使用其他 home 时请同步调整。
 
-## 文件职责与注意事项
+## 注意事项
 
-- `SOUL.md`：人格、交流方式与工作区管理约定；其中的目录分类与保留周期是本模板的约定，不代表框架强制要求，也不会自动创建目录或定时任务。
-- `memories/USER.md`：用户画像和偏好，发布模板时只保留通用骨架或占位符。
-- `memories/MEMORY.md`：长期保留的环境事实与约定，后续可由 Hermes 的 `memory` 工具维护。
 - 不要把真实凭据、私人资料、聊天记录或实际运行中的记忆文件提交到公共仓库。
 - 本次提供的是文件模板；不需要修改正在运行的 Hermes 配置。
 

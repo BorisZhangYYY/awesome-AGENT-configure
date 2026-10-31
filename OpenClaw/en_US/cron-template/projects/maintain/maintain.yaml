@@ -1,0 +1,141 @@
+# Maintenance session scene (Loop iteration)
+# ============================================================
+# This scene runs project maintenance work automatically through scheduled tasks.
+# Suitable for: regression testing, technical debt cleanup, code health checks, dependency updates
+#
+# Differences from feature development:
+#   - Maintenance tasks usually add no features; they verify and clean up
+#   - Greater emphasis on test coverage and code health
+#   - May involve cross-validation across multiple modules
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/maintain/maintain.yaml
+
+templateRef: "../../template-cron.yaml"
+
+variables:
+  # ========== Mode switch ==========
+  # Enable Loop mode (state-driven iteration)
+  LOOP_MODE_ENABLED: "true"
+  LOOP_TASK_TYPE: "software maintenance"
+
+  # ========== Basic information ==========
+  JOB_NAME: "【AAC-Project】XXX maintenance session"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  CATEGORY: "Project"
+  DESCRIPTION: "Maintain the project regularly: test verification, debt cleanup, health checks; progress by maintenance milestone"
+
+  # ========== Schedule configuration ==========
+  # Maintenance sessions are best triggered on weekday afternoons
+  TRIGGER_ENABLED: "true"
+  SCHEDULE_EXPR: "0 15 * * 1-5"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "14:00"
+  WINDOW_END: "18:00"
+
+  # ========== Development task configuration ==========
+  DEV_PROJECT_NAME: "MyProject"
+  DEV_PROJECT_DIR: "/path/to/your/project"
+  DEV_PHASE: "Maintenance"
+  DEV_BRANCH: "main"
+  # State file path (used for resumption). ⚠️ Every Loop task must use its own state file; sharing one causes states to overwrite each other.
+  DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-maintain-session.json"
+  DEV_TEST_PATTERN: "test_*.py"
+  # Git commit prefix (common: feat/fix/refactor/maint/docs/test/chore)
+  DEV_COMMIT_PREFIX: "maint"
+
+  # Project docs directory (used to read/update architecture docs, design docs, etc.)
+  DEV_DOCS_DIR: "{{DEV_PROJECT_DIR}}/docs"
+
+  # ========== Goal and milestones ==========
+  # Overall goal: one sentence describing the final outcome of this maintenance cycle
+  DEV_GOAL: "Complete this maintenance cycle: regression testing, health checks, debt handling, documentation sync"
+  # Milestone list: break down the maintenance process in order; each milestone should be independently verifiable
+  DEV_MILESTONES: '["Milestone 1: Regression test verification", "Milestone 2: Code health check", "Milestone 3: Technical debt handling", "Milestone 4: Dependency and documentation sync"]'
+  # Current milestone name (display only; the real index comes from the state file)
+  DEV_CURRENT_MILESTONE: "Milestone 1: Regression test verification"
+  # Whether to auto-disable the cron task after reaching the final goal (maintenance can be false to keep running; true for a one-off maintenance sprint)
+  DEV_AUTO_DISABLE_ON_GOAL_REACHED: "false"
+
+  # ========== Scene-specific instructions ==========
+  DEV_TASK_INSTRUCTIONS: |
+    ### Standard maintenance session workflow
+
+    **Every maintenance run must perform these checks**:
+
+    #### 1. Regression test verification
+    Run all tests:
+    ```bash
+    cd {{DEV_PROJECT_DIR}}
+    python -m pytest {{DEV_TEST_PATTERN}} -v
+    ```
+    Record the results: passed/total/failed
+
+    #### 2. Code health check
+    - Syntax check: `python -m py_compile` over all .py files
+    - Unused variable detection: check added/modified files for unused imports
+    - TODO/FIXME/HACK scan: record the count
+    - Security review: confirm no hard-coded API keys, tokens, or private paths
+
+    #### 3. Technical debt handling
+    Read the `tech_debt` list from the state file:
+    - Assess the priority and impact of each debt item
+    - Pick 1-2 high-priority items to handle (30-minute time limit)
+    - For items that cannot be handled, update the state and record the reason
+
+    #### 4. Dependency check
+    - Check consistency between `requirements.txt` and actual usage
+    - Check for unused dependencies
+    - Record dependencies that need updating (do not update automatically, only record)
+
+    #### 5. Documentation sync
+    - Check whether code changes are reflected in `{{DEV_PROJECT_DIR}}/TODO.md`
+    - Check whether `{{DEV_PROJECT_DIR}}/CHANGELOG.md` needs updating
+    - Check whether architecture docs such as `{{DEV_DOCS_DIR}}/architecture*.md` are stale
+
+    **Current milestone completion criteria**:
+    1. All checks for this milestone have been performed
+    2. Found issues are recorded or fixed
+    3. The state file and TODO.md are updated
+
+    **Maintenance acceptance criteria**:
+    1. All tests pass (or failures are recorded and assessed)
+    2. The code health check finds no new issues
+    3. At least one technical debt item is handled or assessed
+    4. The state file is updated
+
+  # ========== Delivery configuration ==========
+  DELIVERY_MODE: "none"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+
+  # ========== Session configuration ==========
+  SESSION_TARGET: "isolated"
+  TIMEOUT_SECONDS: "7200"  # 2 hours
+
+  # ========== Agent configuration ==========
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  TOOLS: "exec,read,write,edit,bash"
+
+  # ========== Persona configuration ==========
+  PERSONA_MODE: "file"
+  PERSONA_FILE: "{{WORKSPACE}}/SOUL.md"
+
+  # ========== Time window ==========
+
+  # ========== Deduplication configuration ==========
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/dev-maintain-dedup.txt"
+
+  # ========== Advanced options ==========
+  EXACT: "false"
+
+  # ========== Scene-specific supplementary instructions ==========
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    **Maintenance discipline**:
+    1. Do not introduce new features; only verify and clean up
+    2. Fix issues on the spot when possible; record those that cannot be fixed as debt
+    3. Stay objective: record the real situation without sugar-coating
+    4. Prioritize verifying whether issues found in the last maintenance run have been resolved
+    5. After this maintenance cycle's goal is reached, if DEV_AUTO_DISABLE_ON_GOAL_REACHED is true, disable this task automatically and wait for user intervention

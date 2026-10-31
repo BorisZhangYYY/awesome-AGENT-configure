@@ -1,0 +1,145 @@
+# Feature development scene (Loop iteration)
+# ============================================================
+# This scene advances software feature development automatically through scheduled tasks.
+# Suitable for: new feature development, module implementation, feature enhancement
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/feature/feature.yaml
+#
+# Differences from reminder/check scenes:
+#   - Project tasks enable Loop mode (LOOP_MODE_ENABLED: "true")
+#   - Usually no daily deduplication (multiple iterations per day are possible)
+#   - Full context is required (lightContext: false)
+#   - Full toolset is required (development needs edit/write/exec/bash, etc.)
+#   - Longer timeout (4 hours)
+#   - State files manage resumption
+#   - Progress by milestone; auto-disable cron when the goal is reached
+
+templateRef: "../../template-cron.yaml"
+
+variables:
+  # ========== Mode switch ==========
+  # Enable Loop mode (state-driven iteration)
+  LOOP_MODE_ENABLED: "true"
+  LOOP_TASK_TYPE: "software feature development"
+  # Task name; recommended format: 【AAC-Project】Project-Name-Feature-Name
+  JOB_NAME: "【AAC-Project】XXX feature development"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  CATEGORY: "Project"
+  DESCRIPTION: "Advance project feature development on a schedule with the Loop method, progress by milestone, and auto-disable when the goal is reached"
+
+  # ========== Schedule configuration ==========
+  # Development tasks are best triggered on weekday mornings/afternoons
+  # Example: weekdays at 10:00
+  TRIGGER_ENABLED: "true"
+  SCHEDULE_EXPR: "0 10 * * 1-5"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "09:00"
+  WINDOW_END: "12:00"
+
+  # ========== Development task configuration ==========
+  # Project name (used in reports and logs)
+  DEV_PROJECT_NAME: "MyProject"
+  # Absolute project path
+  DEV_PROJECT_DIR: "/path/to/your/project"
+  # Current phase identifier (used in commit messages)
+  DEV_PHASE: "Phase 1"
+  # Development branch name
+  DEV_BRANCH: "dev/main"
+  # State file path (used for resumption). ⚠️ Every Loop task must use its own state file; sharing one causes states to overwrite each other. Use distinct file names such as dev-session.json / maintain-session.json.
+  DEV_STATE_FILE: "{{DEV_PROJECT_DIR}}/.state/dev-session.json"
+  # Test file matching pattern
+  DEV_TEST_PATTERN: "test_*.py"
+  # Git commit prefix (common: feat/fix/refactor/maint/docs/test/chore)
+  DEV_COMMIT_PREFIX: "feat"
+
+  # Project docs directory (used to read/update architecture docs, design docs, etc.)
+  DEV_DOCS_DIR: "{{DEV_PROJECT_DIR}}/docs"
+
+  # ========== Goal and milestones ==========
+  # Overall goal: one sentence describing the final outcome to achieve
+  DEV_GOAL: "Complete the development and testing of XXX"
+  # Milestone list: break down the goal in order; each milestone should be independently verifiable
+  DEV_MILESTONES: '["Milestone 1: Base module and interface design", "Milestone 2: Core logic implementation", "Milestone 3: Integration testing and documentation"]'
+  # Current milestone name (display only; the real index comes from the state file)
+  DEV_CURRENT_MILESTONE: "Milestone 1: Base module and interface design"
+  # Whether to auto-disable the cron task after reaching the final goal (recommended true for feature development)
+  DEV_AUTO_DISABLE_ON_GOAL_REACHED: "true"
+
+  # ========== Scene-specific instructions ==========
+  # Define the concrete development instructions for the current phase here
+  # Fill in the following based on your actual project
+  DEV_TASK_INSTRUCTIONS: |
+    ### Current development task: implement XXX
+
+    **Technical approach** (brief):
+    1. ...
+    2. ...
+    3. ...
+
+    **Development steps** (iterate; complete only a small step each run):
+
+    #### Iteration 1: Base module
+    - Create/modify files...
+    - Implement core logic...
+    - Add unit tests...
+
+    #### Iteration 2: Integration testing
+    - ...
+
+    #### Iteration 3: Documentation
+    - Add/update relevant docs under `{{DEV_DOCS_DIR}}/` (e.g. `architecture.md`, `usage.md`)
+    - Update `{{DEV_PROJECT_DIR}}/CHANGELOG.md` (for user-visible changes)
+
+    **Acceptance criteria per iteration**:
+    1. New code passes syntax checks
+    2. New code has corresponding unit tests
+    3. All tests pass
+    4. Changes are committed with git commit (do not push)
+
+    **Current milestone completion criteria** (all must be met):
+    1. The core code for this milestone is committed
+    2. All relevant tests pass
+    3. The corresponding tasks in TODO.md are marked complete
+
+  # ========== Delivery configuration ==========
+  # Development tasks stay silent when normal and report on progress or blockers
+  # Change to announce if reporting is needed
+  DELIVERY_MODE: "none"
+  BEST_EFFORT: "true"
+  CHANNEL: "last"
+
+  # ========== Session configuration ==========
+  # Development tasks use an isolated session so the main session is not polluted
+  SESSION_TARGET: "isolated"
+  TIMEOUT_SECONDS: "14400"  # 4 hours
+
+  # ========== Agent configuration ==========
+  # Development tasks need full context and reasoning capability
+  LIGHT_CONTEXT: "false"
+  THINKING: "medium"
+  # Development needs the full toolset
+  TOOLS: "exec,read,write,edit,bash"
+
+  # ========== Persona configuration ==========
+  PERSONA_MODE: "file"
+  PERSONA_FILE: "{{WORKSPACE}}/SOUL.md"
+
+  # ========== Time window ==========
+
+  # ========== Deduplication configuration ==========
+  # Development tasks usually do not need daily deduplication because there may be multiple iterations per day
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/dev-feature-dedup.txt"
+
+  # ========== Advanced options ==========
+  EXACT: "false"
+
+  # ========== Scene-specific supplementary instructions ==========
+  # Add extra constraints or notes here
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    **Additional constraints** (fill in as needed):
+    1. Reuse existing code first; do not reinvent the wheel
+    2. Comply with the project's license requirements
+    3. Report before any operation involving external repositories
+    4. Do not start a new goal automatically after reaching the goal; wait for user intervention

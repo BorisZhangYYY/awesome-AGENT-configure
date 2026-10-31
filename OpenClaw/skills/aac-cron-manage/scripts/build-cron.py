@@ -77,6 +77,8 @@ DEFAULTS = {
     "DEV_DOCS_DIR": "{{DEV_PROJECT_DIR}}/docs",
     "SCENE_SPECIFIC_INSTRUCTIONS": "",
     "PERSONA_MODE": "inline",
+    # 生成人设提示词的语言：zh_CN（默认）| en_US
+    "LOCALE": "zh_CN",
     "WORKSPACE": "~/.openclaw/workspace",
     # Trigger 默认值（OpenClaw 2026.7.1+）
     "TRIGGER_ENABLED": "false",
@@ -255,7 +257,7 @@ def load_yaml(path):
 
 def load_template(scene, scene_path):
     """根据 scene 中的 templateRef 加载通用模板。"""
-    template_ref = scene.get("templateRef", "../template-cron.zh.yaml")
+    template_ref = scene.get("templateRef", "../template-cron.yaml")
     template_path = Path(template_ref)
     if not template_path.is_absolute():
         template_path = (scene_path.parent / template_path).resolve()
@@ -390,7 +392,7 @@ def check_unresolved(message):
 def apply_loop_mode(message, variables):
     """根据 LOOP_MODE_ENABLED 保留或剥离 Loop 模式专属片段。
 
-    template-cron.zh.yaml 中同时包含普通任务和 Loop 任务两套 Prompt，
+    template-cron.yaml 中同时包含普通任务和 Loop 任务两套 Prompt，
     分别用 {{#LOOP_ONLY}}...{{/LOOP_ONLY}} 和 {{#NON_LOOP_ONLY}}...{{/NON_LOOP_ONLY}}
     标记。本函数根据 LOOP_MODE_ENABLED 的值只保留对应分支，并移除标记本身。
     """
@@ -506,6 +508,14 @@ def build_persona_prompt(template, variables):
         if raw_role and not re.search(r"\{\{.*?\}\}", raw_role):
             persona_role = raw_role
 
+    locale = str(variables.get("LOCALE", "zh_CN")).strip().lower()
+    if locale.startswith("en"):
+        if mode == "file" and persona_file:
+            return f"Please use the persona defined in {persona_file}."
+        if persona_role:
+            return f"You are {persona_role}."
+        return ""
+
     if mode == "file" and persona_file:
         return f"请基于 {persona_file} 中定义的人设。"
     if persona_role:
@@ -611,7 +621,7 @@ def build_command(variables, flags, scene_path, test_mode=False, edit_job_id=Non
     add_flag(cmd, "session.sessionKey", variables.get("SESSION_KEY", ""), flags)
 
     # 投递陷阱校验：isolated 会话无 "last" 路由，announce + CHANNEL=last 必然 fail-closed。
-    # 参照 references/trigger-sandbox.md 同类思路：部署前拦截，避免任务静默失败。
+    # 参照 references/{zh_CN,en_US}/trigger-sandbox.md 同类思路：部署前拦截，避免任务静默失败。
     delivery_mode = str(variables.get("DELIVERY_MODE", "")).strip()
     channel = str(variables.get("CHANNEL", "")).strip()
     if (

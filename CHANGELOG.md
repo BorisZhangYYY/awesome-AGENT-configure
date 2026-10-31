@@ -6,7 +6,22 @@
 
 ### Added
 
-- **`Hermes/workspace-template/`（新增）**：提供 `SOUL.md`、`memories/USER.md` 与 `memories/MEMORY.md` 初始模板，包含私聊与群聊边界、工作区分类和长期记忆骨架；`Hermes/README.md` 说明目标 home、按需合并与隐私注意事项。
+### Changed
+
+### Fixed
+
+### Removed
+
+## [0.2.1] - 2026-10-31
+
+### Added
+
+- **全仓库中英双语（新增）**：根、`AI-ProjConf/`、`Hermes/`、`OpenClaw/` 均新增 `README.en.md`；新增 `AI-ProjConf/en_US/`、`Hermes/en_US/`、`OpenClaw/en_US/` 全套英文模板，与 `zh_CN/` 一一镜像。
+- **`OpenClaw/README.md` / `README.en.md`（新增）**：说明 workspace、cron、hook 三类模板与共享 skill 的用途与用法。
+- **skill 文档中英双语（新增）**：`SKILL.md` 为英文入口（OpenClaw skill 发现使用），新增 `SKILL.zh_CN.md` 中文版；`references/` 拆分为 `zh_CN/` 与 `en_US/`，6 份参考文档一一镜像。
+- **i18n CI 校验（新增）**：`scripts/check_i18n_templates.py` 校验模板文件集合、YAML 结构、场景变量与占位符；`scripts/check_i18n_docs.py` 校验文档配对、标题/代码块数量、相对链接与英文文档中文残留；新增 `.github/workflows/i18n.yml`。
+- **`AI-ProjConf/zh_CN/single-repo/` 环境配置与任务跟踪（新增）**：`CLAUDE.md.example` 增加「环境索引」与「任务跟踪规范」，`TODO.md.example` 改为索引骨架，新增 `.project/env/.gitkeep` 与 `.docs/.gitkeep`，与 `multi-repo/` 对齐；`en_US/single-repo/` 同步。
+- **`Hermes/zh_CN/workspace-template/`（新增）**：提供 `SOUL.md`、`memories/USER.md` 与 `memories/MEMORY.md` 初始模板，包含私聊与群聊边界、工作区分类和长期记忆骨架；`Hermes/README.md` 说明目标 home、按需合并与隐私注意事项。
 - **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 新增「一个主题一个目录」约束**：同一主题的任务共用一个 `YYYYMMDD-主题/` 目录；复杂任务在目录内用 `01-问题讨论` 这样的序号子目录区分步骤，不得另建主题目录。
 - **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example`「任务跟踪规范」补充并入规则**：同一主题的后续任务并入已有主题目录，不另建主题目录。
 - **`AI-ProjConf/zh_CN/multi-repo/TODO.md.example`（新增）**：微服务工作区模板补齐 todo 索引骨架，与 `single-repo/` 对齐。
@@ -14,10 +29,21 @@
 
 ### Changed
 
-- **`OpenClaw/workspace_example/SOUL.md`**：长内容外置规则统一使用「基本文件」表述，明确引用附录与定时报告目录边界，并简化技能目录说明。
-- **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 日期目录格式统一为 8 位**：`YYMMDD-主题/` → `YYYYMMDD-主题/`（示例同步为 `20260831-HIVE建表语句/`），与「任务跟踪规范」及 `single-repo/`、`OpenClaw/workspace_example` 的 8 位口径保持一致。
+- **根 README 重新定位（破坏性）**：从 Cron 模板仓库调整为「Harness 与 Loop 的 Agent 模板仓库」，按 AI 项目模板 / Agent 身份模板 / 定时任务模板 / 上下文注入模板四类组织，删除大段目录树，AI-ProjConf 前置。
+- **目录按语言镜像（破坏性）**：`OpenClaw/cron-template/` → `OpenClaw/zh_CN/cron-template/`，`OpenClaw/hook-template/` → `OpenClaw/zh_CN/hook-template/`，`OpenClaw/workspace_example/` → `OpenClaw/zh_CN/workspace_example/`，`Hermes/workspace-template/` → `Hermes/zh_CN/workspace-template/`；`OpenClaw/skills/` 保持共享。
+- **`template-cron.zh.yaml` 更名为 `template-cron.yaml`**：语言由目录表达；场景 YAML 的 `templateRef` 同步改为 `../../template-cron.yaml`；`build-cron.py` 默认值与 `scripts/check.py` 的模板扫描同步更新。
+- **`build-cron.py` 新增 `LOCALE` 变量**：`zh_CN`（默认）/ `en_US`，控制生成的人设提示词语言；英文场景显式设置 `LOCALE: "en_US"`，英文 Loop 场景补充 `LOOP_TASK_TYPE`。
+- **中文提醒与自定义巡检场景补齐 `CATEGORY` 标签**：与英文模板及其他场景对齐，`AAC_ORIGIN` 元数据不再为空。
+- **`scripts/check.py`**：模板扫描范围改为 `OpenClaw/*/cron-template/**/*.yaml`，同时渲染 `zh_CN` 与 `en_US` 两套场景。
+- **`.gitignore`**：trigger 渲染产物路径改为 `OpenClaw/*/cron-template/**/trigger.js`。
+- **根 `CLAUDE.md`**：项目简介改为 Harness/Loop 模板仓库；架构规范补充语言目录与中英文同步维护要求。
+- **`OpenClaw/README.md` / `README.en.md` 的 skill 文档链接**：按语言分别指向 `SKILL.zh_CN.md` 与 `SKILL.md`，references 指向对应语言目录。
+- **`OpenClaw/zh_CN/workspace_example/SOUL.md`**：长内容外置规则统一使用「基本文件」表述，明确引用附录与定时报告目录边界，并简化技能目录说明。
+- **`AI-ProjConf/zh_CN/multi-repo/CLAUDE.md.example` 日期目录格式统一为 8 位**：`YYMMDD-主题/` → `YYYYMMDD-主题/`（示例同步为 `20260831-HIVE建表语句/`），与「任务跟踪规范」及 `single-repo/`、`OpenClaw/zh_CN/workspace_example` 的 8 位口径保持一致。
 
 ### Fixed
+
+- **skill 文档路径更新**：skill 文档中旧的 `OpenClaw/cron-template/` 与 `template-cron.zh.yaml` 引用同步为新路径与新文件名；补充英文分类说明。
 
 ### Removed
 

@@ -1,0 +1,11 @@
+# TODO
+
+> This file is an index only; details live in `.project/`. See "Task Tracking" in `CLAUDE.md`.
+
+## In Progress
+
+### {{TODO_ITEM}}, see [{{YYYYMMDD-TOPIC}}](.project/{{YYYYMMDD-TOPIC}})
+
+## Completed / Archived
+
+### ✅ {{COMPLETED_ITEM}}, see [{{YYYYMMDD-TOPIC}}](.project/{{YYYYMMDD-TOPIC}})

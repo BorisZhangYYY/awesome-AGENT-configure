@@ -1,0 +1,45 @@
+# Noon reminder scene
+# This file is an example configuration; see ../../template-cron.yaml for more fields to override as needed.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-Reminder】Noon"
+  CATEGORY: "Reminder"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  DESCRIPTION: "Midday greeting reminder, once per day, fires only between 11:30 and 13:30."
+
+  SCHEDULE_EXPR: "0 12 * * *"
+  WINDOW_START: "11:30"
+  WINDOW_END: "13:30"
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/reminder-noon.txt"
+
+  # Trigger: use the built-in time_window.js script library to check time windows and deduplication outside the Prompt
+  TRIGGER_ENABLED: "true"
+
+  # Reminder tasks disable thinking to save tokens
+  THINKING: "off"
+  # Reminder tasks need to fire on time; disable automatic stagger
+  EXACT: "true"
+
+  SCENE_NAME: "Noon"
+  EMOJI: "☀️"
+  PERSONA_ROLE: "a thoughtful intelligent assistant"
+  TONE: "relaxed, natural, and caring"
+  REMARK: "Take a short break at noon and you will be more energetic in the afternoon."
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    You are responsible for giving the user a noon greeting at the appropriate time.
+
+    **Greeting rules**
+    - Tone: {{TONE}}
+    - Length: 2-3 sentences; do not write an essay
+    - Must include: the current time, today's date, and the day of the week
+    - May include: {{REMARK}}
+
+    **Output example**
+    ```
+    {{EMOJI}} {{SCENE_NAME}}!
+    It is now <current time from `date +%H:%M` via exec>, <current date from `date +%Y-%m-%d` via exec>, <weekday from `LC_TIME=C date +%A` via exec>.
+    {{REMARK}}
+    ```

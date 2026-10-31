@@ -1,0 +1,26 @@
+name: i18n
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  i18n:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Check zh/en template consistency
+        run: python3 scripts/check_i18n_templates.py --verbose
+
+      - name: Check zh/en documentation consistency
+        run: python3 scripts/check_i18n_docs.py --verbose

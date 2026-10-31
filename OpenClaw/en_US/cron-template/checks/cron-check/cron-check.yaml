@@ -1,0 +1,140 @@
+# Cron task health check scene
+# This task checks the run status of all cron tasks every day, compares against historical reports
+# to distinguish "new failures" from "known ongoing issues", and only alerts and retries newly seen anomalies.
+# Check results are persisted under docs/reports/ for later reference.
+# If everything is healthy or there are no new issues, stay silent (NO_REPLY).
+#
+# Usage:
+#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/cron-check/cron-check.yaml
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-Check】Cron task health"
+  AGENT_ID: "main"
+  LOCALE: "en_US"
+  CATEGORY: "Check"
+  DESCRIPTION: "Check cron task status daily, distinguishing new failures from known issues using historical reports"
+
+  SCHEDULE_EXPR: "0 9 * * *"
+  TIMEZONE: "Asia/Shanghai"
+  WINDOW_START: "06:00"
+  WINDOW_END: "23:59"
+
+  DELIVERY_MODE: "announce"
+  BEST_EFFORT: "true"
+  # ⚠️ Fill in the delivery target for your platform before use (isolated sessions cannot use "last"; the build blocks it):
+  # CHANNEL: "feishu"        # telegram | slack | discord | whatsapp | feishu | ...
+  # TO: "<chat_id or open_id>"
+  LIGHT_CONTEXT: "true"
+  THINKING: "medium"
+  TOOLS: "exec,read,write"
+  EXACT: "false"
+  TIMEOUT_SECONDS: "600"
+
+  # Deduplication on: run once per day
+  DEDUP_STATE_FILE: "{{WORKSPACE}}/.state/check-cron-check.txt"
+
+  # Trigger: use the built-in time_window.js script library to check time windows and deduplication outside the Prompt
+  TRIGGER_ENABLED: "true"
+
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    You are responsible for checking the run status of all cron tasks every day. Core idea: **compare historical reports and focus only on new or changed anomalies.**
+
+    **Check task**: {{JOB_NAME}}
+    **Report directory**: `{{WORKSPACE}}/docs/reports/cron-check/`
+
+    ---
+
+    ## Step 1: Read historical reports
+
+    List the report files from the last 3 days:
+    ```bash
+    ls -t {{WORKSPACE}}/docs/reports/cron-check/ 2>/dev/null | head -3
+    ```
+    Read these reports to understand:
+    - Which tasks failed recently and why
+    - Which anomalies have persisted for multiple days
+    - Which were previously abnormal but may have recovered
+
+    If the report directory does not exist or is empty, treat this as the first check and all anomalies as new.
+
+    ## Step 2: Get all cron task statuses
+
+    Use exec to run `openclaw cron list` and parse each task's ID and name.
+    Skip this check task itself (name `{{JOB_NAME}}`).
+
+    For each task, use exec to run `openclaw cron info --id <task ID>` and extract:
+    - Latest run status (success / failed / timeout / skipped)
+    - Latest run time
+    - Failure reason (if any)
+    - Next scheduled run time (judge severe lateness: still not run after 2x the schedule period)
+
+    ## Step 3: Contextual judgment
+
+    Compare against the historical reports from Step 1 and judge each anomaly found this time:
+
+    | Case | Verdict | Action |
+    |------|---------|--------|
+    | Abnormal now, task not in historical reports | **New failure** | Alert + attempt retry |
+    | Abnormal now, same reason as last report | **Known ongoing issue** | Do not re-alert; note the duration in the report |
+    | Abnormal now, reason **different** from last report | **Issue changed** | Alert (reason changed) |
+    | Abnormal in historical reports, healthy now | **Recovered** | Do not alert; record recovery in the report |
+
+    Extra rules:
+    - If nextRun is severely overdue, alert regardless of history (the task may be stuck)
+    - If the same task fails for the same reason for 7+ consecutive days, merge it into one reminder in the report and recommend manual investigation
+
+    ## Step 4: Retry (new failures only)
+
+    For newly failed tasks, judge the cause:
+    - Network timeout, API rate limiting, temporary resource shortage → mark "retry recommended" in the report and run `openclaw cron run --wait <task ID>` to retry once immediately, then observe recovery.
+    - Configuration error, insufficient permissions, missing script → do not retry; mark for manual intervention
+
+    ## Step 5: Write the check report
+
+    Report path: use exec to run `date +%Y-%m-%d` for the current date, then write to `{{WORKSPACE}}/docs/reports/cron-check/<YYYY-MM-DD>.md`.
+
+    Write the report whether or not there are new anomalies:
+
+    ```markdown
+    # 【AAC-Check】Cron task health — <current date via exec> <current time via exec>
+
+    ## Summary
+    - Total tasks: X | Healthy: Y | Abnormal: Z
+    - New anomalies: N | Recovered: M | Known ongoing: K
+
+    ## Details
+    (If there are new anomalies)
+    ### 🆕 New anomalies
+    | Task name | Status | Failure reason | Retry result |
+    |-----------|--------|----------------|--------------|
+    | xxx | failed | Network timeout | ✅ Recovered |
+
+    (If an issue changed)
+    ### 🔄 Issue changed
+    | Task name | Previous reason | Current reason |
+    |-----------|-----------------|----------------|
+
+    (If anything recovered)
+    ### ✅ Recovered
+    - zzz (previous: timeout; current: healthy)
+
+    (If any failure persists >7 days)
+    ### ⚠️ Persistent failure (>7 days; manual investigation recommended)
+    - aaa: configuration error (persisting for 10 days)
+
+    (If there are no new anomalies)
+    No new anomalies this run. Known ongoing issues: K (see historical reports).
+    ```
+
+    ## Step 6: Clean up reports older than 30 days
+
+    ```bash
+    mkdir -p {{WORKSPACE}}/.trash/ && find {{WORKSPACE}}/docs/reports/cron-check/ -name '*.md' -mtime +30 -exec mv {} {{WORKSPACE}}/.trash/ \; 2>/dev/null
+    ```
+    If `{{WORKSPACE}}/.trash/` does not exist, create it with `mkdir -p` first.
+
+    ---
+
+    **If an alert is needed** (new anomalies or issue changes), send the "Details" section from the Step 5 report.
+    **If no alert is needed** (no new anomalies or changes), output `NO_REPLY`.

@@ -1,6 +1,8 @@
 # awesome-AGENT-configure
 
-> 基于 AGENT 常见的 Cron 定时任务机制，结合 Harness 和 Loop 思想，打造一个**既自律，又准确，还可以自我提升的 AI AGENT**。
+> Harness 与 Loop 的 Agent 模板仓库：用约束让 AGENT 可靠，用循环让 AGENT 持续推进。
+
+简体中文 | [English](README.en.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -9,23 +11,21 @@
 ## 目录
 
 - [项目简介](#项目简介)
+- [模板总览](#模板总览)
 - [核心特性](#核心特性)
-- [适用场景](#适用场景)
 - [快速开始](#快速开始)
-  - [环境要求](#环境要求)
-  - [安装](#安装)
-  - [最小可运行示例](#最小可运行示例)
-- [项目结构](#项目结构)
+  - [AI 项目模板](#ai-项目模板最常用)
+  - [Agent 身份模板](#agent-身份模板)
+  - [定时任务模板](#定时任务模板)
+  - [上下文注入模板](#上下文注入模板)
 - [核心概念](#核心概念)
 - [使用指南](#使用指南)
-  - [生成 cron 命令](#生成-cron-命令)
-  - [JSON 输出](#json-输出)
-  - [自定义场景](#自定义场景)
-- [配置说明](#配置说明)
+  - [语言版本](#语言版本)
+  - [占位符与模板](#占位符与模板)
+  - [构建期校验](#构建期校验)
 - [路线图](#路线图)
 - [贡献指南](#贡献指南)
 - [常见问题](#常见问题)
-- [支持与致谢](#支持与致谢)
 - [许可证](#许可证)
 - [相关链接](#相关链接)
 
@@ -33,152 +33,123 @@
 
 ## 项目简介
 
-你在使用 OpenClaw、Hermes 等 AI AGENT 工具的时候，是否面临 workspace 杂乱、skills 冗杂、Heartbeat 与 Cron 效果不佳的情况？
+使用 OpenClaw、Hermes 等 AI AGENT 工具时，真正决定效果的往往不是模型本身，而是围绕它的约束与推进机制：
 
-通过本项目提供的模板，结合自身需求修改后将其应用在 AI AGENT 的 cron 机制内，即可通过严格的提示词系统（如状态机、时间窗口、效果评估等方式），让 AI AGENT 的 Cron 效果**可记录、可追踪、可推进**。
+- **Harness（约束）**：时间窗口、去重、状态机、效果评估，让 AGENT 的行为可预测、可追踪。
+- **Loop（循环）**：目标、里程碑、状态续传、自动停用，让 AGENT 在多次会话中持续推进，直至完成。
+
+本仓库把这些机制沉淀为可直接复制的模板，按使用场景分为四类：AI 项目模板、Agent 身份模板、定时任务模板、上下文注入模板。
+
+## 模板总览
+
+| 类型 | 模板 | 解决什么问题 | 语言 |
+|------|------|--------------|------|
+| **AI 项目模板** | AI-ProjConf：single-repo / multi-repo | 项目规范、任务跟踪、环境索引、文档分层 | zh_CN / en_US |
+| **Agent 身份模板** | Hermes / OpenClaw workspace | 人格、用户画像、长期记忆、群聊边界 | zh_CN / en_US |
+| **定时任务模板** | OpenClaw cron：提醒 / 巡检 / 项目 / 学习 | 时间窗口、去重、状态机；Loop 里程碑与自动停用 | zh_CN / en_US |
+| **上下文注入模板** | OpenClaw hook-template | 会话启动时注入角色与规则 | zh_CN / en_US |
 
 ## 核心特性
 
-- **Cron 模板化**：将通用约束沉淀在 `template-cron.zh.yaml`，场景文件只需填写变量。
-- **Harness 与 Loop 机制**：通过时间窗口、去重、状态机等手段约束 AGENT 行为，提升稳定性。
-- **构建期校验**：`build-cron.py` 在生成 CLI 命令时检测投递陷阱、注入时区偏移，减少运行期错误。
-- **多框架扩展**：已提供 OpenClaw Cron 模板和 [Hermes 工作区基础模板](Hermes/README.md)；Hermes Cron 与 Claude Code 模板持续补充中。
-
-## 适用场景
-
-- **定时提醒**：早安、午安、晚安、自定义提醒等个人助理场景。
-- **环境巡检**：工作区整理、Docker 容器检查、Cron 任务健康检查。
-- **项目维护**：功能开发、维护会话等需要 Loop 模式的长期任务。
-- **自主学习**：让 AGENT 按固定节奏学习指定主题并记录进展。
+- **Harness 约束**：把时间窗口、去重、状态机、效果评估写进模板，减少运行期漂移。
+- **Loop 推进**：项目类任务按里程碑推进，状态可续传，达成目标后自动停用。
+- **AI 项目规范**：`CLAUDE.md` / `AGENTS.md` / `TODO.md` / `CHANGELOG.md` 一套对齐，覆盖 single-repo 与 multi-repo。
+- **占位符化**：所有模板使用 `{{PLACEHOLDER}}`，复制后替换即可。
+- **构建期校验**：`build-cron.py` 在生成命令时校验投递陷阱、注入时区偏移。
+- **中英双语**：README 与全部模板提供 `zh_CN` / `en_US` 两个版本。
 
 ## 快速开始
 
-### 环境要求
+### AI 项目模板（最常用）
 
-- Python 3
-- PyYAML（`pip install pyyaml`）
+选择与项目形态匹配的目录：
 
-### 安装
+| 形态 | 目录 | 适用场景 |
+|------|------|----------|
+| 单仓库 | `AI-ProjConf/zh_CN/single-repo/`（或 `en_US/`） | 独立开发者；根目录即 git 仓库 |
+| 微服务工作区 | `AI-ProjConf/zh_CN/multi-repo/`（或 `en_US/`） | 根目录不做版本控制；子目录为独立 git 仓库 |
+
+将 `.example` 文件复制到项目根目录并去掉后缀，替换占位符：
 
 ```bash
-pip install pyyaml
+cp AI-ProjConf/zh_CN/single-repo/CLAUDE.md.example /path/to/project/CLAUDE.md
 ```
 
-### 最小可运行示例
+模板约定：
 
-以早安提醒为例，生成并执行一条 OpenClaw cron 命令：
+- `.docs/`：面向使用者的业务/部署文档
+- `.project/`：仓库内部开发细则
+- `.project/env/`：按环境拆分的连接信息（`test.md` / `uat.md` / `prd.md`）
+- `.project/YYYYMMDD-主题/`：任务正文；根 `TODO.md` 只做索引
+
+### Agent 身份模板
+
+- **Hermes**：将 `Hermes/zh_CN/workspace-template/`（或 `en_US/`）中的 `SOUL.md` 与 `memories/*.md` 备份后合并到 `$HERMES_HOME`。
+- **OpenClaw**：将 `OpenClaw/zh_CN/workspace_example/`（或 `en_US/`）中的文件复制到 OpenClaw workspace，按需修改。
+
+### 定时任务模板
+
+以早安提醒为例：
 
 ```bash
 python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
-  OpenClaw/cron-template/reminders/morning/morning.yaml
+  OpenClaw/zh_CN/cron-template/reminders/morning/morning.yaml
 ```
 
-输出示例：
+常用参数：
 
 ```bash
-openclaw \
-  cron \
-  create \
-  '0 8 * * *' \
-  --message \
-  '...' \
-  --name \
-  '【AAC-提醒】 - 早安' \
-  --tz \
-  Asia/Shanghai \
-  --announce \
-  --best-effort-deliver \
-  --session \
-  isolated \
-  --timeout-seconds \
-  300 \
-  --no-light-context \
-  --thinking \
-  off \
-  --exact
+# 预览渲染后的 message 与命令
+python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
+  OpenClaw/zh_CN/cron-template/reminders/morning/morning.yaml --preview
+
+# 输出 JSON 数组，便于程序化调用
+python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
+  OpenClaw/zh_CN/cron-template/reminders/morning/morning.yaml --json
 ```
 
-## 项目结构
+英文版本将路径中的 `zh_CN` 换成 `en_US`。
 
-```
-awesome-AGENT-configure/
-├── AI-ProjConf/              # 通用项目初始化模板（按单仓库 / 微服务工作区两类）
-├── Hermes/
-│   ├── README.md             # 工作区模板使用说明
-│   └── workspace-template/  # SOUL.md + memories/{USER,MEMORY}.md
-├── OpenClaw/
-│   ├── conf/                 # OpenClaw 参数与 flag 配置
-│   ├── cron-template/        # cron 场景模板，按类别分子目录
-│   │   ├── checks/           # 巡检类模板
-│   │   │   ├── cron-check/          # Cron 任务健康巡检
-│   │   │   ├── custom-checks/       # 自定义巡检场景
-│   │   │   ├── docker-check/        # Docker 容器/Compose 巡检
-│   │   │   └── workspace-check/     # 工作区整理巡检
-│   │   ├── projects/         # 项目类模板（Loop 方法，基于 template-cron.zh.yaml）
-│   │   │   ├── custom-projects/     # 自定义项目场景
-│   │   │   ├── feature/             # 功能开发场景
-│   │   │   └── maintain/            # 维护会话场景
-│   │   ├── learns/           # 学习类模板
-│   │   │   └── custom-learns/     # AI 自我学习场景
-│   │   ├── reminders/        # 提醒类模板
-│   │   │   ├── morning/
-│   │   │   ├── noon/
-│   │   │   ├── evening/
-│   │   │   └── custom-reminders/  # 自定义提醒场景
-│   │   └── template-cron.zh.yaml  # 通用/Loop 统一父模板
-│   ├── hook-template/        # 通用上下文注入模板
-│   ├── skills/               # AAC cron 管理 skill（含 build-cron.py + trigger 模板）
-│   └── workspace_example/    # OpenClaw workspace 配置示例
-├── docs/                     # 项目文档
-├── CHANGELOG.md
-├── CLAUDE.md
-├── README.md
-└── TODO.md
-```
+### 上下文注入模板
+
+将 `OpenClaw/zh_CN/hook-template/`（或 `en_US/`）复制到 OpenClaw hooks 目录，编辑 `context.md` 填写角色与规则。
 
 ## 核心概念
 
-- **Cron**：基于 crontab 表达式的定时触发机制，决定任务何时运行。
-- **Trigger**：OpenClaw 在 cron 触发后执行的 JavaScript 脚本，用于二次判断（如时间窗口、去重）。
-- **Harness**：通过 Prompt 层的状态机、时间窗口、效果评估等手段，约束 AGENT 的执行行为。
-- **Loop**：针对项目类任务，让 AGENT 在多次会话中持续推进，直至目标完成。
-- **状态文件**：由 AGENT 自行维护的持久化记录，用于去重与进度追踪。
+- **Harness**：约束 AGENT 行为的 Prompt 层机制，如时间窗口、去重、状态机、效果评估。
+- **Loop**：让 AGENT 跨会话持续推进的机制，如目标、里程碑、状态文件、自动停用。
+- **Cron**：基于 crontab 表达式的定时触发。
+- **Trigger**：cron 触发后执行的 JavaScript 二次判断（时间窗口、去重）。
+- **状态文件**：AGENT 自行维护的持久化记录，用于去重与续传。
+- **身份文件**：`SOUL.md` / `USER.md` / `MEMORY.md` 等，定义 AGENT 的人格与记忆。
 
 ## 使用指南
 
-### 生成 cron 命令
+### 语言版本
 
-```bash
-python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
-  OpenClaw/cron-template/reminders/morning/morning.yaml
-```
+- 中文：`README.md`、`*/zh_CN/`
+- English：`README.en.md`、`*/en_US/`
+- 两套模板与 README 需同步维护；新增模板时同时补齐两种语言。
 
-### JSON 输出
+### 占位符与模板
 
-如果需要程序化调用，可输出 JSON 数组：
+- 模板变量仅使用大写字母、数字和下划线（`[A-Z][A-Z0-9_]*`）。
+- 场景 YAML 通过 `templateRef` 指向父模板；场景变量覆盖父模板默认值。
+- 英文场景通过 `LOCALE: "en_US"` 生成英文人设提示词；中文场景默认为 `zh_CN`。
+- Cron 任务名强制使用 `【AAC-分类】任务名`；英文模板的分类为 `Reminder` / `Check` / `Project` / `Learn`，前缀 `【AAC-` 固定。
 
-```bash
-python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
-  OpenClaw/cron-template/reminders/morning/morning.yaml --json
-```
+### 构建期校验
 
-### 自定义场景
+`build-cron.py` 会：
 
-复制 `OpenClaw/cron-template/reminders/custom-reminders/custom-reminders.yaml`，修改 `variables` 中的值即可。
-
-## 配置说明
-
-- 场景配置：每个 `.yaml` 文件位于 `OpenClaw/cron-template/<类别>/<场景>/` 目录下。
-- 通用约束：公共 Prompt 与变量定义在 `OpenClaw/cron-template/template-cron.zh.yaml`。
-- 构建脚本：`OpenClaw/skills/aac-cron-manage/scripts/build-cron.py` 负责 YAML → CLI 翻译。
-- 触发脚本：`OpenClaw/skills/aac-cron-manage/scripts/trigger.js` 为通用时间窗口检查脚本。
+- 检测 `DELIVERY_MODE=announce + CHANNEL=last + isolated` 的投递陷阱；
+- 注入时区偏移 `AAC_TZ_OFFSET_MINUTES`，避免 trigger 沙箱内使用 `Intl`；
+- 对 Loop 变量做前置校验。
 
 ## 路线图
 
-- [ ] 补充 Hermes 框架的 cron 模板与使用说明。
-- [ ] 补充 Claude Code 框架的模板与使用说明。
-- [ ] 完善 `docs/` 下的架构设计与最佳实践文档。
-- [ ] 增加更多实用场景模板（如健康、阅读、代码审查等）。
+- [ ] 补充 Claude Code 框架的项目模板。
+- [ ] 补充更多实用场景模板。
 
 ## 贡献指南
 
@@ -196,10 +167,9 @@ python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
 
 OpenClaw Gateway 的 trigger 执行环境为 QuickJS-WASI 沙箱，禁止 `require`、`import`、Node 模块、网络、定时器等 API。时区换算由 `build-cron.py` 构建期注入 `AAC_TZ_OFFSET_MINUTES` 完成。
 
-## 支持与致谢
+### 中文版和英文版内容不一致怎么办？
 
-- 问题反馈：请提交 [Issue](https://github.com/BorisZhangYYY/awesome-AGENT-configure/issues)。
-- 致谢：感谢 OpenClaw 等 AGENT 框架提供的 Cron 与 Trigger 能力。
+以中文版为准，并欢迎提交 PR 同步英文版。
 
 ## 许可证
 

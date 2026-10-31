@@ -1,0 +1,43 @@
+# CLAUDE.md
+
+> Default language for this project: English
+
+## Project Overview
+
+{{PROJECT_OVERVIEW}}
+
+## Architecture Rules
+- User-facing business and deployment documents go to `.docs/`
+- Internal development notes go to `.project/`
+- Environment configuration and connection details go to `.project/env/`, split by environment: `test.md`, `uat.md`, `prd.md`
+
+## Environment Index
+
+| Environment | Access | Details |
+|-------------|--------|---------|
+| Test | {{TEST_ENV_ACCESS}} | `.project/env/test.md` |
+| Staging | {{UAT_ENV_ACCESS}} | `.project/env/uat.md` |
+| Production | {{PROD_ENV_ACCESS}} | `.project/env/prd.md` |
+
+## Task Tracking
+
+> One register, one detail location: the root `TODO.md` is the index and `.project/` holds the details.
+
+- For a new task, create `.project/YYYYMMDD-<topic>/` and name the body after the topic
+- Merge follow-up work on the same topic into the existing topic directory (use numbered subdirectories such as `01-discussion` for steps); do not create a second topic directory
+- Add one line under "In Progress" in the root `TODO.md`: `### <item>, see [<directory>](.project/<directory>)`
+- When done, move the item from "In Progress" to "Completed / Archived" with a `### ✅` prefix
+
+## Development Rules
+- Read `TODO.md` and `CHANGELOG.md` before starting work to catch up on project progress
+- Add comments to file headers, core functions, and business logic; use type annotations consistently
+- Record any open discussion items in `TODO.md` when work is finished
+
+## Commit Rules
+- Do not commit intermediate artifacts, auxiliary documents, or development plans
+- Before committing, decide whether the change is user-visible; if so, record it in `CHANGELOG.md`
+- `CHANGELOG.md` records functional changes only, not implementation details
+
+## Other
+- Add dependency, testing, and deployment rules as the project evolves; this file must not exceed 50 lines
+- Put long development guides in `.project/` and link to them here, e.g. [Release Notes Guide](.project/release-note.md)
