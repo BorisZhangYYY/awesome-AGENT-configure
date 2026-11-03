@@ -15,11 +15,23 @@
 
 ### Documentation Rules
 
-- Business documents (acceptance reports, test reports, feature specs, white papers, etc.) go to `.docs/`
-- Developer-facing material (task verification, development plans, etc.) goes to `.project/`
-- Directory naming: `YYYYMMDD-topic/`, e.g. `20260831-HIVE-table-ddl/`
-- **One topic, one directory**: tasks on the same topic share a single `YYYYMMDD-topic/` directory. For complex work, use numbered subdirectories such as `01-discussion` inside that directory instead of creating another topic directory
+> Rule of thumb: stable material that a second task will reuse goes to `.docs/`; anything that only serves one work episode goes to `.project/`.
+
+- **`.docs/` shared material**: environment and access details, feature lists, API/data-reporting specs, resource and component inventories, acceptance and test reports — relatively stable material reused across tasks
+- **`.project/` workspace**: requirement discussions, design notes, demo and verification runs, debugging, Q&A records, development plans and retrospectives
+- `.docs/` groups material into category directories with a two-digit numeric prefix for ordering: `01-environments/` (fixed), `02-feature-list/`, `03-data-reporting/`; `00-` can be reserved for overview or glossary material
+- **Do not use `YYYYMMDD-` date directories inside `.docs/`**; append new categories at the end of the numbering — never renumber or reuse an old number
+- `.docs/README.md` is the shared-material index: register every new, moved, or split category there
+- Keep each shared document and its attachments in exactly one place; topic directories under `.project/` link to `.docs/` with relative paths instead of copying files
+- When several versions of a document exist, keep only the latest and record the version in the filename or the body — not in a dated directory
+- **One topic, one directory** under `.project/`: tasks on the same topic share a single `<topic>/` directory. For complex work, use numbered subdirectories such as `01-discussion` inside that directory instead of creating another topic directory
 - {{OTHER_DOCUMENTATION_REQUIREMENTS}}
+
+### Environment Rules
+
+- Environment and access details are shared material: keep them in `.docs/01-environments/`, one file per environment named `test.md` / `uat.md` / `prd.md`
+- Only create files for environments that actually exist: do not invent files or placeholder content for missing environments — note them in the "Environment Index" instead
+- Edit the environment file in place when details change; do not keep historical versions. Mask sensitive fields per team policy
 
 ### Task Tracking
 
@@ -29,15 +41,19 @@
 - Merge follow-up work on the same topic into the existing topic directory (use numbered subdirectories such as `01-discussion` for steps); do not create a second topic directory
 - Add one line under "In Progress" in the root `TODO.md`: `### <item>, see [<directory>](.project/<directory>)`
 - When done, move the item from "In Progress" to "Completed / Archived" with a `### ✅` prefix
+- Promote lasting conclusions into `.docs/`; do not pile process detail into the root `TODO.md` or topic directories
 
 ## Environment Index
 
 | Environment | Access | Details |
 |-------------|--------|---------|
-| Test | {{TEST_ENV_ACCESS}} | `.project/env/test.md` |
-| Staging | {{UAT_ENV_ACCESS}} | `.project/env/uat.md` |
-| Production | {{PROD_ENV_ACCESS}} | `.project/env/prd.md` |
+| Test | {{TEST_ENV_ACCESS}} | `.docs/01-environments/test.md` |
+| Staging | {{UAT_ENV_ACCESS}} | `.docs/01-environments/uat.md` |
+| Production | {{PROD_ENV_ACCESS}} | `.docs/01-environments/prd.md` |
+
+> Register only environments that exist; drop the rows for missing ones and say so instead of inventing access details.
 
 ## Other
 
+- How the two directories relate to version control follows the repository they live in; decide per workspace whether shared material and the sub-repositories it references are committed
 - {{OTHER_CONVENTIONS}}

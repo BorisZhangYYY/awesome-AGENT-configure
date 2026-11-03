@@ -8,7 +8,27 @@
 
 ### Changed
 
+### Fixed
+
+### Removed
+
+## [0.2.2] - 2026-11-03
+
+### Added
+
+- **`AI-ProjConf/{zh_CN,en_US}/multi-repo/.docs/README.md.example`（新增）**：共用资料索引入口，含两位数字编号约定、类别登记表与维护规则。
+- **`multi-repo` 模板新增「共用资料 / 工作区」分层规范**：`.docs/` 收纳跨任务复用的稳定资料，`.project/` 收纳需求讨论、方案、演示验证、调试、答疑与计划等过程内容；以「是否会被第二个任务引用」作为判断口径。
+
+### Changed
+
+- **`AI-ProjConf/{zh_CN,en_US}/multi-repo/CLAUDE.md.example`「文档规范」重写**：`.docs/` 顶层改为两位数字编号目录（`01-环境说明/` 为固定槽位，其后 `02-`、`03-` 顺延；`00-` 留给总览），明确 `.docs/` 内不使用 `YYYYMMDD-` 日期目录、编号顺延不重排不复用、共用资料单一来源并由主题目录链接引用、多版本只留最新版。
+- **`AI-ProjConf/{zh_CN,en_US}/multi-repo/TODO.md.example`**：索引头补充指向 `.docs/README.md` 的共用资料入口，区分「待办索引 → `.project/` 正文」与「稳定结论 → `.docs/`」。
 - **根 README 精简**：中英文首页聚焦四类模板的功能与文档入口，移除目录、FAQ、路线图、重复概念说明及详细操作步骤。
+- **环境索引迁入 `.docs/`**：`.docs/01-环境说明/`（英文 `01-environments/`）为固定编号槽位，`CLAUDE.md`「环境索引」改指向此处；新增「环境说明规范」——只为真实存在的环境建 `test.md` / `uat.md` / `prd.md`，缺失环境不建文件、不写占位内容。
+- **`AI-ProjConf/{zh_CN,en_US}/*/.project/env/`（移除）**：环境连接信息不再放 `.project/`，统一归入 `.docs/01-环境说明/`；新增 `.docs/01-环境说明/.gitkeep`（英文 `.docs/01-environments/.gitkeep`）。
+- **`single-repo` 模板同步 `.docs` 编号规范**：`CLAUDE.md.example` 的「架构规范」改为「文档规范」，补共用资料 / 工作区分层、两位数字编号目录（不用日期目录）、单一来源与多版本只留最新版；`TODO.md.example` 索引头补 `.docs/README.md` 入口；新增 `.docs/README.md.example`（中英各一份）。
+- **`AI-ProjConf/README.md` / `README.en.md`**：模板内容表登记 `01-环境说明/` 与 `.docs/README.md.example`，移除 `.project/env/`；「共用资料与工作区」表补环境槽位与两套模板同规范说明；环境配置段落改为写入 `.docs/01-环境说明/`。
+- **`scripts/check_i18n_templates.py`**：新增 `LOCALIZED_DIRS` 本地化目录别名，文件集合比对时把 `01-环境说明/` 与 `01-environments/` 归一为同一路径，避免本地化的编号目录被误报为缺失；真实差异仍会照常报错。
 
 ### Fixed
 

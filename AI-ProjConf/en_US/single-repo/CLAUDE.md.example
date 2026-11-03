@@ -6,18 +6,26 @@
 
 {{PROJECT_OVERVIEW}}
 
-## Architecture Rules
-- User-facing business and deployment documents go to `.docs/`
-- Internal development notes go to `.project/`
-- Environment configuration and connection details go to `.project/env/`, split by environment: `test.md`, `uat.md`, `prd.md`
+## Documentation Rules
+
+> Rule of thumb: stable material that a second task will reuse goes to `.docs/`; anything that only serves one work episode goes to `.project/`.
+
+- **`.docs/` shared material**: environment and access details, feature lists, API/reporting specs, resource inventories, acceptance and test reports
+- **`.project/` workspace**: requirement discussions, designs, demo and verification runs, debugging, Q&A records, plans and retrospectives
+- `.docs/` groups material into numbered category directories: `01-environments/` (fixed), `02-feature-list/`, `03-data-reporting/`; `00-` reserved for overview; **no `YYYYMMDD-` date directories** — append new categories, never renumber or reuse
+- `.docs/README.md` is the shared-material index; keep each document and its attachments in one place, link from `.project/` topics, keep only the latest version
+- **One topic, one directory** as `.project/YYYYMMDD-<topic>/`; use numbered subdirectories such as `01-discussion` for steps
+- {{OTHER_DOCUMENTATION_REQUIREMENTS}}
 
 ## Environment Index
 
+> Create files only for environments that exist; drop the rows for missing ones instead of inventing access details.
+
 | Environment | Access | Details |
 |-------------|--------|---------|
-| Test | {{TEST_ENV_ACCESS}} | `.project/env/test.md` |
-| Staging | {{UAT_ENV_ACCESS}} | `.project/env/uat.md` |
-| Production | {{PROD_ENV_ACCESS}} | `.project/env/prd.md` |
+| Test | {{TEST_ENV_ACCESS}} | `.docs/01-environments/test.md` |
+| Staging | {{UAT_ENV_ACCESS}} | `.docs/01-environments/uat.md` |
+| Production | {{PROD_ENV_ACCESS}} | `.docs/01-environments/prd.md` |
 
 ## Task Tracking
 
@@ -35,8 +43,7 @@
 
 ## Commit Rules
 - Do not commit intermediate artifacts, auxiliary documents, or development plans
-- Before committing, decide whether the change is user-visible; if so, record it in `CHANGELOG.md`
-- `CHANGELOG.md` records functional changes only, not implementation details
+- Decide whether a change is user-visible and record it in `CHANGELOG.md`; that file covers functional changes only, never implementation details
 
 ## Other
 - Add dependency, testing, and deployment rules as the project evolves; this file must not exceed 50 lines

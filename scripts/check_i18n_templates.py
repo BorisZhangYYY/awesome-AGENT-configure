@@ -28,6 +28,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IGNORED_NAMES = {"trigger.js", ".DS_Store"}
 # 英文模板在语言层面新增的变量，不要求中文模板同步。
 EN_ONLY_VARS = {"LOCALE", "LOOP_TASK_TYPE"}
+# 语言本地化的目录名：中英文各自使用本地语言命名，比对时归一为同一路径。
+# 用于 `.docs/` 的编号目录（如 01-环境说明 / 01-environments）。
+LOCALIZED_DIRS = {"01-环境说明": "01-environments"}
 PLACEHOLDER_RE = re.compile(r"\{\{[^{}]+\}\}")
 
 
@@ -45,6 +48,14 @@ def iter_files(root: str) -> list[str]:
                 continue
             result.append(os.path.relpath(os.path.join(base, name), root))
     return result
+
+
+def normalized(paths: set[str]) -> set[str]:
+    """ Collapses localized directory names so both languages compare equal. """
+    return {
+        "/".join(LOCALIZED_DIRS.get(part, part) for part in path.split("/"))
+        for path in paths
+    }
 
 
 def load_yaml(path: str):
@@ -89,11 +100,13 @@ def check_file_sets(result: Result, verbose: bool) -> None:
             continue
         zh_files = set(iter_files(zh_root))
         en_files = set(iter_files(en_root))
-        for missing in sorted(zh_files - en_files):
+        zh_norm = normalized(zh_files)
+        en_norm = normalized(en_files)
+        for missing in sorted(zh_norm - en_norm):
             result.fail(f"{base}: en_US 缺少 {missing}")
-        for extra in sorted(en_files - zh_files):
+        for extra in sorted(en_norm - zh_norm):
             result.fail(f"{base}: zh_CN 缺少 {extra}")
-        if verbose and zh_files == en_files:
+        if verbose and zh_norm == en_norm:
             print(f"  OK   {base}: {len(zh_files)} 个文件镜像一致")
 
 

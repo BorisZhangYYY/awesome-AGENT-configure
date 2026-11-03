@@ -17,21 +17,34 @@ The Chinese versions live in `zh_CN/single-repo/` and `zh_CN/multi-repo/` and mi
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md.example` | Project convention entry point: overview, architecture rules, environment index, task tracking, development and commit rules |
+| `CLAUDE.md.example` | Project convention entry point: overview, documentation rules, environment index, task tracking, development and commit rules |
 | `AGENTS.md.example` | AGENT entry file pointing to `CLAUDE.md` |
 | `README.md.example` | Project README skeleton (single-repo) |
 | `CHANGELOG.md.example` | Changelog skeleton following Keep a Changelog (single-repo) |
 | `TODO.md.example` | Todo index; details live in `.project/` |
-| `.docs/` | User-facing business and deployment documents |
-| `.project/` | Internal repository development notes |
-| `.project/env/` | Per-environment connection details: `test.md` / `uat.md` / `prd.md` |
+| `.docs/` | Shared material reused across tasks: environment notes, feature lists, data-reporting/API specs, resource inventories, acceptance reports |
+| `.docs/README.md.example` | Shared-material index entry point: numbering convention and category table |
+| `.docs/01-environments/` | Fixed numbered slot for `test.md` / `uat.md` / `prd.md`; create files only for environments that exist |
+| `.project/` | Workspace: requirement discussions, designs, demo and verification runs, debugging, Q&A, plans and retrospectives |
+
+## Shared Material vs. Workspace
+
+| Area | What goes there | Naming |
+|------|-----------------|--------|
+| `.docs/` | Stable material a second task will reuse (including environment and access details) | Numbered top-level categories `01-environments/` (fixed), `02-category/`, ...; `00-` reserved for overview; no date directories inside |
+| `.project/` | Content that only serves one work episode | `YYYYMMDD-<topic>/`, with `01-discussion/` subdirectories for steps |
+
+- The number only controls ordering: append new categories at the end of the numbering, never renumber or reuse a removed number.
+- Keep each shared document and its attachments in one place; `.project/` topic directories link to them with relative paths instead of copying.
+- When several versions of a document exist, keep only the latest and record the version in the filename or the body.
+- `single-repo/` and `multi-repo/` share the same `.docs` numbering and `.project` topic conventions.
 
 ## Task Tracking and Environment Configuration
 
 - Create a `.project/YYYYMMDD-<topic>/` directory for each task and name the body after the topic.
 - Merge follow-up work on the same topic into the existing directory; use numbered subdirectories such as `01-discussion` for steps.
 - The root `TODO.md` is an index only: add a link line under "In Progress"; when done, move it to "Completed / Archived" with a `### ✅` prefix.
-- Write environment connection details into `.project/env/` and register them in the "Environment Index" section of `CLAUDE.md`.
+- Write environment details into `.docs/01-environments/` and register them in the "Environment Index" of `CLAUDE.md`; register existing environments only — no files or placeholder content for missing ones.
 
 ## Usage
 

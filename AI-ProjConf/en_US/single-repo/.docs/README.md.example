@@ -1,0 +1,26 @@
+# Shared Material
+
+This directory holds relatively stable material reused by multiple tasks. Anything that only serves one work episode belongs in `.project/`; see the root `TODO.md` for the task index.
+
+## Numbering Convention
+
+- The two-digit prefix only controls ordering, not importance; categories start at `01`, and `00` may be reserved for overview, glossary, or project-background material
+- `01-environments/` is the fixed slot for per-environment access details; the "Environment Index" in `CLAUDE.md` points here
+- Append new categories at the end of the numbering; never renumber and never reuse a removed number
+- Organize inside a category by sub-topic or filename — **do not use `YYYYMMDD-` date directories**
+- When several versions of a document exist, keep only the latest and record the version in the filename or the body
+
+## Index
+
+| No. | Category directory | Contents |
+|-----|--------------------|----------|
+| 00 | `00-overview/` (optional) | Project background, glossary, overall architecture |
+| 01 | `01-environments/` (fixed) | Environment and access details: `test.md` / `uat.md` / `prd.md`; only for environments that exist |
+| 02 | `02-{{CATEGORY}}/` | {{SHARED_MATERIAL_IN_THIS_CATEGORY}} |
+| 03 | `03-{{CATEGORY}}/` | {{SHARED_MATERIAL_IN_THIS_CATEGORY}} |
+
+## Maintenance
+
+- Update the table above and the "Environment Index" in `CLAUDE.md` whenever you add, move, or split a category
+- Keep each shared document and its attachments in exactly one place; `.project/` topic directories link to them with relative paths instead of copying
+- Shared is not the same as publishable; check scope and sensitive content before sending anything outside the team
