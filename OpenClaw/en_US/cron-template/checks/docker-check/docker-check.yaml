@@ -4,7 +4,7 @@
 # Stay silent when everything is healthy (NO_REPLY); alert and persist a report on anomalies.
 #
 # Usage:
-#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/docker-check/docker-check.yaml
+#   python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/docker-check/docker-check.yaml
 templateRef: "../../template-cron.yaml"
 
 variables:

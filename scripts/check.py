@@ -25,7 +25,7 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BUILD_CRON = "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py"
+BUILD_CRON = "OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py"
 TEMPLATE_ROOT = "OpenClaw/*/cron-template"
 SKIP_TEMPLATE = "template-cron.yaml"
 

@@ -25,7 +25,7 @@
 - **7. 重新渲染**：
   ```bash
   # 推荐：--edit <job-id> 直接生成 openclaw cron edit <job-id> ... 命令
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml" --edit <job-id> --json
   ```
   `--edit` 模式会：位置参数用 job id（不是 cron 表达式）、cron 表达式走 `--cron`、
@@ -33,7 +33,7 @@
 
   旧版脚本无 `--edit` 时，退化为只取 `--message` 做最小编辑：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml" --json
   ```
   输出是 argv 数组（JSON），可直接取出 `--message` 的值。
@@ -45,7 +45,7 @@
 - **10. 执行更新**：
   - 方式 A（推荐）：用 `--edit <job-id>` 渲染后直接执行
     ```bash
-    python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+    python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
       "$AAC_WORKSPACE/cron/<job-name>.yaml" --edit <job-id> --json > /tmp/edit-argv.json
     python3 -c "import json,subprocess; subprocess.run(json.load(open('/tmp/edit-argv.json')))"
     ```
@@ -55,7 +55,7 @@
     ```python
     import json, subprocess
     arr = json.loads(subprocess.run(
-        ['python3', f'{AAC_REPO}/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py', yaml, '--json'],
+        ['python3', f'{AAC_REPO}/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py', yaml, '--json'],
         capture_output=True, text=True).stdout)
     msg = arr[arr.index('--message') + 1]
     subprocess.run(['openclaw', 'cron', 'edit', job_id, '--message', msg])

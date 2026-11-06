@@ -1,5 +1,5 @@
 ---
-name: aac-cron-manage
+name: aac-openclaw-cron-manage
 description: "Manage AAC-normalized OpenClaw cron tasks: create, edit, migrate, update, or remove."
 ---
 
@@ -22,9 +22,9 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 
 - Only manage tasks with `【AAC-` prefix in the name.
 - All scene YAML files live in `~/.openclaw/workspace/awesome-AGENT-configure/cron/<task-name>/<task-name>.yaml`.
-- Rendering goes through `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`.
+- Rendering goes through `OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py`.
 - Templates are directory-based: `{zh_CN|en_US}/cron-template/checks/docker-check/docker-check.yaml`. (Scene-specific .js is currently unavailable; see the template comments.)
-- Trigger logic is unified in `OpenClaw/skills/aac-cron-manage/scripts/trigger.js` (time window). Scene-specific JS is auto-concatenated by `build-cron.py`.
+- Trigger logic is unified in `OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js` (time window). Scene-specific JS is auto-concatenated by `build-cron.py`.
 - Trigger scripts run in a QuickJS-WASI sandbox: pure ES2022 JS only — no `Intl`, no `require`/`import`, no `process`, no Node modules. See `references/en_US/trigger-sandbox.md` before touching any trigger code.
 - Always show the configuration to the user and get confirmation before executing.
 - `--test` mode generates a one-off task with a `【TEST】` prefix, skips window/dedup checks, and auto-deletes after running.
@@ -43,22 +43,22 @@ Manage awesome-AGENT-configure (AAC) normalized cron tasks. Only handles tasks w
 
 - Render a scene YAML (normal):
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml"
   ```
 - Render a scene YAML as an argv array:
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" --json
   ```
 - Render a scene YAML as an **edit** command (keep the job id; do not create a new task):
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" --edit <job-id> --json
   ```
 - Render a scene YAML (test mode):
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" \
     --test
   ```
@@ -85,7 +85,7 @@ Neither option can be skipped: **after editing, verify that the live job's paylo
 
 ## Legacy variable cleanup
 
-Do not use these in new YAMLs — they are handled by `OpenClaw/skills/aac-cron-manage/scripts/trigger.js`:
+Do not use these in new YAMLs — they are handled by `OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js`:
 - `TIME_WINDOW_ENABLED`
 - `DEDUP_ENABLED`
 - `WINDOW_OUT_ACTION`

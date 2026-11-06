@@ -5,7 +5,7 @@
 # If everything is healthy or there are no new issues, stay silent (NO_REPLY).
 #
 # Usage:
-#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/cron-check/cron-check.yaml
+#   python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/cron-check/cron-check.yaml
 templateRef: "../../template-cron.yaml"
 
 variables:

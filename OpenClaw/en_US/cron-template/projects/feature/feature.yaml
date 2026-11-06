@@ -4,7 +4,7 @@
 # Suitable for: new feature development, module implementation, feature enhancement
 #
 # Usage:
-#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/feature/feature.yaml
+#   python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/feature/feature.yaml
 #
 # Differences from reminder/check scenes:
 #   - Project tasks enable Loop mode (LOOP_MODE_ENABLED: "true")

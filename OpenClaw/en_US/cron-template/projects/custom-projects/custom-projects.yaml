@@ -8,7 +8,7 @@
 #   - Any project work that needs state resumption and milestone-based progress
 #
 # Usage:
-#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/custom-projects/custom-projects.yaml
+#   python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/custom-projects/custom-projects.yaml
 
 templateRef: "../../template-cron.yaml"
 

@@ -9,7 +9,7 @@
 #   - May involve cross-validation across multiple modules
 #
 # Usage:
-#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/maintain/maintain.yaml
+#   python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/projects/maintain/maintain.yaml
 
 templateRef: "../../template-cron.yaml"
 

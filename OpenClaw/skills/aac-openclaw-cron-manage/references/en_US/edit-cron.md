@@ -25,7 +25,7 @@ Modify a scheduled task that was created under AAC conventions.
 - **7. Render again**:
   ```bash
   # Recommended: --edit <job-id> directly generates an `openclaw cron edit <job-id> ...` command
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml" --edit <job-id> --json
   ```
   `--edit` mode: the positional argument is the job id (not the cron expression), the cron expression goes through `--cron`,
@@ -33,7 +33,7 @@ Modify a scheduled task that was created under AAC conventions.
 
   If the old script has no `--edit`, fall back to taking only `--message` for a minimal edit:
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml" --json
   ```
   The output is an argv array (JSON); take the `--message` value directly.
@@ -45,7 +45,7 @@ Modify a scheduled task that was created under AAC conventions.
 - **10. Execute the update**:
   - Method A (recommended): render with `--edit <job-id>` and run it directly
     ```bash
-    python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+    python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
       "$AAC_WORKSPACE/cron/<job-name>.yaml" --edit <job-id> --json > /tmp/edit-argv.json
     python3 -c "import json,subprocess; subprocess.run(json.load(open('/tmp/edit-argv.json')))"
     ```
@@ -55,7 +55,7 @@ Modify a scheduled task that was created under AAC conventions.
     ```python
     import json, subprocess
     arr = json.loads(subprocess.run(
-        ['python3', f'{AAC_REPO}/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py', yaml, '--json'],
+        ['python3', f'{AAC_REPO}/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py', yaml, '--json'],
         capture_output=True, text=True).stdout)
     msg = arr[arr.index('--message') + 1]
     subprocess.run(['openclaw', 'cron', 'edit', job_id, '--message', msg])

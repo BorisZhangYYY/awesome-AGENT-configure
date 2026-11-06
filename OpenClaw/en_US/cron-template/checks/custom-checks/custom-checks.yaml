@@ -8,7 +8,7 @@
 #   - Any scheduled check that should be "silent when healthy, alert when abnormal"
 #
 # Usage:
-#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/custom-checks/custom-checks.yaml
+#   python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/custom-checks/custom-checks.yaml
 
 templateRef: "../../template-cron.yaml"
 

@@ -11,7 +11,7 @@
 # ⚠️ About the relationship between time windows, deduplication, and trigger
 # OpenClaw cron replays all missed tasks when the gateway restarts or a session is rebuilt.
 # If trigger returns fire: false when the cron schedule fires, the task is skipped and no startup pile-up occurs.
-# Time windows and deduplication are handled uniformly by OpenClaw/skills/aac-cron-manage/scripts/trigger.js; all cron tasks share the same base logic.
+# Time windows and deduplication are handled uniformly by OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js; all cron tasks share the same base logic.
 # ⚠️ Scene-specific .js is currently unavailable: the OpenClaw trigger sandbox forbids child_process / fs modules.
 # build-cron.py keeps the scene JS concatenation scaffolding for when the sandbox policy improves.
 #
@@ -198,7 +198,7 @@ command:
 
 # ===== Trigger configuration (OpenClaw 2026.7.1+ official feature) =====
 # After the schedule fires, the trigger script runs first; the payload runs only when it returns { fire: true }.
-# The script is provided by OpenClaw/skills/aac-cron-manage/scripts/trigger.js (time-window check);
+# The script is provided by OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js (time-window check);
 # build-cron.py assembles it and injects environment variables.
 # When TRIGGER_ENABLED is true, the Prompt layer omits time-window and deduplication logic.
 #

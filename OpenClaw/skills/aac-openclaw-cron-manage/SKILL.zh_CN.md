@@ -1,5 +1,5 @@
 ---
-name: aac-cron-manage
+name: aac-openclaw-cron-manage
 description: "Manage AAC-normalized OpenClaw cron tasks: create, edit, migrate, update, or remove."
 ---
 
@@ -22,9 +22,9 @@ description: "Manage AAC-normalized OpenClaw cron tasks: create, edit, migrate, 
 
 - 只管理名称带 `【AAC-` 前缀的任务。
 - 所有场景 YAML 位于 `~/.openclaw/workspace/awesome-AGENT-configure/cron/<task-name>/<task-name>.yaml`。
-- 渲染统一走 `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`。
+- 渲染统一走 `OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py`。
 - 模板按目录组织：`{zh_CN|en_US}/cron-template/checks/docker-check/docker-check.yaml`（场景专属 .js 暂不可用，见模板注释）。
-- Trigger 逻辑统一在 `OpenClaw/skills/aac-cron-manage/scripts/trigger.js`（时间窗口）。场景 JS 由 `build-cron.py` 自动拼接。
+- Trigger 逻辑统一在 `OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js`（时间窗口）。场景 JS 由 `build-cron.py` 自动拼接。
 - Trigger 脚本运行在 QuickJS-WASI 沙箱：仅允许 ES2022 纯 JS —— 禁用 `Intl`、`require`/`import`、`process`、Node 模块。修改任何 trigger 代码前先阅读 `references/zh_CN/trigger-sandbox.md`。
 - 执行前必须向用户展示配置并获得确认。
 - `--test` 模式生成带 `【TEST】` 前缀的一次性任务，跳过时间窗口与去重检查，执行后自动删除。
@@ -43,22 +43,22 @@ description: "Manage AAC-normalized OpenClaw cron tasks: create, edit, migrate, 
 
 - 渲染场景 YAML（普通）：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml"
   ```
 - 将场景 YAML 渲染为 argv 数组：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" --json
   ```
 - 将场景 YAML 渲染为 **edit** 命令（保留 job id，不新建任务）：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" --edit <job-id> --json
   ```
 - 渲染场景 YAML（测试模式）：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<task-name>/<task-name>.yaml" \
     --test
   ```
@@ -82,7 +82,7 @@ description: "Manage AAC-normalized OpenClaw cron tasks: create, edit, migrate, 
 
 ## 遗留变量清理
 
-新 YAML 中不要使用以下变量 —— 它们已由 `OpenClaw/skills/aac-cron-manage/scripts/trigger.js` 处理：
+新 YAML 中不要使用以下变量 —— 它们已由 `OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js` 处理：
 - `TIME_WINDOW_ENABLED`
 - `DEDUP_ENABLED`
 - `WINDOW_OUT_ACTION`

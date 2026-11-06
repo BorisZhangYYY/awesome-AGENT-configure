@@ -11,7 +11,7 @@
 | Agent identity | `en_US/workspace_example/` (or `zh_CN/`) | `SOUL.md`, `AGENTS.md`, `USER.md`, `MEMORY.md`, `IDENTITY.md`, `HEARTBEAT.md` |
 | Scheduled tasks | `en_US/cron-template/` (or `zh_CN/`) | Four scene categories (reminders, checks, projects, learning) plus the shared parent `template-cron.yaml` |
 | Context injection | `en_US/hook-template/` (or `zh_CN/`) | Listens for `agent:bootstrap` and injects `context.md` at session startup |
-| Skill tooling | `skills/aac-cron-manage/` | `build-cron.py`, `trigger.js`, and usage docs (shared, not split by language) |
+| Skill tooling | `skills/aac-openclaw-cron-manage/` | `build-cron.py`, `trigger.js`, and usage docs (shared, not split by language) |
 
 ## Scheduled Task Templates
 
@@ -32,7 +32,7 @@ Every scene points to the parent template `template-cron.yaml` via `templateRef`
 Generate a cron command:
 
 ```bash
-python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
+python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py \
   OpenClaw/en_US/cron-template/reminders/morning/morning.yaml --preview
 ```
 
@@ -58,6 +58,6 @@ Copy `en_US/hook-template/` (or `zh_CN/`) into the OpenClaw hooks directory and 
 
 ## Related Documentation
 
-- [aac-cron-manage SKILL](skills/aac-cron-manage/SKILL.md)
-- [Template parameter guide](skills/aac-cron-manage/references/en_US/cron-template-guide.md)
-- [Trigger sandbox limitations](skills/aac-cron-manage/references/en_US/trigger-sandbox.md)
+- [aac-openclaw-cron-manage SKILL](skills/aac-openclaw-cron-manage/SKILL.md)
+- [Template parameter guide](skills/aac-openclaw-cron-manage/references/en_US/cron-template-guide.md)
+- [Trigger sandbox limitations](skills/aac-openclaw-cron-manage/references/en_US/trigger-sandbox.md)

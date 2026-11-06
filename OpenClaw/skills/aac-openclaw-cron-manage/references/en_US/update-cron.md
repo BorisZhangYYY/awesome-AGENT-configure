@@ -21,7 +21,7 @@ After a template upgrade, sync existing AAC tasks to the latest template while k
 - **5. Find the YAML**: search under `$AAC_WORKSPACE/cron/`
 - **6. Render again**:
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/<job-name>.yaml" \
     --preview
   ```

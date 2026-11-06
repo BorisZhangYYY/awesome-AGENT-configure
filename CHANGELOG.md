@@ -6,7 +6,11 @@
 
 ### Added
 
+- **`tests/openclaw/test_skill_identity.py`（新增）**：重命名身份回归测试，检查新目录存在、frontmatter 名字一致，并确认活跃源码中不再残留旧引用。
+
 ### Changed
+
+- **OpenClaw 技能改名（破坏性）**：`OpenClaw/skills/aac-cron-manage/` → `OpenClaw/skills/aac-openclaw-cron-manage/`；`SKILL.md` 与 `SKILL.zh_CN.md` 的 frontmatter `name`、`references/`、`scripts/` 内容零变动的同步更新路径，及 `CLAUDE.md`、`OpenClaw/README.md`、`OpenClaw/README.en.md`、两语范范围 `cron-template/` 场景与 `scripts/` 三个检查脚本中的引用路径一并更新。
 
 ### Fixed
 

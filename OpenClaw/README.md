@@ -11,7 +11,7 @@
 | Agent 身份模板 | `zh_CN/workspace_example/`（或 `en_US/`） | `SOUL.md`、`AGENTS.md`、`USER.md`、`MEMORY.md`、`IDENTITY.md`、`HEARTBEAT.md` |
 | 定时任务模板 | `zh_CN/cron-template/`（或 `en_US/`） | 提醒、巡检、项目、学习四类场景 + 统一父模板 `template-cron.yaml` |
 | 上下文注入模板 | `zh_CN/hook-template/`（或 `en_US/`） | 监听 `agent:bootstrap`，在会话启动时注入 `context.md` |
-| 技能工具 | `skills/aac-cron-manage/` | `build-cron.py`、`trigger.js` 与使用文档（共享，不按语言拆分） |
+| 技能工具 | `skills/aac-openclaw-cron-manage/` | `build-cron.py`、`trigger.js` 与使用文档（共享，不按语言拆分） |
 
 ## 定时任务模板
 
@@ -32,7 +32,7 @@
 生成 cron 命令：
 
 ```bash
-python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
+python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py \
   OpenClaw/zh_CN/cron-template/reminders/morning/morning.yaml --preview
 ```
 
@@ -58,6 +58,6 @@ python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py \
 
 ## 相关文档
 
-- [aac-cron-manage SKILL（中文）](skills/aac-cron-manage/SKILL.zh_CN.md)
-- [模板参数指南](skills/aac-cron-manage/references/zh_CN/cron-template-guide.md)
-- [Trigger 沙箱限制](skills/aac-cron-manage/references/zh_CN/trigger-sandbox.md)
+- [aac-openclaw-cron-manage SKILL（中文）](skills/aac-openclaw-cron-manage/SKILL.zh_CN.md)
+- [模板参数指南](skills/aac-openclaw-cron-manage/references/zh_CN/cron-template-guide.md)
+- [Trigger 沙箱限制](skills/aac-openclaw-cron-manage/references/zh_CN/trigger-sandbox.md)

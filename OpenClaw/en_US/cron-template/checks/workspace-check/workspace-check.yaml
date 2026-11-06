@@ -4,7 +4,7 @@
 # If the workspace is already tidy, stay silent (NO_REPLY); otherwise report and persist a report.
 #
 # Usage:
-#   python3 OpenClaw/skills/aac-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/workspace-check/workspace-check.yaml
+#   python3 OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py OpenClaw/en_US/cron-template/checks/workspace-check/workspace-check.yaml
 templateRef: "../../template-cron.yaml"
 
 variables:

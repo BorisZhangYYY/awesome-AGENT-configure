@@ -108,8 +108,8 @@ def check_pair(result: Result, zh_path: str, en_path: str, verbose: bool) -> Non
 
 
 def check_reference_dirs(result: Result, verbose: bool) -> None:
-    zh_root = os.path.join(ROOT, "OpenClaw/skills/aac-cron-manage/references/zh_CN")
-    en_root = os.path.join(ROOT, "OpenClaw/skills/aac-cron-manage/references/en_US")
+    zh_root = os.path.join(ROOT, "OpenClaw/skills/aac-openclaw-cron-manage/references/zh_CN")
+    en_root = os.path.join(ROOT, "OpenClaw/skills/aac-openclaw-cron-manage/references/en_US")
     if not os.path.isdir(zh_root) or not os.path.isdir(en_root):
         result.fail("缺少 references/zh_CN 或 references/en_US")
         return
@@ -141,8 +141,8 @@ def main() -> int:
         ("Hermes/README.md", "Hermes/README.en.md"),
         ("OpenClaw/README.md", "OpenClaw/README.en.md"),
         (
-            "OpenClaw/skills/aac-cron-manage/SKILL.zh_CN.md",
-            "OpenClaw/skills/aac-cron-manage/SKILL.md",
+            "OpenClaw/skills/aac-openclaw-cron-manage/SKILL.zh_CN.md",
+            "OpenClaw/skills/aac-openclaw-cron-manage/SKILL.md",
         ),
     ]
     for zh, en in pairs:

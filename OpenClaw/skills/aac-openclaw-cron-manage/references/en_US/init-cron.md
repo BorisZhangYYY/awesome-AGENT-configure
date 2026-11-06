@@ -31,7 +31,7 @@ Complete steps for creating a new AAC-normalized scheduled task.
   - Replace `templateRef` with the absolute path `<AAC_REPO>/OpenClaw/{zh_CN|en_US}/cron-template/template-cron.yaml`
 - **7. Render the command**:
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml"
   ```
 - **8. User confirmation**: show the YAML path, rendered command, and key configuration notes
@@ -41,7 +41,7 @@ Complete steps for creating a new AAC-normalized scheduled task.
 ## Test Mode
 
 ```bash
-python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
   "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml" \
   --test
 ```
@@ -54,7 +54,7 @@ Effects:
 ## Time Window and Deduplication
 
 - Do not use the `TIME_WINDOW_ENABLED` / `DEDUP_ENABLED` / `WINDOW_OUT_ACTION` variables
-- All handling is done by `OpenClaw/skills/aac-cron-manage/scripts/trigger.js`
+- All handling is done by `OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js`
 - `build-cron.py` automatically injects `WINDOW_START` / `WINDOW_END` / `DEDUP_STATE_FILE` / `DEDUP_GRANULARITY` as environment variables
 
 ## Safety Red Lines

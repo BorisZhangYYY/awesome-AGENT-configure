@@ -90,7 +90,7 @@ def check_file_sets(result: Result, verbose: bool) -> None:
         ("AI-ProjConf", "zh_CN", "en_US"),
         ("Hermes", "zh_CN", "en_US"),
         ("OpenClaw", "zh_CN", "en_US"),
-        ("OpenClaw/skills/aac-cron-manage/references", "zh_CN", "en_US"),
+        ("OpenClaw/skills/aac-openclaw-cron-manage/references", "zh_CN", "en_US"),
     ]
     for base, zh, en in pairs:
         zh_root = os.path.join(ROOT, base, zh)

@@ -31,7 +31,7 @@
   - `templateRef` 替换为绝对路径 `<AAC_REPO>/OpenClaw/{zh_CN|en_US}/cron-template/template-cron.yaml`
 - **7. 渲染命令**：
   ```bash
-  python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+  python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
     "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml"
   ```
 - **8. 用户确认**：展示 YAML 路径、渲染命令、关键配置说明
@@ -41,7 +41,7 @@
 ## 测试模式
 
 ```bash
-python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
   "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml" \
   --test
 ```
@@ -54,7 +54,7 @@ python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
 ## 时间窗口与去重说明
 
 - 不再使用 `TIME_WINDOW_ENABLED` / `DEDUP_ENABLED` / `WINDOW_OUT_ACTION` 变量
-- 统一由 `OpenClaw/skills/aac-cron-manage/scripts/trigger.js` 处理
+- 统一由 `OpenClaw/skills/aac-openclaw-cron-manage/scripts/trigger.js` 处理
 - `build-cron.py` 自动注入 `WINDOW_START` / `WINDOW_END` / `DEDUP_STATE_FILE` / `DEDUP_GRANULARITY` 为环境变量
 
 ## 安全红线

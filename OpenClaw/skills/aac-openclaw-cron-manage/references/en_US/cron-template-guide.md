@@ -337,18 +337,18 @@ import os, sys
 def locate_repo():
     # 1. AAC_REPO environment variable (explicitly set by the user, e.g. /mnt/d/Study_Project/awesome-AGENT-configure)
     env = os.environ.get("AAC_REPO")
-    if env and os.path.isfile(os.path.join(env, "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py")):
+    if env and os.path.isfile(os.path.join(env, "OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py")):
         return env
     # 2. Current working directory
     cwd = os.getcwd()
-    if os.path.isfile(os.path.join(cwd, "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py")):
+    if os.path.isfile(os.path.join(cwd, "OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py")):
         return cwd
     # 3. Bounded-depth search under $HOME
     home = os.path.expanduser("~")
     for root, dirs, _ in os.walk(home):
         if "awesome-AGENT-configure" in dirs:
             p = os.path.join(root, "awesome-AGENT-configure")
-            if os.path.isfile(os.path.join(p, "OpenClaw/skills/aac-cron-manage/scripts/build-cron.py")):
+            if os.path.isfile(os.path.join(p, "OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py")):
                 return p
         if root.count(os.sep) - home.count(os.sep) >= 4:
             del dirs[:]
@@ -367,7 +367,7 @@ Locating priority:
 
 1. The `AAC_REPO` environment variable.
 2. The current working directory (if it is the project root).
-3. A directory named `awesome-AGENT-configure` within the first 4 levels under `$HOME` that contains `OpenClaw/skills/aac-cron-manage/scripts/build-cron.py`.
+3. A directory named `awesome-AGENT-configure` within the first 4 levels under `$HOME` that contains `OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py`.
 
 ### 5.2 Runtime Path (`AAC_WORKSPACE`)
 
@@ -382,7 +382,7 @@ mkdir -p "$AAC_WORKSPACE/cron"
 
 ```bash
 # Render the create command
-python3 "$AAC_REPO/OpenClaw/skills/aac-cron-manage/scripts/build-cron.py" \
+python3 "$AAC_REPO/OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py" \
   "$AAC_WORKSPACE/cron/init-<job-name>/init-<job-name>.yaml"
 ```
 
