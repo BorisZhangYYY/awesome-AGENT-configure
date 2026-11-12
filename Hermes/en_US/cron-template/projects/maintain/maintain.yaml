@@ -1,0 +1,39 @@
+# Project work (maintenance): Loop mode for known defects, dependency upgrades, and small cleanups.
+# paused: true by default; fill LOOP_PROJECT_DIR, LOOP_GOAL and milestones, then resume.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Project] Maintenance backlog"
+  SCHEDULE: "0 11 * * 2,4"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  LOOP_MODE_ENABLED: true
+  LOOP_TASK_TYPE: "maintain"
+  LOOP_PROJECT_DIR: "/path/to/your/project"
+  LOOP_STATE_FILE: "{{LOOP_PROJECT_DIR}}/.state/maintain.json"
+  LOOP_GOAL: "Burn down known defects and dependency risk, leaving reviewable fix evidence each run"
+  LOOP_MILESTONES:
+    - "Milestone 1: inventory known defects and dependency warnings into an actionable list"
+    - "Milestone 2: fix them one by one with reproduction cases and keep the suite green"
+    - "Milestone 3: summarise unfixed items and risk, then propose the follow-up schedule"
+  LOOP_AUTO_PAUSE: false
+  LOOP_JOB_ID: ""
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Maintain `{{LOOP_PROJECT_DIR}}`, preferring reproducible issues with a clear blast radius.
+    Change code or dependency versions only with explicit approval from the user; otherwise return diagnosis and options only.
+    Start every run by recording user changes (`git status` plus a `git diff` summary) so no uncommitted work is overwritten.
+    Give every fix a reproduction or verification step; when it cannot be reproduced, state the evidence gap instead of claiming a fix.
+    For upgrades, name the old and new version, the affected surface, and the rollback path; mention lockfile changes in the summary.
+    Do not commit, push, edit CI configuration, or touch release pipelines unless the user authorized it for this run.
+    Write `{{HERMES_HOME}}/docs/reports/projects/maintain/<YYYY-MM-DD>.md`, appending on repeat runs, with issue, cause, change, and verification output.
+    After two consecutive runs with nothing actionable, report the blocker and the decision a human must make.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  workdir: "{{LOOP_PROJECT_DIR}}"
+  continuity: true
+  paused: true
+  paused_reason: "Waiting for LOOP_PROJECT_DIR, the maintenance list, and milestones; resume afterwards"

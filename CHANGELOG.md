@@ -10,6 +10,9 @@
 - **`AI-ProjConf/{zh_CN,en_US}/{multi-repo,single-repo}/.project/rules/workflow.md.example`（新增）**：工作流程操作手册，覆盖新接任务／干一半暂停／中途插队／隔天或换人恢复四种场景，附落位表、多人协作约定、可复制开场白与反模式清单。
 - **`AI-ProjConf/scripts/check-project.py`（新增）**：四套模板共用的状态校验脚本，检查断链、front matter、状态取值、`superseded_by`、`active` 陈旧、`owner_task` 登记与关键事实重复；纯标准库，退出码 0/1。
 
+- **`Hermes/{zh_CN,en_US}/cron-template/`（新增）**：Hermes 原生 cron 模板，父模板 `template-cron.yaml` 承载变量默认值、Harness 统一约束与 Loop 段落（含嵌套条件块）；每语言 14 个场景覆盖提醒、巡检、项目推进（Loop）、学习、纯脚本与变更监控，含可执行的 `script-only.py`、`change-monitor.py` 与 `monitor-source.txt`。
+- **`Hermes/skills/aac-hermes-cron-manage/`（新增）**：编译器 `build-cron.py` 按原生 `hermes cron` 参数校验并只输出命令或请求（`--validate`／`--preview`／`--json`／`--tool-json`／`--plan`／`--test`／`--catalog`／`--check-cli`），拒绝未知字段、布尔写成字符串、monitor 双开、脚本越界与符号链接逃逸、重复 YAML 键；配套 `references/{zh_CN,en_US}/` 四篇文档（模板与 Loop、原生参数、命令与验收、升级与迁移）。
+- **`tests/hermes/{test_build_cron,test_scenes}.py`（新增）**：离线验收测试，覆盖编译器契约、二十八份场景的字段与中英对称、脚本/monitor 的可执行契约。
 - **`tests/openclaw/test_skill_identity.py`（新增）**：重命名身份回归测试，检查新目录存在、frontmatter 名字一致，并确认活跃源码中不再残留旧引用。
 
 ### Changed
@@ -20,6 +23,9 @@
 - **四套 `.docs/README.md.example`**：补 front matter 与「共用资料是只读背景、非执行依据」规则，索引指向任务注册表。
 - **`AI-ProjConf/README.md` / `README.en.md`**：模板内容表登记 `INDEX.md.example`、`rules/workflow.md.example` 与校验脚本，补充一处一事实、入口协议、多人协作与使用方式中的复制命令。
 
+- **`Hermes/README.md` / `README.en.md`**：从「工作区模板」扩为「身份、Cron 与 Loop 模板」，新增 Cron 快速开始、Harness 与 Loop 两节与部署注意事项。
+- **根 `README.md` / `README.en.md`「定时任务模板」**：改为同时覆盖 Hermes 与 OpenClaw，并说明两套参数与编译器互不通用。
+- **`scripts/check.py`**：模板渲染检查改为按套件执行，Hermes 场景一并纳入渲染校验。
 - **OpenClaw 技能改名（破坏性）**：`OpenClaw/skills/aac-cron-manage/` → `OpenClaw/skills/aac-openclaw-cron-manage/`；`SKILL.md` 与 `SKILL.zh_CN.md` 的 frontmatter `name`、`references/`、`scripts/` 内容零变动的同步更新路径，及 `CLAUDE.md`、`OpenClaw/README.md`、`OpenClaw/README.en.md`、两语范范围 `cron-template/` 场景与 `scripts/` 三个检查脚本中的引用路径一并更新。
 
 ### Fixed

@@ -1,0 +1,29 @@
+# 个性化提醒；使用 Hermes 原生 cron 调度，不移植额外触发器或去重字段。
+# catch_up: false 禁止补跑；时间按目标 profile 时区解释。
+# 如需固定时区，可在 job 中添加 timezone: "Asia/Shanghai"（仅示例）。
+# DELIVER 与 job.deliver 均显式 local，配置外部投递前先确认用户授权。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-提醒】晚安"
+  SCHEDULE: "0 22 * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  SCENE_NAME: "晚安"
+  EMOJI: "🌙"
+  TONE: "舒缓、安静、温暖"
+  REMARK: "夜深了，愿你有个好梦，明天再见。"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    为用户生成 {{EMOJI}} {{SCENE_NAME}} 提醒，语气为 {{TONE}}。
+    使用终端 `date` 获取当前时间、日期和星期，在实际配置的时区中解释；不要使用构建时间。
+    输出 2-3 句话，包含真实的当前时间、今天日期与星期，可自然附带：{{REMARK}}
+    仅使用本任务明确提供且获准使用的偏好；不要声称能访问上一次聊天，也不要编造用户日程。
+    此样例保留 Agent 模式以便个性化措辞；固定文本的零模型方案见 scripts/script-only 场景。
+    输出由任务的 local 投递策略处理，不调用外部发送工具。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  no_agent: false

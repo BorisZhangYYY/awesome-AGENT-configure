@@ -1,0 +1,38 @@
+# 项目推进（自定义项目）：把同一套 Loop 机制套到任意仓库，只需替换目录与目标。
+# 示例默认值必须替换；默认 paused: true，未配置前不会执行。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-项目】自定义项目推进"
+  SCHEDULE: "0 20 * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  LOOP_MODE_ENABLED: true
+  LOOP_TASK_TYPE: "custom-projects"
+  LOOP_PROJECT_DIR: "/path/to/your/project"
+  LOOP_STATE_FILE: "{{LOOP_PROJECT_DIR}}/.state/custom-projects.json"
+  LOOP_GOAL: "在指定仓库按里程碑推进既定目标，每轮只前进一步"
+  LOOP_MILESTONES:
+    - "里程碑 1：确认仓库现状与目标差距，写出本轮切入点"
+    - "里程碑 2：完成一处可验证的改动并自测"
+    - "里程碑 3：整理证据与遗留项，确认是否收尾"
+  LOOP_AUTO_PAUSE: false
+  LOOP_JOB_ID: ""
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    在 `{{LOOP_PROJECT_DIR}}` 推进用户指定的目标；示例路径与目标必须先替换，未替换前不要动手。
+    仅在用户明确授权后修改文件；只读阶段可以分析结构、跑只读命令、给出方案。
+    每轮开始记录用户改动（`git status`），结束时给出改动清单与验证输出，确保没有覆盖既有工作。
+    只做本目标需要的改动，不顺手重构无关文件，不调整格式化工具的全局配置。
+    不提交、不推送、不发布、不改生产配置，除非用户对本次运行明确授权。
+    写入 `{{HERMES_HOME}}/docs/reports/projects/custom-projects/<YYYY-MM-DD>.md`，同日追加，记录目标、里程碑状态、证据与阻塞。
+    目标已完成或无法继续时明确说明，并建议操作员暂停或删除该任务，不自行改调度。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  workdir: "{{LOOP_PROJECT_DIR}}"
+  continuity: true
+  paused: true
+  paused_reason: "示例任务：替换 LOOP_PROJECT_DIR、LOOP_GOAL 与里程碑后再恢复"

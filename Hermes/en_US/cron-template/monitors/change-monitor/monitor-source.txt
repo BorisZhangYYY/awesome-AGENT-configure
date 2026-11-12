@@ -1,0 +1,6 @@
+# Monitored sample file: any byte change alters the change-monitor hash output.
+# Replace it with the real target (a version manifest, config snapshot, or release note).
+version: 1
+channel: stable
+notes:
+  - sample content used only to demonstrate hash changes

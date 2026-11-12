@@ -1,0 +1,29 @@
+# 只读巡检，告警仅 local；原生 catch_up: false，不补跑过期巡检。
+# 场景仅定义业务指令，统一 Harness 由父模板注入。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-巡检】工作区整理"
+  SCHEDULE: "0 23 * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  WORKSPACE_DIR: "{{HERMES_HOME}}"
+  WORKSPACE_ALLOW_MOVES: false
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    检查 `{{WORKSPACE_DIR}}` 的工作区布局，结合最近 3 份 `{{HERMES_HOME}}/docs/reports/workspace-check/` 报告识别持续问题。
+    读取存在的 SOUL.md、AGENTS.md、CLAUDE.md 与工作区目录约定。未定义规范则提示补充，不自行创造白名单或强行整理。
+    默认仅生成移动计划；WORKSPACE_ALLOW_MOVES={{WORKSPACE_ALLOW_MOVES}}，只有用户明确授权且该开关为 true，才可移动明确属于本任务范围的文件。
+    按主题归类而非扩展名：普通资料放 docs/<topic>/，身份文件明确引用的附录放 docs/references/<topic>/，脚本放 scripts/<topic>/，巡检报告放 docs/reports/<topic>/。
+    保留根目录核心文件、原有合法目录和全部 Hermes 运行配置。不得读取或移动 .env、auth.json、config.yaml、state.db、凭据文件、cron/、sessions/、logs/、memories/、skills/、plugins/ 或 scripts/aac/ 的已安装脚本。
+    不触碰隐藏文件、.state/、.trash/、符号链接或工作区外目标；不改动用户未授权文件，不删除、不覆盖同名目标，不提交或推送。
+    已获授权的移动必须预检依赖引用与目标冲突，保留回退路径；在新位置只做语法检查，不执行业务脚本。Python 用 ast.parse，Shell 用 bash -n；其他语言无检查器时注明未验证。
+    旧路径和相对路径引用问题只记录，不自动修复配置、引用或定时任务；移动会破坏运行路径时停止并请求确认。
+    写入 `{{HERMES_HOME}}/docs/reports/workspace-check/<YYYY-MM-DD>.md`，同日追加，列出原路径、拟定/实际新路径、主题、授权依据、验证结果与回退建议。
+    无需整理且无新问题输出 `[SILENT]`；有计划、移动或引用风险则简报。无法读取规范或写入报告时，首行单独输出 `[CRON_FAILURE]` 并解释阻塞。
+    旧报告仅建议归档，不自动清理。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false

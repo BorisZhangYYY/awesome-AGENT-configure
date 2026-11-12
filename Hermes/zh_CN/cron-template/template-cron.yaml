@@ -1,0 +1,69 @@
+# 通用 Hermes Cron 任务模板（简体中文）
+# 场景文件只提供 variables 与原生 job 覆盖；本文件提供统一约束与 Loop 段落。
+# 所有占位符都是 {{UPPER_SNAKE_CASE}}；未定义的变量会直接报错，不会被静默丢弃。
+# 条件块写作 {{#if FLAG}} ... {{/if}}，FLAG 为假时整段不渲染。
+#
+# 本模板分两层：
+#   1. 统一约束（Harness）：新会话前提、取证要求、授权边界、报告落盘与失败表述
+#   2. Loop 推进：仅在 LOOP_MODE_ENABLED 为真时渲染，用于多轮推进同一目标
+#
+# 时区与调度由场景的 SCHEDULE 决定；本模板不假设构建时间、时区或当前时间。
+
+version: 1
+
+variables:
+  JOB_NAME: "【AAC】未命名任务"
+  SCHEDULE: "0 9 * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  LOOP_MODE_ENABLED: false
+  LOOP_TASK_TYPE: ""
+  LOOP_PROJECT_DIR: ""
+  LOOP_STATE_FILE: ""
+  LOOP_GOAL: ""
+  LOOP_MILESTONES: []
+  LOOP_AUTO_PAUSE: false
+  LOOP_JOB_ID: ""
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "{{DELIVER}}"
+  catch_up: false
+
+template: |
+  你正在执行一个由 Hermes 调度的任务（{{JOB_NAME}}，语言环境 {{LOCALE}}）。
+
+  ## 场景指令
+  {{SCENE_SPECIFIC_INSTRUCTIONS}}
+
+  ## 统一约束
+  - 每次运行都是全新会话：没有当前聊天上下文，不能提问，也不能等待用户回复。输出必须自足。
+  - 先取证再下结论：只引用本次实际读到的文件内容、命令输出或接口返回；取不到就明确说明缺口，不推测、不补全。
+  - 授权边界：只做本任务明确要求的事。不提交或推送 Git，不启动、重启、删除容器，不修改 Hermes 配置、jobs.json 或调度策略，不安装依赖。
+  - 输出即交付：最终回复就是本地投递的内容，不要再调用外部发送工具，也不要重复发送。
+  - 需要留档时写入 `{{HERMES_HOME}}/docs/reports/<主题>/<YYYY-MM-DD>.md`；同日多次运行追加，不覆盖既有记录。
+  - 无异常、无变化、无事可报时，最终回复只输出 `[SILENT]`。
+  - 任务无法完成（权限、依赖、路径或服务不可用）时，首行单独输出 `[CRON_FAILURE]`，随后说明阻塞点与实际覆盖范围；不要用健康结论掩盖未知状态。
+  - 报告与输出都不得包含凭据、令牌、会话 Cookie 或原始环境变量。
+
+  {{#if LOOP_MODE_ENABLED}}
+  ## Loop 推进
+  - 任务类型：{{LOOP_TASK_TYPE}}
+  - 目标：{{LOOP_GOAL}}
+  - 工作目录：`{{LOOP_PROJECT_DIR}}`
+  - 里程碑（按顺序推进）：{{LOOP_MILESTONES}}
+  - 状态文件：`{{LOOP_STATE_FILE}}`
+
+  规则：
+  1. 每次运行先读状态文件；不存在则创建，记录当前里程碑、已完成项、证据路径与下一步。
+  2. 本次只推进一个可验证里程碑，完成后立即写回状态文件，再输出简短进度。
+  3. 里程碑完成以证据为准（测试通过、文件落盘、命令输出），不以「已尝试」为准。
+  4. 状态文件损坏或缺失时，重建并记录「状态丢失」事件，不假定上一轮结论。
+  5. 完成全部里程碑后输出总结并说明可以停止该任务，不自行删除或改写任务调度。
+  6. 连续两次没有可推进的进展时，输出阻塞原因与需要人工决定的事项。
+
+  {{#if LOOP_AUTO_PAUSE}}
+  - 自暂停已开启：绑定任务 ID 为 `{{LOOP_JOB_ID}}`。仅在全部里程碑完成或遇到硬阻塞时暂停本任务，并先写回状态文件。
+  {{/if}}
+  {{/if}}

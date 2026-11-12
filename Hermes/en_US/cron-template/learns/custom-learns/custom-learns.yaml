@@ -1,0 +1,28 @@
+# Learning cadence: accumulate one clear topic a day into reviewable notes and open questions.
+# Read-mostly; never download or execute unreviewed sample code.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Learning] Topic study"
+  SCHEDULE: "0 21 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  LEARN_TOPIC: "Replace with your study topic"
+  LEARN_SOURCE: "official documentation and existing local material"
+  LEARN_OUTPUT_DIR: "{{HERMES_HOME}}/docs/reports/custom-learns"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Study topic: `{{LEARN_TOPIC}}`. Allowed sources: {{LEARN_SOURCE}}.
+    Read the three most recent notes under `{{HERMES_HOME}}/docs/reports/custom-learns/` first and continue from them instead of repeating what is already settled.
+    Cover one concept per run: what problem it solves, where its boundary is, how it differs from what is already known, and one minimal example that proves understanding.
+    Use only local material or explicitly authorized sources; when no evidence exists, write "unverified" instead of filling the gap from memory or inventing API and version behaviour.
+    Do not run scripts from unknown sources, install dependencies, register accounts, or download large files.
+    Write `{{HERMES_HOME}}/docs/reports/custom-learns/<YYYY-MM-DD>.md`, appending on repeat runs, with today's concept, key conclusions, open questions, and the next step.
+    Reply `[SILENT]` when the run adds nothing; when sources are unavailable or the note cannot be written, put `[CRON_FAILURE]` alone on the first line and explain why.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  paused: true
+  paused_reason: "Waiting for LEARN_TOPIC and an allowed source list; resume afterwards"

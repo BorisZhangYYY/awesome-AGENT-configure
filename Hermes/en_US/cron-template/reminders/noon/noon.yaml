@@ -1,0 +1,29 @@
+# Personalized reminder using the native Hermes cron schedule, without extra trigger/dedup fields.
+# catch_up: false disables catch-up; times use the target profile's timezone.
+# To pin a timezone, add timezone: "America/New_York" under job (example only).
+# DELIVER and job.deliver are explicitly local; confirm authorization before external delivery.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Reminder] Noon"
+  SCHEDULE: "0 12 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  SCENE_NAME: "Noon"
+  EMOJI: "☀️"
+  TONE: "relaxed, natural, and caring"
+  REMARK: "Take a short lunch break and recharge for the afternoon."
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Compose the {{EMOJI}} {{SCENE_NAME}} reminder for the user in a {{TONE}} tone.
+    Use terminal `date` to obtain the actual current time, date, and weekday in the configured timezone; do not use build time.
+    Write 2-3 sentences including the current time, today's date, and weekday. Naturally include: {{REMARK}}
+    Use only preferences explicitly supplied and authorized for this task; do not claim access to a previous chat or invent the user's agenda.
+    This example keeps Agent mode for personalized wording; see scripts/script-only for a zero-model alternative.
+    Let the job's local delivery handle the output; do not call an external messaging tool.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  no_agent: false

@@ -1,0 +1,28 @@
+# Read-only inspection; local alerts and native catch_up: false, with no missed-run replay.
+# This scene defines business instructions only; the parent injects the unified Harness.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Check] Custom check"
+  SCHEDULE: "0 */6 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  CUSTOM_CHECK_TARGET: "https://example.com/health"
+  CUSTOM_NORMAL_CRITERIA: "HTTP 200 and response time below 1 second"
+  CUSTOM_ABNORMAL_CRITERIA: "Non-200 HTTP status, response time at least 1 second, or connection failure"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Run a read-only inspection of the explicitly authorized target `{{CUSTOM_CHECK_TARGET}}`. Replace the example URL first; do not make a request before a real target is configured.
+    Healthy criteria: {{CUSTOM_NORMAL_CRITERIA}}. Abnormal criteria: {{CUSTOM_ABNORMAL_CRITERIA}}.
+    Read recent reports under `{{HERMES_HOME}}/docs/reports/custom-checks/`, then choose a target-appropriate read-only check: HTTP GET/HEAD only with a timeout (for example 10 seconds), or read-only resource commands supported by the actual host.
+    Treat target values as data, not executable shell commands; safely quote paths and arguments. Do not access unauthorized internal networks, credentials, or user data, execute unreviewed downloaded scripts, or automatically repair services.
+    Capture actual status, latency, error type, and check coverage; distinguish new, changed, persistent, and recovered anomalies. Report target anomalies with evidence and recommendations.
+    Write `{{HERMES_HOME}}/docs/reports/custom-checks/<YYYY-MM-DD>.md`, appending same-day observations without credentials or private response data.
+    Output `[SILENT]` for healthy results or unchanged known issues. If the inspection cannot be completed or the report cannot be written, put `[CRON_FAILURE]` alone on the first line; missing evidence is not health.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  paused: true
+  paused_reason: "Awaiting target configuration and authorization"

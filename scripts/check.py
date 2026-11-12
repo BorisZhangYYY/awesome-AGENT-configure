@@ -25,8 +25,11 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BUILD_CRON = "OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py"
-TEMPLATE_ROOT = "OpenClaw/*/cron-template"
+# 每套模板用各自的编译器渲染，互不通用
+TEMPLATE_SUITES = (
+    ("OpenClaw/*/cron-template", "OpenClaw/skills/aac-openclaw-cron-manage/scripts/build-cron.py"),
+    ("Hermes/*/cron-template", "Hermes/skills/aac-hermes-cron-manage/scripts/build-cron.py"),
+)
 SKIP_TEMPLATE = "template-cron.yaml"
 
 # 设计上就以占位符形式提供的模板：DEV_PROJECT_DIR 必须由使用者填写。
@@ -99,14 +102,16 @@ def check_python_and_shell(r: Result, verbose: bool) -> None:
 
 
 def check_template_render(r: Result, verbose: bool) -> None:
-    scenes = [
-        p for p in iter_files(f"{TEMPLATE_ROOT}/**/*.yaml")
-        if os.path.basename(p) != SKIP_TEMPLATE
-    ]
+    scenes: list[tuple[str, str]] = []
+    for template_root, builder in TEMPLATE_SUITES:
+        scenes += [
+            (path, builder) for path in iter_files(f"{template_root}/**/*.yaml")
+            if os.path.basename(path) != SKIP_TEMPLATE
+        ]
 
-    for path in scenes:
+    for path, builder in scenes:
         proc = subprocess.run(
-            [sys.executable, os.path.join(ROOT, BUILD_CRON), path, "--preview"],
+            [sys.executable, os.path.join(ROOT, builder), path, "--preview"],
             capture_output=True, text=True, cwd=ROOT,
         )
         if proc.returncode == 0:

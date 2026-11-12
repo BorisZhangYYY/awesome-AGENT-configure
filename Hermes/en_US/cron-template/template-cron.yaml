@@ -1,0 +1,69 @@
+# Shared Hermes cron template (English)
+# Scene files supply variables plus native job overrides; this file supplies the
+# shared constraints and the Loop section.
+# Every placeholder is {{UPPER_SNAKE_CASE}}; an undefined variable is an error,
+# never a silent drop. Conditionals are written {{#if FLAG}} ... {{/if}}.
+#
+# Two layers:
+#   1. Harness: fresh-session premise, evidence rules, authorization boundary,
+#      report location and failure wording
+#   2. Loop: rendered only when LOOP_MODE_ENABLED is true
+
+version: 1
+
+variables:
+  JOB_NAME: "[AAC] Unnamed task"
+  SCHEDULE: "0 9 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  LOOP_MODE_ENABLED: false
+  LOOP_TASK_TYPE: ""
+  LOOP_PROJECT_DIR: ""
+  LOOP_STATE_FILE: ""
+  LOOP_GOAL: ""
+  LOOP_MILESTONES: []
+  LOOP_AUTO_PAUSE: false
+  LOOP_JOB_ID: ""
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "{{DELIVER}}"
+  catch_up: false
+
+template: |
+  You are running a task scheduled by Hermes ({{JOB_NAME}}, locale {{LOCALE}}).
+
+  ## Scene instruction
+  {{SCENE_SPECIFIC_INSTRUCTIONS}}
+
+  ## Shared constraints
+  - Every run is a fresh session: there is no current-chat context, you cannot ask questions, and you cannot wait for a reply. The output must stand alone.
+  - Evidence first: cite only files read, command output, or responses received during this run. When something is unavailable, state the gap instead of inferring or filling it in.
+  - Authorization boundary: do only what this task asks. Do not commit or push Git, do not start, restart, or delete containers, do not modify Hermes config, jobs.json, or the schedule, and do not install dependencies.
+  - The output is the delivery: your final response is what local delivery records. Do not call an external messaging tool and do not send twice.
+  - When a record is needed, write `{{HERMES_HOME}}/docs/reports/<topic>/<YYYY-MM-DD>.md`; append for repeat runs on the same day and never overwrite earlier records.
+  - When nothing is wrong, nothing changed, or there is nothing to report, reply with exactly `[SILENT]`.
+  - When the task cannot be completed (permissions, dependencies, paths, or a service is down), put `[CRON_FAILURE]` alone on the first line, then explain the blocker and what was actually covered. Do not let a healthy-looking summary hide an unknown state.
+  - No report or output may contain credentials, tokens, session cookies, or raw environment variables.
+
+  {{#if LOOP_MODE_ENABLED}}
+  ## Loop progress
+  - Task type: {{LOOP_TASK_TYPE}}
+  - Goal: {{LOOP_GOAL}}
+  - Working directory: `{{LOOP_PROJECT_DIR}}`
+  - Milestones (in order): {{LOOP_MILESTONES}}
+  - State file: `{{LOOP_STATE_FILE}}`
+
+  Rules:
+  1. Read the state file first; if it is missing, create it with the current milestone, completed items, evidence paths, and the next step.
+  2. Advance exactly one verifiable milestone per run, then write the state file back before reporting brief progress.
+  3. A milestone is done only with evidence (tests passing, artifacts on disk, command output), never on "attempted".
+  4. If the state file is corrupt or missing, rebuild it and record a state-loss event; do not assume the previous run's conclusions.
+  5. After the last milestone, summarise and say the job can be stopped. Never delete or rewrite the schedule yourself.
+  6. If two consecutive runs make no verifiable progress, report the blocker and the decision needed from a human.
+
+  {{#if LOOP_AUTO_PAUSE}}
+  - Self-pause is enabled and bound to job ID `{{LOOP_JOB_ID}}`. Pause only when all milestones are complete or a hard blocker exists, and write the state file first.
+  {{/if}}
+  {{/if}}

@@ -1,0 +1,29 @@
+# 只读巡检，告警仅 local；原生 catch_up: false，不补跑过期巡检。
+# 场景仅定义业务指令，统一 Harness 由父模板注入。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-巡检】Docker 容器健康"
+  SCHEDULE: "0 */6 * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  DOCKER_STATE_FILE: "{{HERMES_HOME}}/.state/checks/docker-check.json"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    只读巡检本机 Docker 容器与 Compose 项目，区分新异常、持续异常、已恢复与已确认的主动停用。
+    先读取最近 3 份 `{{HERMES_HOME}}/docs/reports/docker-check/` 报告及 `{{DOCKER_STATE_FILE}}`（存在时）。
+    用 `docker ps -a` 枚举全部容器；对异常容器按需运行 `docker inspect <容器ID>`、`docker logs --tail 100 <容器ID>`。
+    对已明确配置的 Compose 路径仅运行 `docker compose -f <路径> ps -a`；不在磁盘全量搜寻配置或读取密钥。
+    将非零退出、unhealthy、dead、持续 restarting 列为异常；Exited (0) 或存在 Compose 文件不能单独证明主动停用。
+    仅凭持久化的明确停用记录或当前任务授权确认主动停用；不假定能访问最近聊天。未知停用标为待确认。
+    默认只读：未获得用户明确授权不得启动、重启、恢复、删除容器、清理资源或改变重启策略。即使属于常驻 Compose 服务，也只建议操作，不自动恢复。
+    记录容器总数、正常数、停用数、异常数、历史变化和脱敏日志证据。写入 `{{HERMES_HOME}}/docs/reports/docker-check/<YYYY-MM-DD>.md`，同日追加，不覆盖既有记录。
+    可在 `{{DOCKER_STATE_FILE}}` 保存本场景最小状态摘要；不要保存原始 inspect 输出、环境变量或凭据。
+    正常或仅有无变化的已知问题时输出 `[SILENT]`；新异常或变化输出简短告警和建议。服务异常不等于巡检执行失败。
+    若 Docker 不可用、权限不足或报告写入失败，首行单独输出 `[CRON_FAILURE]`，随后说明实际阻塞，不伪造健康结果。
+    旧报告仅提出归档建议，不自动删除。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false

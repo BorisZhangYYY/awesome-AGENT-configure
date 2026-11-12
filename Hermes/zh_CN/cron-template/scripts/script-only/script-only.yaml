@@ -1,0 +1,26 @@
+# 纯脚本任务：no_agent 模式，不调用模型，脚本 stdout 直接投递。
+# 脚本须由操作员审阅后复制到 $HERMES_HOME/scripts/aac/，编译器不会安装任何文件。
+# 空 stdout 表示静默；非零退出或超时表示失败。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-脚本】纯脚本巡检"
+  SCHEDULE: "*/30 * * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  SCRIPT_TARGET: "{{HERMES_HOME}}/scripts/target.py"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    本场景不使用模型推理，提示词仅用于说明部署前提，不会进入任务执行。
+    脚本来源是同目录的 `script-only.py`，审阅后复制到 `$HERMES_HOME/scripts/aac/script-only.py`，保持字节一致。
+    脚本行为：校验目标 Python 文件可编译；成功输出单行 JSON（含 status 与目标摘要），重复执行结果完全一致。
+    失败约定：目标缺失或语法错误时以非零退出并只写 stderr，stdout 为空，任务因此被记为失败而不是静默。
+    可选参数 `--target` 指定被检查文件，默认检查脚本自身；不做网络访问，不写文件，不改业务数据。
+    需要扩展时可加参数，但必须保持「成功一行 JSON、失败零 stdout」的契约。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  script: "aac/script-only.py"
+  no_agent: true

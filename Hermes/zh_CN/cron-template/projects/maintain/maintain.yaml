@@ -1,0 +1,39 @@
+# 项目推进（维护）：Loop 模式，处理已知缺陷、依赖升级与小范围整改。
+# 默认 paused: true；填好 LOOP_PROJECT_DIR、LOOP_GOAL 与里程碑后由操作员恢复。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-项目】存量维护"
+  SCHEDULE: "0 11 * * 2,4"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  LOOP_MODE_ENABLED: true
+  LOOP_TASK_TYPE: "maintain"
+  LOOP_PROJECT_DIR: "/path/to/your/project"
+  LOOP_STATE_FILE: "{{LOOP_PROJECT_DIR}}/.state/maintain.json"
+  LOOP_GOAL: "按优先级收敛已知缺陷与依赖隐患，每轮留下可复核的修复证据"
+  LOOP_MILESTONES:
+    - "里程碑 1：盘点现有缺陷与依赖告警，排出可执行清单"
+    - "里程碑 2：逐项修复并补复现用例，跑通既有测试"
+    - "里程碑 3：汇总未修项与风险，给出后续排期建议"
+  LOOP_AUTO_PAUSE: false
+  LOOP_JOB_ID: ""
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    在 `{{LOOP_PROJECT_DIR}}` 做存量维护，优先处理可复现、影响面清楚的问题。
+    仅在用户明确授权后修改代码或依赖版本；未获授权时只输出诊断与建议。
+    每轮先记录用户改动（`git status` 与 `git diff` 摘要），确认没有未提交改动被覆盖，再开始动手。
+    修一个问题就补一条能复现的验证；无法复现时说明证据缺口，不写「已修复」。
+    依赖升级必须写明旧版本、新版本、受影响面与回滚方式；涉及锁文件时同步提交说明。
+    不提交、不推送、不改 CI 配置、不动发布流水线，除非用户对本次运行明确授权。
+    写入 `{{HERMES_HOME}}/docs/reports/projects/maintain/<YYYY-MM-DD>.md`，同日追加，记录问题、根因、改动与验证输出。
+    连续两轮没有可推进项时，输出阻塞原因和需要人工决定的事项。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  workdir: "{{LOOP_PROJECT_DIR}}"
+  continuity: true
+  paused: true
+  paused_reason: "等待填写 LOOP_PROJECT_DIR、维护清单与里程碑后由操作员恢复"

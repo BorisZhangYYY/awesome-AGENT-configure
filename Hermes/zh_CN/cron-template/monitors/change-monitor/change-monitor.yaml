@@ -1,0 +1,27 @@
+# 变更监控：monitor_script 每 tick 先跑一次，输出完全不变则跳过模型，变化才唤醒。
+# 监控脚本输出必须稳定（不含时间戳），否则每轮都会被判定为变化。
+# 也可改用 `--monitor-url https://example.com/feed` 走 HTTP 通道；两者互斥，由操作员二选一。
+# 脚本须由操作员审阅后复制到 $HERMES_HOME/scripts/aac/。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-监控】文件变更"
+  SCHEDULE: "0 * * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  MONITOR_SOURCE: "{{HERMES_HOME}}/scripts/aac/monitor-source.txt"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    监控源为本场景的 `monitor-source.txt`，脚本 `change-monitor.py` 输出其字节哈希；哈希不变时本轮不唤醒模型。
+    被唤醒说明内容已变化：说明变化范围、可能影响，以及是否需要人工确认，不自动修改、回滚或重新生成被监控内容。
+    首次运行建立基线，此时没有「变化」可言；基线的建立不算告警。
+    不读取被监控文件之外的目录，不访问网络，不写入任何文件。
+    需要更长的监控链时，可用 `--monitor-url` 换成 HTTP 源，但两者不能同时使用。
+    脚本安装路径固定为 `$HERMES_HOME/scripts/aac/change-monitor.py`，与 monitor-source.txt 同目录时按相对路径解析。
+    没有变化时不输出内容；脚本缺失或读取失败时首行单独输出 `[CRON_FAILURE]` 并说明阻塞。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  monitor_script: "aac/change-monitor.py"

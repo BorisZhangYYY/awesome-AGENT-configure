@@ -1,0 +1,38 @@
+# 项目推进（新功能）：Loop 模式，每轮只推进一个可验证里程碑。
+# 默认 paused: true；填好 LOOP_PROJECT_DIR、LOOP_GOAL 与里程碑后由操作员恢复。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-项目】新功能推进"
+  SCHEDULE: "0 10 * * 1-5"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  LOOP_MODE_ENABLED: true
+  LOOP_TASK_TYPE: "feature"
+  LOOP_PROJECT_DIR: "/path/to/your/project"
+  LOOP_STATE_FILE: "{{LOOP_PROJECT_DIR}}/.state/feature.json"
+  LOOP_GOAL: "按里程碑实现已确认的新功能，并留下可复核的测试证据"
+  LOOP_MILESTONES:
+    - "里程碑 1：读清现有实现与约定，写出改动方案与影响面"
+    - "里程碑 2：实现核心改动，相关单元测试通过"
+    - "里程碑 3：补回归与文档，给出验收结论与未覆盖项"
+  LOOP_AUTO_PAUSE: false
+  LOOP_JOB_ID: ""
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    在 `{{LOOP_PROJECT_DIR}}` 推进一个已确认的新功能，每一步都要可复核。
+    仅在用户明确授权后修改该仓库文件；未获授权时只做只读分析并给出方案。
+    动手前先记录用户改动：`git status` 与 `git diff --stat` 的原始结果要写进当轮输出，避免覆盖或回退与本任务无关的改动。
+    每轮结束给出改动文件清单、执行的验证命令和真实输出；失败就写失败原因，不把未跑当通过。
+    不提交、不推送、不切分支、不改版本号，除非用户对本次运行明确授权。
+    需要长期留档时写入 `{{HERMES_HOME}}/docs/reports/projects/feature/<YYYY-MM-DD>.md`，同日追加，记录里程碑、改动范围、验证证据与下一步。
+    遇到需求不清、依赖缺失或与既有约定冲突时停下来说明，不猜测实现细节。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  workdir: "{{LOOP_PROJECT_DIR}}"
+  continuity: true
+  paused: true
+  paused_reason: "等待填写 LOOP_PROJECT_DIR、LOOP_GOAL 与里程碑后由操作员恢复"

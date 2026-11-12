@@ -1,0 +1,27 @@
+# Change monitor: monitor_script runs before the agent each tick; identical output suppresses the run.
+# The monitor output must be stable (no timestamps) or every tick looks changed.
+# Alternatively use `--monitor-url https://example.com/feed`; the two channels are mutually exclusive.
+# An operator reviews the script and copies it to $HERMES_HOME/scripts/aac/.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Monitor] File change"
+  SCHEDULE: "0 * * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  MONITOR_SOURCE: "{{HERMES_HOME}}/scripts/aac/monitor-source.txt"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    The monitored source is `monitor-source.txt` in this directory; `change-monitor.py` prints its byte hash, so an unchanged hash skips the model entirely.
+    Being woken up means the content changed: describe what changed, the likely impact, and whether a human should confirm. Never modify, revert, or regenerate the monitored content.
+    The first tick only establishes the baseline; a new baseline is not an alert.
+    Read nothing outside the monitored file, make no network calls, and write no files.
+    For longer chains, `--monitor-url` can replace the script with an HTTP source, but never both at once.
+    The install path is `$HERMES_HOME/scripts/aac/change-monitor.py`; with monitor-source.txt in the same directory it resolves relatively.
+    Say nothing when nothing changed; if the script is missing or unreadable, put `[CRON_FAILURE]` alone on the first line and explain the blocker.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  monitor_script: "aac/change-monitor.py"

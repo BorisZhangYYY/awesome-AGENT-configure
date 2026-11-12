@@ -30,13 +30,13 @@ See [Hermes workspace templates](Hermes/README.en.md) and [OpenClaw workspace te
 
 ## Scheduled Task Templates
 
-Reminder, check, project, and learning scenarios for OpenClaw.
+Independent reminder, check, project, learning, script-only, and change-monitor scenarios for OpenClaw and Hermes; their parameters and compilers are not interchangeable.
 
-- **Harness constraints**: time windows, deduplication, state records, and delivery configuration guide task execution.
-- **Loop progress**: goals and milestones guide continued work, with state files for resumption and instructions to disable tasks once goals are met.
-- **Build tooling**: `build-cron.py` generates task commands with preview and JSON output, validates delivery configuration, and injects timezone offsets.
+- **Harness constraints**: one shared premise (fresh session, evidence first, authorization boundary) plus consistent `[SILENT]` and `[CRON_FAILURE]` wording.
+- **Loop progress**: goals and milestones drive one verifiable step per run, with progress in a dedicated state file and no automatic self-pause by default.
+- **Build tooling**: each `build-cron.py` only prints reviewable commands or requests — never executes or installs — with validate, preview, JSON, tool-request, plan, and one-shot test modes.
 
-See [OpenClaw scheduled task templates](OpenClaw/README.en.md#scheduled-task-templates).
+See [Hermes scheduled task templates](Hermes/README.en.md#cron-quick-start) and [OpenClaw scheduled task templates](OpenClaw/README.en.md#scheduled-task-templates).
 
 ## Context Injection Templates
 

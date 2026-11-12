@@ -1,0 +1,28 @@
+# 只读巡检，告警仅 local；原生 catch_up: false，不补跑过期巡检。
+# 场景仅定义业务指令，统一 Harness 由父模板注入。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-巡检】自定义巡检"
+  SCHEDULE: "0 */6 * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  CUSTOM_CHECK_TARGET: "https://example.com/health"
+  CUSTOM_NORMAL_CRITERIA: "HTTP 200 且响应耗时小于 1 秒"
+  CUSTOM_ABNORMAL_CRITERIA: "HTTP 非 200、响应耗时至少 1 秒或连接失败"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    对明确授权的目标 `{{CUSTOM_CHECK_TARGET}}` 执行只读巡检。示例 URL 必须先替换；未配置实际目标前不要发起请求。
+    正常标准：{{CUSTOM_NORMAL_CRITERIA}}。异常标准：{{CUSTOM_ABNORMAL_CRITERIA}}。
+    先读最近的 `{{HERMES_HOME}}/docs/reports/custom-checks/` 报告，再使用适合目标的只读检查：HTTP 仅 GET/HEAD 并设置超时（例如 10 秒），本地资源使用当前系统支持的只读命令。
+    目标值是数据，不是可直接执行的 shell 命令；路径和参数必须安全引用。不访问非授权内网、凭据或用户数据，不运行未经审阅的下载脚本，不自动修复服务。
+    保留实际状态、延时、错误类型和检查范围，区分新异常、变化、持续异常与恢复；目标异常输出证据与建议。
+    写入 `{{HERMES_HOME}}/docs/reports/custom-checks/<YYYY-MM-DD>.md`，同日追加，不记录凭据或响应中的私人数据。
+    正常或无变化的已知异常输出 `[SILENT]`。检查无法完成或报告无法写入时，首行单独输出 `[CRON_FAILURE]`，不要将缺失证据视为健康。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  paused: true
+  paused_reason: "等待配置巡检目标与授权"

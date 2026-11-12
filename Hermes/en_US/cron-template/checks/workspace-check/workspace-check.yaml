@@ -1,0 +1,29 @@
+# Read-only inspection; local alerts and native catch_up: false, with no missed-run replay.
+# This scene defines business instructions only; the parent injects the unified Harness.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Check] Workspace organization"
+  SCHEDULE: "0 23 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  WORKSPACE_DIR: "{{HERMES_HOME}}"
+  WORKSPACE_ALLOW_MOVES: false
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Inspect the layout of `{{WORKSPACE_DIR}}`, using the latest 3 reports under `{{HERMES_HOME}}/docs/reports/workspace-check/` to identify persistent issues.
+    Read existing SOUL.md, AGENTS.md, CLAUDE.md, and workspace directory rules. If no layout rules exist, request them instead of inventing an allowlist or forcing organization.
+    Default to a move plan only. WORKSPACE_ALLOW_MOVES={{WORKSPACE_ALLOW_MOVES}}; moving in-scope files requires both explicit user approval and this switch set to true.
+    Classify by topic, not extension: ordinary material under docs/<topic>/, appendices explicitly referenced by identity files under docs/references/<topic>/, scripts under scripts/<topic>/, inspection reports under docs/reports/<topic>/.
+    Keep root core files, existing valid directories, and all Hermes runtime configuration. Never read or move .env, auth.json, config.yaml, state.db, credential files, cron/, sessions/, logs/, memories/, skills/, plugins/, or installed scripts under scripts/aac/.
+    Do not touch hidden files, .state/, .trash/, symlinks, or targets outside the workspace. Preserve user changes and unauthorized files; never delete, overwrite an existing destination, commit, or push.
+    Before authorized moves, check dependency references and destination conflicts and preserve a rollback path. At the new location check syntax only; do not execute business scripts. Use ast.parse for Python and bash -n for Shell; mark other languages unverified if no checker exists.
+    Record old-path and relative-path issues without automatically repairing configuration, references, or cron jobs; stop for confirmation if a move would break a runtime path.
+    Write `{{HERMES_HOME}}/docs/reports/workspace-check/<YYYY-MM-DD>.md`, appending same-day observations. Include old paths, proposed/actual destinations, topics, approval evidence, verification results, and rollback recommendations.
+    Output `[SILENT]` when no organization or new issue is needed; otherwise summarize plans, moves, or reference risks. If rules cannot be read or the report cannot be written, put `[CRON_FAILURE]` alone on the first line and explain the blocker.
+    Recommend archival of old reports; do not automatically clean them up.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false

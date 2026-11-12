@@ -1,0 +1,26 @@
+# Read-only inspection; local alerts and native catch_up: false, with no missed-run replay.
+# This scene defines business instructions only; the parent injects the unified Harness.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Check] Cron task health"
+  SCHEDULE: "0 9 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Read-only audit all cron jobs in the target Hermes profile, comparing the latest 3 reports under `{{HERMES_HOME}}/docs/reports/cron-check/`.
+    Run `hermes cron list` and `hermes cron status`; use the actual IDs from their output for `hermes cron runs <job-id> --limit 5`. For diagnosis use `hermes cron doctor`, without repair options.
+    This inspection job is {{JOB_NAME}}. Exclude itself only when its identity is unambiguous; report duplicate-name ambiguity rather than skipping arbitrary jobs.
+    Distinguish paused, not-yet-first-run, skipped, blocked configuration, execution failure, and delivery failure. Missing history is not success; intentional pauses are not faults.
+    Compare anomalies with history: new failure, changed cause, known ongoing issue, recovered. Determine severe lateness from the actual schedule and next-run time, not from a job normally waiting its turn.
+    Alert on new failures or changed causes; record the duration of unchanged failures, and summarize issues persisting over 7 days with a manual-investigation recommendation. Do not repeat unchanged alerts.
+    For temporary timeouts or rate limits, only recommend a single retry; configuration, permission, or missing-script failures need manual intervention. Never automatically trigger, edit, pause, resume, or remove other jobs, or change global scheduling permissions.
+    Always write `{{HERMES_HOME}}/docs/reports/cron-check/<YYYY-MM-DD>.md`, appending same-day observations. Record total and category counts, job IDs, causes, evidence, and recommendations; redact platform destinations and credentials.
+    Output `[SILENT]` when there are no new anomalies. If reading job status or persisting the report fails, put `[CRON_FAILURE]` alone on the first line and describe coverage and blockers; unknown does not mean healthy.
+    Recommend archival of old reports instead of automatically deleting them.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false

@@ -1,0 +1,26 @@
+# Script-only job: no_agent mode, no model call, the script's stdout is delivered verbatim.
+# An operator reviews the script and copies it to $HERMES_HOME/scripts/aac/; the compiler installs nothing.
+# Empty stdout means silence; a non-zero exit or a timeout means failure.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Script] Syntax check"
+  SCHEDULE: "*/30 * * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  SCRIPT_TARGET: "{{HERMES_HOME}}/scripts/target.py"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    This scene runs no model: the text below documents the deployment contract only and never reaches execution.
+    The source is `script-only.py` in this directory; review it, then copy it to `$HERMES_HOME/scripts/aac/script-only.py` byte for byte.
+    Behaviour: compile-check a Python file and print a single JSON line (status plus a target summary); repeated runs produce identical output.
+    Failure contract: a missing target or a syntax error exits non-zero with stderr only and empty stdout, so the job is recorded as failed rather than silent.
+    Optional `--target` selects the file to check and defaults to the script itself; no network access, no file writes, no business data touched.
+    Extensions must keep the contract: one JSON line on success, empty stdout on failure.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  script: "aac/script-only.py"
+  no_agent: true

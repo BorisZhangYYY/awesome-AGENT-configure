@@ -1,0 +1,38 @@
+# Project work (custom project): the same Loop machinery aimed at any repository.
+# Replace the sample defaults; paused: true keeps it inert until configured.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Project] Custom repository"
+  SCHEDULE: "0 20 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  LOOP_MODE_ENABLED: true
+  LOOP_TASK_TYPE: "custom-projects"
+  LOOP_PROJECT_DIR: "/path/to/your/project"
+  LOOP_STATE_FILE: "{{LOOP_PROJECT_DIR}}/.state/custom-projects.json"
+  LOOP_GOAL: "Advance the stated goal in the chosen repository, one verifiable step per run"
+  LOOP_MILESTONES:
+    - "Milestone 1: compare the repository's current state with the goal and name this run's entry point"
+    - "Milestone 2: land one verifiable change and self-check it"
+    - "Milestone 3: collect evidence and leftovers, then decide whether to close"
+  LOOP_AUTO_PAUSE: false
+  LOOP_JOB_ID: ""
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Work toward the user's goal inside `{{LOOP_PROJECT_DIR}}`; replace the sample path and goal before any run.
+    Modify files only with explicit approval from the user; a read-only pass may analyse structure, run read-only commands, and propose a plan.
+    Record user changes (`git status`) at the start and list changed files with verification output at the end, so existing work is preserved.
+    Touch only what this goal needs: no drive-by refactors, no global formatter configuration changes.
+    Do not commit, push, publish, or change production configuration unless the user authorized it for this run.
+    Write `{{HERMES_HOME}}/docs/reports/projects/custom-projects/<YYYY-MM-DD>.md`, appending on repeat runs, with goal, milestone state, evidence, and blockers.
+    When the goal is met or blocked, say so and suggest that an operator pause or remove the job; never rewrite the schedule yourself.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  workdir: "{{LOOP_PROJECT_DIR}}"
+  continuity: true
+  paused: true
+  paused_reason: "Sample job: replace LOOP_PROJECT_DIR, LOOP_GOAL, and milestones before resuming"

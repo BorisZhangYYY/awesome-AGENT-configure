@@ -1,0 +1,28 @@
+# 学习推进：按天积累一个明确主题，输出可复核的笔记与问题清单。
+# 只读为主；不下载、不执行未审阅的示例代码。
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "【AAC-学习】主题学习"
+  SCHEDULE: "0 21 * * *"
+  DELIVER: "local"
+  LOCALE: "zh_CN"
+  LEARN_TOPIC: "替换为你的学习主题"
+  LEARN_SOURCE: "官方文档与本地已有资料"
+  LEARN_OUTPUT_DIR: "{{HERMES_HOME}}/docs/reports/custom-learns"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    本次学习主题：`{{LEARN_TOPIC}}`；允许的信息来源：{{LEARN_SOURCE}}。
+    先读 `{{HERMES_HOME}}/docs/reports/custom-learns/` 下最近 3 份笔记，接着上次的进度继续，不重复已掌握的结论。
+    一次只推进一个概念：说清它解决什么问题、边界在哪、与已学内容的区别，并给出一个能验证理解的最小例子。
+    只使用本地已有资料或明确授权的来源；找不到依据时写「未验证」，不用印象补全，不编造 API 或版本行为。
+    不执行来源不明的脚本，不安装依赖，不注册账号，不下载大文件。
+    写入 `{{HERMES_HOME}}/docs/reports/custom-learns/<YYYY-MM-DD>.md`，同日追加；记录今日概念、关键结论、仍存疑问与下一步。
+    本轮没有新进展时输出 `[SILENT]`；来源不可用或笔记无法写入时，首行单独输出 `[CRON_FAILURE]` 并说明原因。
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
+  paused: true
+  paused_reason: "等待填写 LEARN_TOPIC 与允许来源后由操作员恢复"

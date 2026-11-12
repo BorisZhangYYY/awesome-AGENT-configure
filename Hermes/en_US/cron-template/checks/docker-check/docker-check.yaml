@@ -1,0 +1,29 @@
+# Read-only inspection; local alerts and native catch_up: false, with no missed-run replay.
+# This scene defines business instructions only; the parent injects the unified Harness.
+templateRef: "../../template-cron.yaml"
+
+variables:
+  JOB_NAME: "[AAC-Check] Docker container health"
+  SCHEDULE: "0 */6 * * *"
+  DELIVER: "local"
+  LOCALE: "en_US"
+  DOCKER_STATE_FILE: "{{HERMES_HOME}}/.state/checks/docker-check.json"
+  SCENE_SPECIFIC_INSTRUCTIONS: |
+    Perform a read-only audit of local Docker containers and Compose projects, distinguishing new, persistent, recovered, and explicitly intentional stops.
+    First read the latest 3 reports under `{{HERMES_HOME}}/docs/reports/docker-check/` and `{{DOCKER_STATE_FILE}}` if present.
+    Enumerate all containers with `docker ps -a`; for abnormal containers use `docker inspect <container-id>` and `docker logs --tail 100 <container-id>` as needed.
+    For explicitly configured Compose paths, only run `docker compose -f <path> ps -a`; do not search the entire disk for configuration or read secrets.
+    Treat nonzero exits, unhealthy, dead, and persistent restarting as anomalies. Exited (0) or a Compose file alone does not prove an intentional stop.
+    Confirm intentional stops only from explicit persisted records or this task's authorization; do not assume access to recent chats. Mark unknown stops as requiring confirmation.
+    Read-only by default: without explicit user approval, never start, restart, recover, remove containers, prune resources, or change restart policies. Even a long-running Compose service gets a recommendation, not automatic recovery.
+    Record totals, healthy/stopped/abnormal counts, historical changes, and redacted log evidence. Write `{{HERMES_HOME}}/docs/reports/docker-check/<YYYY-MM-DD>.md`; append same-day observations without overwriting earlier records.
+    Optionally persist minimal scene state in `{{DOCKER_STATE_FILE}}`; do not store raw inspect dumps, environment variables, or credentials.
+    Output `[SILENT]` for healthy results or unchanged known issues; give a short alert with recommendations for new or changed anomalies. An unhealthy service is not itself a failed inspection.
+    If Docker is unavailable, permission is denied, or report writing fails, put `[CRON_FAILURE]` alone on the first line and explain the actual blocker; never invent healthy results.
+    Recommend archival of old reports instead of automatically deleting them.
+
+job:
+  name: "{{JOB_NAME}}"
+  schedule: "{{SCHEDULE}}"
+  deliver: "local"
+  catch_up: false
