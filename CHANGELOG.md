@@ -6,15 +6,27 @@
 
 ### Added
 
+- **`AI-ProjConf/{zh_CN,en_US}/{multi-repo,single-repo}/.project/INDEX.md.example`（新增）**：任务注册表模板，作为任务状态唯一来源；含稳定 ID、执行者、依赖、关闭条件、证据路径、front matter 生命周期取值表与入口协议。
+- **`AI-ProjConf/{zh_CN,en_US}/{multi-repo,single-repo}/.project/rules/workflow.md.example`（新增）**：工作流程操作手册，覆盖新接任务／干一半暂停／中途插队／隔天或换人恢复四种场景，附落位表、多人协作约定、可复制开场白与反模式清单。
+- **`AI-ProjConf/scripts/check-project.py`（新增）**：四套模板共用的状态校验脚本，检查断链、front matter、状态取值、`superseded_by`、`active` 陈旧、`owner_task` 登记与关键事实重复；纯标准库，退出码 0/1。
+
 - **`tests/openclaw/test_skill_identity.py`（新增）**：重命名身份回归测试，检查新目录存在、frontmatter 名字一致，并确认活跃源码中不再残留旧引用。
 
 ### Changed
+
+- **四套 `CLAUDE.md.example`「任务跟踪规范」重写**：`.project/INDEX.md` 成为唯一状态源并新增执行者列；本轮范围改由会话指令给出、不落共享文件；新增入口协议（先读注册表并运行校验、只认 `status: active`、失效文档与会话记忆不得作为任务来源）、一行一人与交接约定、子任务链拆分、操作手册入口、状态全量改写与证据门禁。
+- **四套 `CLAUDE.md.example`「文档规范」补充「一处一事实」与「正文状态字段化」**：front matter 字段与五种生命周期取值；`single-repo` 版压缩至 49 行，保持 50 行上限。
+- **四套 `.project/INDEX.md.example` 补「执行者」列与多人协作约定**：一行一人、改完即提交、交接改执行者并写断点；当前阶段、阻塞原因与下一步仍由分组标题、备注列与 `blocked` 行承载，彻底消除状态双写。
+- **四套 `.docs/README.md.example`**：补 front matter 与「共用资料是只读背景、非执行依据」规则，索引指向任务注册表。
+- **`AI-ProjConf/README.md` / `README.en.md`**：模板内容表登记 `INDEX.md.example`、`rules/workflow.md.example` 与校验脚本，补充一处一事实、入口协议、多人协作与使用方式中的复制命令。
 
 - **OpenClaw 技能改名（破坏性）**：`OpenClaw/skills/aac-cron-manage/` → `OpenClaw/skills/aac-openclaw-cron-manage/`；`SKILL.md` 与 `SKILL.zh_CN.md` 的 frontmatter `name`、`references/`、`scripts/` 内容零变动的同步更新路径，及 `CLAUDE.md`、`OpenClaw/README.md`、`OpenClaw/README.en.md`、两语范范围 `cron-template/` 场景与 `scripts/` 三个检查脚本中的引用路径一并更新。
 
 ### Fixed
 
 ### Removed
+
+- **四套 `TODO.md.example`（移除）**：任务清单属会话级概念，不该占用共享文件；本轮范围由会话指令给出，状态、责任人、阻塞与证据统一由 `.project/INDEX.md` 承担，避免「TODO 是唯一状态源之外的第二份清单」。
 
 ## [0.2.2] - 2026-11-03
 

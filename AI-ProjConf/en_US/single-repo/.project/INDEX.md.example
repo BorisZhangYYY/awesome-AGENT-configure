@@ -1,0 +1,88 @@
+---
+status: active
+updated_at: {{UPDATED_AT}}
+---
+
+# Task Register
+
+> This file is the **single source of truth** for task status, and the only table a team reconciles against: who is on what, how far it got, and why it is stuck are recorded here and nowhere else.
+> Which rows are in play this round comes from the session instruction, so no separate task-list file exists.
+> Conventions live in `CLAUDE.md` under "Task Tracking", the playbook in [workflow](rules/workflow.md). Replace every `{{PLACEHOLDER}}` and run `python3 scripts/check-project.py` before use.
+
+## Conventions
+
+- One task per row; an ID never changes once assigned. Edit the original row when item, status, dependency, or owner changes — never append an "Update:" section.
+- **One row, one owner.** Put a single name in `Assignee` so responsibility is personal. When several people push the same goal, split it into subtasks that each own a row — never write "A+B" or "the team".
+- **Commit right after editing.** Commit only the rows and bodies you touched; inside a single repository git merges different rows automatically. Do not re-sort the table or re-pad columns "for tidiness" — that turns everyone's edits into conflicts.
+- On handover, change `Assignee` and state in Notes "how far it got and how to restart", without opening a new task or copying the body.
+- Break large stages into a subtask chain: parent `S1`, children `S1.1`, `S1.2`; each child states action, artifact, and closing condition.
+- Status has exactly four values: `active` (in progress), `blocked` (dependency unmet), `done` (closed), `superseded` (retired).
+- Move to `done` only when the evidence exists and the closing condition is met. Deferred, dependency-unmet, and not-enabled are not done.
+- **Status appears once, in this table.** Express the current stage as a group heading and put blockers and next actions in the Notes column of `blocked` rows; no body document may keep a focus table, an archive ledger, or a second status table — they link to IDs only.
+- Point each body document's `owner_task` front-matter field at an ID here; a retired body declares `superseded_by` and its task is marked `superseded`.
+- History belongs to git; this table only shows the present. No process log, no dated "updated" bullets.
+- Commit, push, merge, build, and deploy are separately authorized steps: listing them is not permission to run them.
+
+## Columns
+
+| Column | Meaning |
+|--------|---------|
+| ID | Stable task ID; starts with a letter, may contain digits, dots, underscores, e.g. `S1`, `S1.1` |
+| Item | One sentence on what is being delivered |
+| Status | `active` / `blocked` / `done` / `superseded` |
+| Depends on | Upstream task IDs; `—` when none |
+| Assignee | The single accountable person; `unassigned` until someone claims it, and nobody else edits that row |
+| Closing condition | A verifiable artifact or acceptance boundary, never "take a look at it" |
+| Body | Relative link to the plan, steps, and acceptance notes under `.project/`; `—` when absent |
+| Evidence | Relative link to machine evidence, logs, or verification records; `—` when not produced |
+| Updated | `YYYY-MM-DD`; bump it on every status change |
+| Notes | Blocker, scope, handover point, next action; `—` when empty |
+
+## Task table
+
+### {{CURRENT_STAGE}}
+
+| ID | Item | Status | Depends on | Assignee | Closing condition | Body | Evidence | Updated | Notes |
+|----|------|--------|------------|----------|-------------------|------|----------|---------|-------|
+| {{TASK_ID}} | {{TASK_ITEM}} | active | — | {{ASSIGNEE}} | {{DONE_CONDITION}} | [Topic body]({{YYYYMMDD-TOPIC}}) | — | {{UPDATED_AT}} | — |
+| {{TASK_ID}} | {{BLOCKED_ITEM}} | blocked | {{TASK_ID}} | {{ASSIGNEE}} | {{DONE_CONDITION}} | — | — | {{UPDATED_AT}} | {{BLOCKER}} |
+
+> Example: `S1` close out database portability → `S1.1` connection factory (A), `S1.2` DDL (B), `S1.3` regression evidence (A). Register each one; do not pile substeps into the parent row. When the stage changes, rewrite the group heading and sync the Notes column.
+
+## Body status markers
+
+Every body document under `.project/` and `.docs/` starts with YAML front matter; index files and the playbooks under `rules/` may omit `owner_task`:
+
+```yaml
+---
+status: active
+owner_task: {{TASK_ID}}
+updated_at: {{UPDATED_AT}}
+---
+```
+
+| status | Meaning | Usable as execution input? |
+|--------|---------|----------------------------|
+| `active` | Current working reference, re-check regularly | Yes |
+| `reference` | Stable background reused across tasks | Background only |
+| `superseded` | No longer valid; must declare `superseded_by` | No |
+| `evidence` | Machine evidence, command output, logs; append-only | No |
+| `archived` | Body of a finished topic, kept for history | No |
+
+## Entry protocol
+
+Written into `CLAUDE.md` so every session follows it:
+
+1. Read this register and run `python3 scripts/check-project.py` before starting; fix failures first.
+2. Narrow the round from the session instruction: with an explicit ID list, touch only those rows; without one, take the rows that are `active` and assigned to you, and say which rows you are about to touch.
+3. Treat only documents with `status: active` as execution input.
+4. On finding "pending confirmation / not implemented / deferred" inside a `superseded`, `archived`, or `evidence` document, **do not start work from it**.
+5. Agent session memory and logs are append-only records, **not a status source**; any "current" wording there yields to this table.
+6. Never mark a task `done` while the checker fails.
+
+## Maintenance
+
+- On a status change, rewrite the original row, bump `updated_at`, and update the body's front matter in the same edit.
+- Completion, blocking, and retirement are recorded here only. A task dropping out of view is not completion — only `done` is.
+- When deleting a conclusion, clean up its links, IDs, and references in the same pass; leave no orphan evidence, empty section, or dangling ID.
+- One fact, one home: environment, version, quota, and conclusion appear once, in the file that defines them; everywhere else links.

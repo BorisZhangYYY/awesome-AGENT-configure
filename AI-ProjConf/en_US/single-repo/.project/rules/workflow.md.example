@@ -1,0 +1,124 @@
+---
+status: reference
+updated_at: {{UPDATED_AT}}
+---
+
+# Workflow Playbook
+
+> This file answers exactly one question: **for the work at hand, which file do I touch now.**
+> It is a map for humans, not a status source. Where it conflicts with `CLAUDE.md` or `.project/INDEX.md`, those win.
+
+## 0. One job per layer
+
+| Location | Holds | Who edits | When to read |
+|----------|-------|-----------|--------------|
+| Session instruction | Which rows this round covers | Whoever starts the task | At kickoff |
+| `.project/INDEX.md` | Status, owner, closing condition, blocker | Each owner edits only their row | Kickoff, wrap-up, handover |
+| `.project/<topic>/` | Working body and evidence | The owner | While working |
+| `.docs/` | Stable material reused across tasks (environments, interfaces, acceptance rules) | Whoever finds it stale | When citing it |
+| `.project/rules/` | Rules and playbooks (this file) | When the rules change | Onboarding, process questions |
+
+In one line: **status in one place, process in bodies, reuse in `.docs/`, rules in `rules/`.**
+
+## 1. First decide: new work or old work
+
+- New deliverable and new acceptance criteria → scenario A.
+- Same work moving one step forward → scenario B (the next leg of the existing task, no new topic).
+- Something else entirely → scenario C.
+- Days later, or a different person → scenario D.
+
+## 2. Scenario A: taking on a complex multi-step task
+
+| Step | Action | Where | Test |
+|------|--------|-------|------|
+| 1 | Open a topic directory with its first body | `.project/YYYYMMDD-<topic>/` + `01-discussion.md` | One sentence names the deliverable and its acceptance |
+| 2 | Break the task into steps inside the body | `## Steps` section | Every step has an artifact and a closing condition; ordering is explicit |
+| 3 | Give each verifiable step its own register row | `INDEX.md` task table (parent `S1` + children `S1.1`) | Closing conditions do not overlap and are checkable |
+| 4 | State which rows this round covers | Session instruction | Both sides agree on "this round" |
+| 5 | Run the checker | `python3 scripts/check-project.py` | No FAIL before touching code |
+
+The rule that matters: **registration granularity equals the granularity you can verify in one sitting** — not the git commit granularity, and not "the next thing I thought of". More than seven or eight subtasks means the steps were cut wrong; go back to step 2.
+
+Front matter for a new body:
+
+```yaml
+---
+status: active
+owner_task: S1.1
+updated_at: {{UPDATED_AT}}
+---
+```
+
+## 3. Scenario B: stopping halfway through the day
+
+Three things, thirty seconds, then stop:
+
+1. In `INDEX.md`, set the row to its real status, bump `Updated`, and put "how far it got / next action / pitfall hit" in Notes.
+2. Set the body's `updated_at` to today; the body keeps conclusions and evidence only — no "made some progress today" diary.
+3. Save the evidence (logs, command output, screenshots) and link it from the Evidence column. No evidence, no forward status move.
+
+Do not: create `progress.md`, append a "Update: today's progress" section, or copy status into session memory hoping to find it later. Next time, the register is the only thing consulted.
+
+## 4. Scenario C: an unrelated task cuts in
+
+Two hard rules:
+
+1. **The original task keeps its status.** Cutting in is not blocking, unless an external dependency truly blocks it; leave the row `active` and note "deferred, yielding to `S9`".
+2. **The interrupting task still gets an ID.** Not registering it because "it is only a quick thing" is how "I thought that was done" happens.
+
+With a team, one extra step: if the interruption will occupy you for days, hand the original task over (change Assignee + write the handover point) instead of leaving two `active` rows carrying one name.
+
+## 5. Scenario D: back after a gap, or someone takes over
+
+Four steps; you should be productive within five minutes:
+
+1. Run `python3 scripts/check-project.py`, then read `INDEX.md`: only the `active` / `blocked` rows assigned to you.
+2. Open only the bodies linked from those rows. Do not browse `.project/` folders hoping to stumble on context.
+3. Find the break point in the body: last conclusion, last evidence, the next action in Notes.
+4. Tell the requester in one sentence, "I will continue from X because Y", and only then edit files.
+
+When body and register disagree, **the register wins**, and you fix the body in the same edit — never leave two versions for the next person to guess between.
+
+## 6. Three rules for sharing one working directory
+
+- **Claim**: your name in the Assignee column is the claim. Anyone may take an `unassigned` row, but say so in the session first.
+- **Commit granularity is one row**: commit only your rows and their bodies; git merges different rows automatically. Never re-sort the table or re-pad columns.
+- **Handover means new Assignee plus break point**: the taker reads Notes first, then the body — no re-interviewing.
+- **Conflicts**: in `INDEX.md`, keep rows from both sides and reorder by ID; never take one whole side. In a body conflict, ask the other author — do not guess.
+
+## 7. Opening prompts (copy and paste)
+
+New task:
+
+```
+Task: <one sentence>
+Deliverable: <something verifiable>
+Acceptance: <how we know it is done>
+Follow scenario A in .project/rules/workflow.md: give me the topic directory and the INDEX breakdown first, then wait for my confirmation.
+```
+
+Resuming:
+
+```
+Resume <ID>. Run scripts/check-project.py first, read that row in INDEX and the bodies it links,
+then tell me in three sentences: how far it got, where it is stuck, next action. Edit nothing until I confirm.
+```
+
+Interrupting:
+
+```
+New task cutting in: <one sentence>. Handle it as scenario C: propose the new ID and placement,
+keep <ID> active, and only add a yield note in Notes.
+```
+
+## 8. Anti-patterns
+
+| Symptom | Consequence | Do instead |
+|---------|-------------|------------|
+| "Status: 80% done" inside a body | Second status source; nobody knows which to trust | Status only in `INDEX.md`; bodies carry conclusions and evidence |
+| Creating `progress.md` / `handover.md` | Status forks again, and nobody maintains it | Break point in Notes, conclusions in the body |
+| Relying on session memory for "where I left off" | Memory is an append-only log, not state | Read the register at kickoff |
+| Re-sorting the table or re-padding columns for tidiness | Everyone's edits collapse into conflicts | Touch only your own row |
+| Marking `done` right after deploy or push | `done` without evidence; nothing to show at regression | Land the evidence first, then move status |
+| Treating `superseded` / `archived` docs as input | Work proceeds on stale conclusions and gets redone | Check the front matter `status` first |
+| Deleting a row because "we are not doing it now" | History breaks; others think it never existed | Mark `superseded` or `blocked` with a reason |

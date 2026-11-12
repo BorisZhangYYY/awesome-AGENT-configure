@@ -21,7 +21,9 @@
 | `AGENTS.md.example` | AGENT 引导文件，指向 `CLAUDE.md` |
 | `README.md.example` | 项目 README 骨架（single-repo） |
 | `CHANGELOG.md.example` | 变更日志骨架，遵循 Keep a Changelog（single-repo） |
-| `TODO.md.example` | 待办索引，正文放 `.project/` |
+| `.project/INDEX.md.example` | 任务注册表：唯一状态源，含稳定 ID、执行者、关闭条件、证据路径与正文生命周期 |
+| `.project/rules/workflow.md.example` | 工作流程操作手册：新任务／干一半／插队／隔天恢复四种场景，含多人协作约定与开场白 |
+| `scripts/check-project.py` | 四套模板共用的状态校验脚本（非 `.example`，随模板一并复制到项目） |
 | `.docs/` | 共用资料：跨任务复用的环境说明、功能清单、上报/接口说明、资源清单、验收报告 |
 | `.docs/README.md.example` | 共用资料索引入口：编号约定与类别登记表 |
 | `.docs/01-环境说明/` | 固定编号槽位，存 `test.md` / `uat.md` / `prd.md`，只为真实存在的环境建文件 |
@@ -38,21 +40,28 @@
 - 共用正文与附件只维护一份，由 `.project/` 主题目录相对链接引用，不复制副本。
 - 同一资料存在多个版本时只保留最新版，版本写进文件名或正文。
 - `single-repo/` 与 `multi-repo/` 使用同一套 `.docs` 编号规范与 `.project` 主题规范。
+- 一处一事实：环境、版本、配额、结论与任务状态只在定义它的文件里出现一次，其余用链接引用；变化直接改写原句，不追加「补充」段落。
+- 正文以 YAML front matter 标注 `status`（`active` / `reference` / `superseded` / `evidence` / `archived`）、`owner_task`、`updated_at`；失效文档补 `superseded_by`。
 
 ## 任务跟踪与环境配置
 
-- 每个任务在 `.project/` 下建 `YYYYMMDD-<主题>/` 目录，正文以主题命名。
-- 同一主题的后续任务并入已有目录，用 `01-问题讨论` 等序号子目录区分步骤。
-- 根 `TODO.md` 只做索引：「未完成」加一行链接，完成后移入「已完成/归档」并加 `### ✅`。
+- 每个任务在 `.project/` 下建 `YYYYMMDD-<主题>/` 目录，正文以主题命名；同一主题的后续任务并入已有目录，用 `01-问题讨论` 等序号子目录区分步骤。
+- 任务状态、依赖、执行者、关闭条件、证据、当前阶段与阻塞原因统一登记在 [任务注册表](zh_CN/multi-repo/.project/INDEX.md.example)（阶段分组标题／备注列／`blocked` 行），一项一个稳定 ID，大步骤拆成子任务链。**本轮做哪几行由会话指令给出，不落任何共享文件**。
+- **入口协议**：开工前先读 `INDEX.md` 并运行 `python3 scripts/check-project.py`；有明确 ID 清单就只动那几行，没有就取「`active` 且执行者是自己」的行。只把 `status: active` 的正文当执行依据，在 `superseded` / `archived` / `evidence` 文档或会话记忆里读到「待确认、未实施」不得据此启动任务。
+- **多人协作**：执行者列一行一人，认领即把名字写进去；改完即提交，只提交自己改的行，交接时改执行者并在备注写断点。操作剧本见 [workflow.md](zh_CN/multi-repo/.project/rules/workflow.md.example)。
+- 状态变化直接改写注册表原行并同步 `updated_at`；证据落盘且满足关闭条件才改 `done`，删除结论时同批清理链接与引用。校验脚本见 [check-project.py](scripts/check-project.py)。
 - 环境连接信息写入 `.docs/01-环境说明/`，并在 `CLAUDE.md` 的「环境索引」中登记；只登记真实存在的环境，缺失环境不建文件、不写占位内容。
 
 ## 使用方式
 
-将对应目录下的 `*.example` 去掉 `.example` 后缀，放入项目根目录，替换 `{{占位符}}` 后使用。
+将对应目录下的 `*.example` 去掉 `.example` 后缀，放入项目根目录，替换 `{{占位符}}` 后使用。校验脚本为四套模板共用，需单独复制到项目 `scripts/` 目录。
 
 ```bash
 cp AI-ProjConf/zh_CN/single-repo/CLAUDE.md.example /path/to/project/CLAUDE.md
+cp AI-ProjConf/scripts/check-project.py /path/to/project/scripts/check-project.py
 ```
+
+`.project/rules/workflow.md.example` 去掉后缀放进项目 `.project/rules/workflow.md`，它是给人看的操作手册。
 
 ## 语言版本
 

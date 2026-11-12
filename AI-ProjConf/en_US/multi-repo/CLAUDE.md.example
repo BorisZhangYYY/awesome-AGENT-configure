@@ -25,6 +25,8 @@
 - Keep each shared document and its attachments in exactly one place; topic directories under `.project/` link to `.docs/` with relative paths instead of copying files
 - When several versions of a document exist, keep only the latest and record the version in the filename or the body — not in a dated directory
 - **One topic, one directory** under `.project/`: tasks on the same topic share a single `<topic>/` directory. For complex work, use numbered subdirectories such as `01-discussion` inside that directory instead of creating another topic directory
+- **One fact, one place**: environments, versions, quotas, conclusions, and task status appear only in the file that defines them; everything else links to them. Rewrite the original sentence when content changes — never append "update" or "follow-up" sections; leave history to git
+- **Status as front matter**: every body document under `.project/` / `.docs/` starts with YAML front matter containing `status` (`active` / `reference` / `superseded` / `evidence` / `archived`), `owner_task`, and `updated_at`; retired documents add `superseded_by`. See the [Task Register](.project/INDEX.md)
 - {{OTHER_DOCUMENTATION_REQUIREMENTS}}
 
 ### Environment Rules
@@ -35,13 +37,18 @@
 
 ### Task Tracking
 
-> One register, one detail location: the root `TODO.md` is the index and `.project/` holds the details.
+> One state source, one detail location: `.project/INDEX.md` is the single source of truth and carries the Assignee column teams reconcile against; `.project/` holds bodies and evidence, `.docs/` holds reusable material. The round's scope comes from the session instruction and is never written into a shared file.
 
-- For a new task, create `.project/YYYYMMDD-<topic>/` and name the body after the topic
-- Merge follow-up work on the same topic into the existing topic directory (use numbered subdirectories such as `01-discussion` for steps); do not create a second topic directory
-- Add one line under "In Progress" in the root `TODO.md`: `### <item>, see [<directory>](.project/<directory>)`
-- When done, move the item from "In Progress" to "Completed / Archived" with a `### ✅` prefix
-- Promote lasting conclusions into `.docs/`; do not pile process detail into the root `TODO.md` or topic directories
+- **Entry protocol**: read `.project/INDEX.md` first, run `python3 scripts/check-project.py`, and treat only documents with `status: active` as execution input
+- **The round's scope comes from the session instruction**: with an explicit ID list, touch only those rows; without one, take rows that are `active` and assigned to you, and state which rows you are about to touch before editing
+- Never start a task from "pending confirmation / not implemented / deferred" found in `superseded`, `archived`, or `evidence` documents; agent session memory and logs are append-only records, not a status source
+- Create `.project/YYYYMMDD-<topic>/` for a new task and assign it a stable ID in `INDEX.md` with an assignee, closing condition, and evidence path; merge follow-up work on the same topic into the existing directory
+- Break large stages into a subtask chain in `INDEX.md` (`S1` -> `S1.1`); each item states action, artifact, and completion condition. Express the current stage as a group heading and put blockers and next actions in the Notes column of `blocked` rows
+- One row, one owner: Assignee holds a single name; on handover change it and write in Notes "how far it got and how to restart", without opening a new task
+- Change status by rewriting the original `INDEX.md` row and its `updated_at`, plus the front matter of the linked body document; when removing a conclusion, remove its links and references in the same change
+- Mark a task `done` only when evidence exists on disk and the closing condition is met; deferred, blocked, and disabled are not done. Commit, push, merge, and deploy are separately authorized steps
+- Promote lasting conclusions into `.docs/`; do not pile process detail into topic directories
+- The playbook lives in [workflow](.project/rules/workflow.md) (new task / stopping halfway / interruption / resuming)
 
 ## Environment Index
 
@@ -56,4 +63,5 @@
 ## Other
 
 - How the two directories relate to version control follows the repository they live in; decide per workspace whether shared material and the sub-repositories it references are committed
+- `scripts/check-project.py` checks broken links, front matter, stale `active` documents, unregistered `owner_task` IDs, and repeated key facts; run it at session start and before commits, and never mark a task `done` while it reports failures
 - {{OTHER_CONVENTIONS}}

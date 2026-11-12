@@ -160,8 +160,7 @@
 欢迎提交 PR 与 Issue。
 
 <!--
-  如有详细规范，请链接到 CONTRIBUTING.md：
-  详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+  如有详细规范，在此写明；`CONTRIBUTING.md` 创建后把上面的代码段换成链接。
 -->
 
 {{CONTRIBUTING_DESCRIPTION}}

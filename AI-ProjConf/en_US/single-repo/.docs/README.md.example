@@ -1,6 +1,11 @@
+---
+status: reference
+updated_at: {{UPDATED_AT}}
+---
+
 # Shared Material
 
-This directory holds relatively stable material reused by multiple tasks. Anything that only serves one work episode belongs in `.project/`; see the root `TODO.md` for the task index.
+This directory holds relatively stable material reused by multiple tasks. Anything that only serves one work episode belongs in `.project/`. Task status and assignee live in the [Task Register](../.project/INDEX.md). Replace `{{UPDATED_AT}}` in the front matter with a real date before use, or the checker will report a failure.
 
 ## Numbering Convention
 
@@ -24,3 +29,4 @@ This directory holds relatively stable material reused by multiple tasks. Anythi
 - Update the table above and the "Environment Index" in `CLAUDE.md` whenever you add, move, or split a category
 - Keep each shared document and its attachments in exactly one place; `.project/` topic directories link to them with relative paths instead of copying
 - Shared is not the same as publishable; check scope and sensitive content before sending anything outside the team
+- Shared material is read-only background with `status: reference`, **never execution input**. Facts such as environments, versions, and quotas appear only in the file that defines them; rewrite the original sentence and update `updated_at`, never append "update" sections
