@@ -23,6 +23,8 @@ backlog doc view "$DOC_ID" --plain
 
 可将 [共享校验脚本](scripts/check-project.py) 复制到项目的 `scripts/`，在协作根运行 `python3 scripts/check-project.py`。检测到本模板生成的 `backlog/config.yml` 时，脚本只检查根目录和现行 Backlog 文档里的本地相对链接，不要求 `.project/INDEX.md`，也不检查任务元数据。任务一致性另用 `backlog doctor` 检查（如 CLI 支持）。
 
+两种模式都默认忽略根目录的 `.trash/`。可重复传入 `--ignore-dir <项目相对目录>`（例如 `--ignore-dir backlog/docs/generated`），跳过目录内的 Markdown 及指向该目录的 Markdown 链接。
+
 从旧模板迁移时，先核对旧任务的归属、未完成条件和证据：一个可验收的交付物对应一张卡，细步骤留在卡里，共用资料迁入 `backlog/docs/`。核验后停止维护旧索引；旧记录只读归档。
 
 ## `.project` / `.docs` 传统模板

@@ -23,6 +23,8 @@ The file-reading syntax above works in Bash/Zsh. If the collaboration root is no
 
 Optionally copy the [shared checker](scripts/check-project.py) into the project's `scripts/` and run `python3 scripts/check-project.py` from the collaboration root. When the template's `backlog/config.yml` exists, the checker only checks local relative links in root Markdown and active Backlog documents. It does not require `.project/INDEX.md` or check task metadata. Use `backlog doctor` for task consistency checks if your CLI supports it.
 
+Both modes ignore `.trash/` at the project root by default. Repeat `--ignore-dir <project-relative directory>` (for example, `--ignore-dir backlog/docs/generated`) to skip Markdown files inside a directory and Markdown links pointing to it.
+
 To migrate from a legacy template, reconcile task ownership, outstanding acceptance criteria, and evidence. Create one card per independently verifiable deliverable, keep small steps on the card, and move reusable material into `backlog/docs/`. After verification, retire the old index and keep its records read-only.
 
 ## Legacy `.project` / `.docs` Templates

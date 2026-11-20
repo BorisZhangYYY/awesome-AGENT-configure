@@ -70,6 +70,36 @@ class ProjectCheckerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("missing task register: .project/INDEX.md", result.stdout)
 
+    def test_legacy_ignores_local_trash_sources_and_links_by_default(self):
+        self.write(
+            ".project/INDEX.md",
+            "---\nstatus: reference\nupdated_at: 2026-01-01\n---\n"
+            "[Archive](../.trash/missing.md)\n",
+        )
+        self.write(".trash/old.md", "[Stale reference](missing.md)\n")
+        result = self.check()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_backlog_accepts_multiple_project_relative_ignore_directories(self):
+        self.init_backlog()
+        self.write("backlog/docs/generated/a.md", "[Untracked dependency](missing.md)\n")
+        self.write(
+            "backlog/docs/guide.md",
+            "[Generated](generated/subdir/../missing.md)\n"
+            "[Local](../../private/missing.md)\n"
+            "[Trash](../../.trash/missing.md)\n",
+        )
+        result = self.check("--ignore-dir", "backlog/docs/generated", "--ignore-dir", "private")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_backlog_still_reports_broken_links_outside_ignored_directory(self):
+        self.init_backlog()
+        self.write("README.md", "[Ignored](.trash/old.md)\n[Broken](.trash-copy/missing.md)\n")
+        result = self.check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("broken link: README.md -> .trash-copy/missing.md", result.stdout)
+        self.assertNotIn(".trash/old.md", result.stdout)
+
     def test_legacy_still_checks_owner_task(self):
         self.write(".project/INDEX.md", "---\nstatus: reference\nupdated_at: 2026-01-01\n---\n| S1 | Task |\n")
         self.write(".project/topic.md", "---\nstatus: reference\nowner_task: S2\nupdated_at: 2026-01-01\n---\n")

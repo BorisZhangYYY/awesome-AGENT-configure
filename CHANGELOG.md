@@ -16,6 +16,7 @@
 
 ### Changed
 
+- **`AI-ProjConf/scripts/check-project.py`**：Backlog 和传统模式默认忽略根目录的 `.trash/`，支持用可重复的 `--ignore-dir` 跳过其他目录及指向它们的 Markdown 链接。
 - **`AI-ProjConf/scripts/check-project.py`**：识别 `backlog/config.yml`；Backlog 版只检查现行文档的本地相对链接，不依赖 `.project/INDEX.md`。传统版继续校验任务注册表和文档状态。
 - **四套 `CLAUDE.md.example`「任务跟踪规范」重写**：`.project/INDEX.md` 成为唯一状态源并新增执行者列；本轮范围改由会话指令给出、不落共享文件；新增入口协议（先读注册表并运行校验、只认 `status: active`、失效文档与会话记忆不得作为任务来源）、一行一人与交接约定、子任务链拆分、操作手册入口、状态全量改写与证据门禁。
 - **四套 `CLAUDE.md.example`「文档规范」补充「一处一事实」与「正文状态字段化」**：front matter 字段与五种生命周期取值；`single-repo` 版压缩至 49 行，保持 50 行上限。

@@ -10,6 +10,9 @@ Backlog mode (when backlog/config.yml exists): check inline local Markdown
 links in root documents and the active backlog tree. Do not require the
 legacy index or inspect task metadata; use the Backlog CLI for task checks.
 
+Both modes skip `.trash/` and directories added with `--ignore-dir` when
+scanning Markdown and checking Markdown link destinations.
+
 Legacy mode checks:
   1. relative Markdown links resolve
   2. body documents declare front matter: status / owner_task / updated_at
@@ -29,6 +32,7 @@ import datetime
 import os
 import re
 import sys
+from pathlib import Path
 from urllib.parse import unquote
 
 # --- Configuration ---------------------------------------------------------
@@ -42,6 +46,8 @@ DEFAULT_MAX_AGE = 14                    # days before an active doc is called st
 # KEY_FACTS = {"64C128G": ".docs/01-environments/test.md"}
 KEY_FACTS = {}
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".idea", ".vscode", "venv"}
+# Project-relative directories to skip as Markdown sources and link targets.
+DEFAULT_IGNORE_DIRS = (".trash",)
 # Indexes and playbooks are not task bodies, so they do not need owner_task.
 INDEX_FILES = {REGISTER, ".docs/README.md", ".project/README.md"}
 NO_OWNER_TASK_PREFIXES = (".project/rules/",)
@@ -63,9 +69,21 @@ def rel(root: str, path: str) -> str:
     return os.path.relpath(path, root).replace(os.sep, "/")
 
 
-def iter_markdown(root: str, skip_at_root: tuple[str, ...] = ()):
+def is_ignored(path: str, ignored_dirs: tuple[Path, ...]) -> bool:
+    candidate = Path(path)
+    return any(candidate.is_relative_to(directory) for directory in ignored_dirs)
+
+
+def iter_markdown(root: str, ignored_dirs: tuple[Path, ...], skip_at_root: tuple[str, ...] = ()):
+    if is_ignored(root, ignored_dirs):
+        return
     for base, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".git")]
+        dirs[:] = [
+            d for d in dirs
+            if d not in SKIP_DIRS
+            and not d.startswith(".git")
+            and not is_ignored(os.path.join(base, d), ignored_dirs)
+        ]
         if base == root:
             dirs[:] = [d for d in dirs if d not in skip_at_root]
         for name in sorted(files):
@@ -73,13 +91,13 @@ def iter_markdown(root: str, skip_at_root: tuple[str, ...] = ()):
                 yield os.path.join(base, name)
 
 
-def iter_backlog_markdown(root: str):
+def iter_backlog_markdown(root: str, ignored_dirs: tuple[Path, ...]):
     for name in sorted(os.listdir(root)):
         path = os.path.join(root, name)
         if name.endswith(".md") and os.path.isfile(path):
             yield path
-    # History may still contain old paths. Active links to history are checked.
-    yield from iter_markdown(os.path.join(root, BACKLOG_DIR), ("archive", "completed"))
+    # History is not scanned, but links to it are checked unless explicitly ignored.
+    yield from iter_markdown(os.path.join(root, BACKLOG_DIR), ignored_dirs, ("archive", "completed"))
 
 
 def local_link_targets(text: str):
@@ -125,9 +143,17 @@ def main() -> int:
         help="legacy mode: days an active document may go unrefreshed (default: 14)",
     )
     parser.add_argument("--verbose", action="store_true", help="print passing items")
+    parser.add_argument(
+        "--ignore-dir", action="append", default=[], metavar="DIR",
+        help="also skip this project-relative directory and links to it (repeatable; .trash skipped by default)",
+    )
     args = parser.parse_args()
 
     root = os.path.abspath(args.root)
+    relative_dirs = tuple(Path(os.path.normpath(d)) for d in (*DEFAULT_IGNORE_DIRS, *args.ignore_dir))
+    if any(d.anchor or not d.parts or d.parts[0] == ".." for d in relative_dirs):
+        parser.error("--ignore-dir must be a directory relative to the project root")
+    ignored_dirs = tuple(Path(root) / d for d in relative_dirs)
     failures: list[str] = []
     warnings: list[str] = []
     today = datetime.date.today()
@@ -136,7 +162,7 @@ def main() -> int:
     ids: set[str] = set()
     if backlog_mode:
         print("Mode: Backlog (local Markdown links)")
-        all_md = list(iter_backlog_markdown(root))
+        all_md = list(iter_backlog_markdown(root, ignored_dirs))
     else:
         register_path = os.path.join(root, REGISTER)
         if not os.path.isfile(register_path):
@@ -145,7 +171,7 @@ def main() -> int:
             return 1
         with open(register_path, encoding="utf-8") as register:
             ids = registered_ids(register.read())
-        all_md = list(iter_markdown(root))
+        all_md = list(iter_markdown(root, ignored_dirs))
 
     for path in all_md:
         name = rel(root, path)
@@ -153,6 +179,8 @@ def main() -> int:
 
         for target in local_link_targets(text):
             resolved = os.path.normpath(os.path.join(os.path.dirname(path), target))
+            if is_ignored(resolved, ignored_dirs):
+                continue
             if not os.path.exists(resolved):
                 failures.append(f"broken link: {name} -> {target}")
             elif args.verbose:
