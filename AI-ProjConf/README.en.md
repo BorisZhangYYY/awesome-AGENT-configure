@@ -4,7 +4,28 @@
 
 [简体中文](README.md) | English
 
-## Two Template Types
+## Backlog.md Template for Any Repository Layout
+
+For projects that use [Backlog.md](https://backlog.md/) for collaboration, choose the [English version](en_US/backlog/CLAUDE.md.example) or the [Chinese version](zh_CN/backlog/CLAUDE.md.example). `backlog/` is the shared home for tasks, docs, and optional milestones. Submodules change where code is committed, not how tasks are organized.
+
+1. Check `backlog --version` (if needed, install it with `npm install -g backlog.md`). Copy `AGENTS.md.example` and `CLAUDE.md.example` from the chosen language into the collaboration root without the `.example` suffix. Fill in `{{PROJECT_SUMMARY}}` and `{{CODE_LAYOUT}}`. Merge into existing agent instructions rather than overwriting them.
+2. Initialize from the collaboration root, then import the [workflow guide body](en_US/backlog/workflow.md.example). Set `TEMPLATE_DIR` to the absolute path to the chosen template. If Backlog is already set up, skip initialization and update the existing guide rather than creating a duplicate.
+
+```sh
+backlog init "Project name" --defaults --integration-mode none --backlog-dir backlog --config-location folder --include-remote false
+backlog doc create "Workflow" -t guide -p guides --plain
+# Set DOC_ID to the document ID returned by the previous command
+backlog doc update "$DOC_ID" --content "$(< "$TEMPLATE_DIR/workflow.md.example")"
+backlog doc view "$DOC_ID" --plain
+```
+
+The file-reading syntax above works in Bash/Zsh. If the collaboration root is not version-controlled, add `--no-git` to the same init command without changing any child repositories. For teams, track `backlog/` in the collaboration repository or designate a shared location everyone can access.
+
+Optionally copy the [shared checker](scripts/check-project.py) into the project's `scripts/` and run `python3 scripts/check-project.py` from the collaboration root. When the template's `backlog/config.yml` exists, the checker only checks local relative links in root Markdown and active Backlog documents. It does not require `.project/INDEX.md` or check task metadata. Use `backlog doctor` for task consistency checks if your CLI supports it.
+
+To migrate from a legacy template, reconcile task ownership, outstanding acceptance criteria, and evidence. Create one card per independently verifiable deliverable, keep small steps on the card, and move reusable material into `backlog/docs/`. After verification, retire the old index and keep its records read-only.
+
+## Legacy `.project` / `.docs` Templates
 
 | Directory | Suitable for | Characteristics |
 |-----------|--------------|-----------------|
@@ -23,7 +44,7 @@ The Chinese versions live in `zh_CN/single-repo/` and `zh_CN/multi-repo/` and mi
 | `CHANGELOG.md.example` | Changelog skeleton following Keep a Changelog (single-repo) |
 | `.project/INDEX.md.example` | Task register: single source of truth with stable IDs, assignee, closing conditions, evidence paths, and document lifecycle |
 | `.project/rules/workflow.md.example` | Workflow playbook: new task / stopping halfway / interruption / resuming, plus team conventions and opening prompts |
-| `scripts/check-project.py` | Shared state checker for all four templates (not an `.example`; copy it into the project alongside the templates) |
+| `scripts/check-project.py` | Shared checker (not an `.example`); also checks the task register and document lifecycle in legacy mode |
 | `.docs/` | Shared material reused across tasks: environment notes, feature lists, data-reporting/API specs, resource inventories, acceptance reports |
 | `.docs/README.md.example` | Shared-material index entry point: numbering convention and category table |
 | `.docs/01-environments/` | Fixed numbered slot for `test.md` / `uat.md` / `prd.md`; create files only for environments that exist |
@@ -54,7 +75,7 @@ The Chinese versions live in `zh_CN/single-repo/` and `zh_CN/multi-repo/` and mi
 
 ## Usage
 
-Remove the `.example` suffix from the files in the matching directory, place them in your project root, and replace the `{{placeholders}}`. The checker is shared by all four templates, so copy it into the project's `scripts/` directory separately.
+Remove the `.example` suffix from the files in the matching directory, place them in your project root, and replace the `{{placeholders}}`. Copy the checker into the project's `scripts/` directory separately.
 
 ```bash
 cp AI-ProjConf/en_US/single-repo/CLAUDE.md.example /path/to/project/CLAUDE.md

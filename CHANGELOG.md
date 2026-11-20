@@ -6,6 +6,8 @@
 
 ### Added
 
+- **根 README（中英）**：新增 Backlog.md、OpenClaw、Claude Code 和 Hermes Agent 致谢及官方链接。
+- **`AI-ProjConf/{zh_CN,en_US}/backlog/`**：新增不区分单仓和多仓的 Backlog.md 模板，由 CLI 初始化和维护任务、共用资料、里程碑及归档；原 `.project` / `.docs` 模板继续保留。
 - **`AI-ProjConf/{zh_CN,en_US}/{multi-repo,single-repo}/.project/INDEX.md.example`（新增）**：任务注册表模板，作为任务状态唯一来源；含稳定 ID、执行者、依赖、关闭条件、证据路径、front matter 生命周期取值表与入口协议。
 - **`AI-ProjConf/{zh_CN,en_US}/{multi-repo,single-repo}/.project/rules/workflow.md.example`（新增）**：工作流程操作手册，覆盖新接任务／干一半暂停／中途插队／隔天或换人恢复四种场景，附落位表、多人协作约定、可复制开场白与反模式清单。
 - **`AI-ProjConf/scripts/check-project.py`（新增）**：四套模板共用的状态校验脚本，检查断链、front matter、状态取值、`superseded_by`、`active` 陈旧、`owner_task` 登记与关键事实重复；纯标准库，退出码 0/1。
@@ -14,6 +16,7 @@
 
 ### Changed
 
+- **`AI-ProjConf/scripts/check-project.py`**：识别 `backlog/config.yml`；Backlog 版只检查现行文档的本地相对链接，不依赖 `.project/INDEX.md`。传统版继续校验任务注册表和文档状态。
 - **四套 `CLAUDE.md.example`「任务跟踪规范」重写**：`.project/INDEX.md` 成为唯一状态源并新增执行者列；本轮范围改由会话指令给出、不落共享文件；新增入口协议（先读注册表并运行校验、只认 `status: active`、失效文档与会话记忆不得作为任务来源）、一行一人与交接约定、子任务链拆分、操作手册入口、状态全量改写与证据门禁。
 - **四套 `CLAUDE.md.example`「文档规范」补充「一处一事实」与「正文状态字段化」**：front matter 字段与五种生命周期取值；`single-repo` 版压缩至 49 行，保持 50 行上限。
 - **四套 `.project/INDEX.md.example` 补「执行者」列与多人协作约定**：一行一人、改完即提交、交接改执行者并写断点；当前阶段、阻塞原因与下一步仍由分组标题、备注列与 `blocked` 行承载，彻底消除状态双写。

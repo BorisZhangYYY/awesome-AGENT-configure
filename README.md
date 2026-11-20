@@ -12,9 +12,8 @@
 
 为 AI 编程协作统一项目规范、任务跟踪和文档管理方式。
 
-- **单仓库**：适用于独立项目，提供项目规范、Agent 引导、README、待办与变更日志骨架。
-- **多仓库工作区**：适用于微服务等多仓库项目，在工作区集中维护协作规范与环境索引。
-- **任务与文档分层**：待办索引与任务正文分离，区分使用文档、开发细则和环境配置，减少上下文冗余。
+- **Backlog.md 版**：单仓和多仓共用一套模板，用 CLI 统一管理任务、共用资料和里程碑。
+- **传统版**：保留单仓和多仓模板，用 `.project/` 跟踪任务、`.docs/` 管理共用资料，无需安装 Backlog.md。
 
 详见 [AI-ProjConf](AI-ProjConf/README.md)。
 
@@ -46,6 +45,15 @@
 - **启动时加载**：通过 `agent:bootstrap` 事件读取并注入，减少重复说明。
 
 详见 [OpenClaw 上下文注入模板](OpenClaw/README.md#上下文注入模板)。
+
+## 致谢
+
+感谢这些项目及其维护者，为本仓库的模板提供了基础和灵感：
+
+- [Backlog.md](https://backlog.md/)：为 AI 项目模板提供任务、文档和里程碑管理。[CLI 文档](https://github.com/MrLesk/Backlog.md/blob/main/CLI-INSTRUCTIONS.md)
+- [OpenClaw](https://openclaw.ai/)：工作区、定时任务和上下文注入模板的运行框架。[官方文档](https://docs.openclaw.ai/)
+- [Claude Code](https://claude.com/product/claude-code)：项目级 `CLAUDE.md` 规则的来源。[官方文档](https://code.claude.com/docs/en/overview)
+- [Hermes Agent](https://hermes-agent.nousresearch.com/)：工作区身份、用户画像与记忆模板的运行框架。[官方文档](https://hermes-agent.nousresearch.com/docs)
 
 ---
 

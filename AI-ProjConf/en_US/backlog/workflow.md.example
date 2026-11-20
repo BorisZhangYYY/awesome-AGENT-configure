@@ -1,0 +1,41 @@
+# Backlog Workflow
+
+## Take On a Task
+
+```sh
+backlog task list --plain
+backlog task create "Deliverable title" -d "Context, outcome, and scope" --ac "Verifiable acceptance criterion" --plain
+```
+
+Use the existing card if there is one. Use `-a` to set one or more assignees, or `-a ""` to explicitly leave the task unassigned. Add `--dep` only for real prerequisites. When multiple tasks need grouping by stage or release, create a milestone with `backlog milestone add "Stage name"` and associate tasks with `-m` on creation or edit.
+
+## Start, Pause, and Hand Off
+
+Set `TASK_ID` to the actual task ID returned by the CLI before running the applicable commands:
+
+```sh
+backlog task view "$TASK_ID" --plain
+backlog task edit "$TASK_ID" -s "In Progress"
+backlog task edit "$TASK_ID" --notes "Current findings; evidence location; blocker and next step"
+```
+
+Read the existing Notes before replacing them and preserve findings and evidence that still apply. When pausing, record the handoff point; an interruption does not make the original task blocked. Record the handoff on the original card and update assignees as needed. `backlog task edit "$TASK_ID" -a "@alice,@bob"` replaces the entire list, so include everyone who is still involved.
+
+## Accept and Archive
+
+```sh
+backlog task edit "$TASK_ID" --check-ac 1
+backlog task edit "$TASK_ID" -s Done
+backlog task view "$TASK_ID" --plain
+```
+
+Check off each criterion only after verifying it. Mark the task `Done` only after all closing conditions are met, then read back the status and evidence. Use `backlog task archive "$TASK_ID"` to remove a task from the board; archiving does not mark it complete. When moving shared docs, update references that still point to the old path.
+
+## Find Docs and Deliver
+
+```sh
+backlog doc list --plain
+backlog milestone list --plain
+```
+
+Keep task-specific conclusions on the card. Maintain reusable material through `backlog doc create` and `backlog doc update`. Before delivery, verify that acceptance evidence and relative links work from the team's actual checkout rather than relying on local files. If the shared checker was copied into the project, run `python3 scripts/check-project.py` to find broken links. If your CLI supports `backlog doctor`, use it to check for duplicate IDs and dependency cycles; it does not replace acceptance or link checks.

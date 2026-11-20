@@ -41,6 +41,7 @@
 
 ## 链接
 
-- OpenClaw 官方文档：https://docs.openclaw.ai/
-- Hermes 官方文档：（待补充）
-- Claude Code 官方文档：（待补充）
+- [Backlog.md CLI 文档](https://github.com/MrLesk/Backlog.md/blob/main/CLI-INSTRUCTIONS.md)
+- [OpenClaw 官方文档](https://docs.openclaw.ai/)
+- [Hermes Agent 官方文档](https://hermes-agent.nousresearch.com/docs)
+- [Claude Code 官方文档](https://code.claude.com/docs/en/overview)

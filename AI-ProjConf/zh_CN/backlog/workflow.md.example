@@ -1,0 +1,41 @@
+# Backlog 工作流程
+
+## 接到任务
+
+```sh
+backlog task list --plain
+backlog task create "交付物标题" -d "背景、产物和范围" --ac "可核实的验收条件" --plain
+```
+
+已有任务就沿用原卡。用 `-a` 指定协作者，可填一人或多人；需要明确留空时用 `-a ""`。有真实依赖才加 `--dep`。有多个任务需要按阶段或版本组织时，用 `backlog milestone add "阶段名"` 建里程碑，建卡或编辑时用 `-m` 关联。
+
+## 开工、暂停与交接
+
+将 `TASK_ID` 设为 CLI 实际返回的任务 ID，再运行相应命令：
+
+```sh
+backlog task view "$TASK_ID" --plain
+backlog task edit "$TASK_ID" -s "In Progress"
+backlog task edit "$TASK_ID" --notes "当前结论；证据位置；阻塞原因和下一步"
+```
+
+更新 Notes 前先读原文，保留仍有效的结论和证据。暂停时如实记录断点；插队不自动把原任务标成阻塞。交接时在原任务留下记录，并按需更新协作者。`backlog task edit "$TASK_ID" -a "@alice,@bob"` 会替换整份协作者列表，要把仍参与的人也列上。
+
+## 验收与归档
+
+```sh
+backlog task edit "$TASK_ID" --check-ac 1
+backlog task edit "$TASK_ID" -s Done
+backlog task view "$TASK_ID" --plain
+```
+
+逐项验收后才勾对应编号，全部关闭条件满足后才标 `Done`；回读状态和证据。需要移出看板时用 `backlog task archive "$TASK_ID"`，不把归档当作完成。移动共享资料时更新仍指向旧路径的引用。
+
+## 查资料与交付
+
+```sh
+backlog doc list --plain
+backlog milestone list --plain
+```
+
+任务专属结论留在任务；跨任务复用的资料通过 `backlog doc create` / `backlog doc update` 维护。交付前验证验收证据和本地相对链接从团队实际检出的目录可用，不依赖本机文件。已复制共享校验脚本的项目可运行 `python3 scripts/check-project.py` 检查断链。若 CLI 支持 `backlog doctor`，可以用它检查重复 ID 和循环依赖；它不代替验收或链接检查。

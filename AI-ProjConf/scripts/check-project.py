@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Check the project task register and document lifecycle.
+"""Check local Markdown links and, for legacy projects, the task register.
 
 Run at the start of each agent session and before commits:
 
     python3 scripts/check-project.py
     python3 scripts/check-project.py --root /path/to/project --max-age 14 --verbose
 
-Checks:
+Backlog mode (when backlog/config.yml exists): check inline local Markdown
+links in root documents and the active backlog tree. Do not require the
+legacy index or inspect task metadata; use the Backlog CLI for task checks.
+
+Legacy mode checks:
   1. relative Markdown links resolve
   2. body documents declare front matter: status / owner_task / updated_at
   3. status is one of the allowed lifecycle values
@@ -25,10 +29,12 @@ import datetime
 import os
 import re
 import sys
+from urllib.parse import unquote
 
 # --- Configuration ---------------------------------------------------------
 # Every option a project may want to change is listed here.
 REGISTER = ".project/INDEX.md"          # single source of truth for task status
+BACKLOG_DIR = "backlog"                 # layout created by the Backlog template
 DOC_ROOTS = (".project", ".docs")       # directories whose .md files need front matter
 VALID_STATUS = ("active", "reference", "superseded", "evidence", "archived")
 DEFAULT_MAX_AGE = 14                    # days before an active doc is called stale
@@ -43,7 +49,11 @@ NO_OWNER_TASK_PREFIXES = (".project/rules/",)
 SECOND_STATUS_RE = re.compile(
     r"^(#{1,6}\s*(当前状态|current status)|>\s*状态[:：])", re.I | re.M
 )
-LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+LINK_RE = re.compile(
+    r"\[[^\]\n]*\]\(\s*(?:<([^>\n]+)>|((?:[^\s()<>]|\([^()\n]*\))+))"
+    r"(?:[ \t]+(?:\"[^\"\n]*\"|'[^'\n]*'|\([^()\n]*\)))?[ \t]*\)"
+)
+EXTERNAL_LINK_RE = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.I)
 ID_RE = re.compile(r"^\|\s*([A-Za-z][A-Za-z0-9_.-]*)\s*\|", re.M)
 
 # ---------------------------------------------------------------------------
@@ -53,12 +63,33 @@ def rel(root: str, path: str) -> str:
     return os.path.relpath(path, root).replace(os.sep, "/")
 
 
-def iter_markdown(root: str):
+def iter_markdown(root: str, skip_at_root: tuple[str, ...] = ()):
     for base, dirs, files in os.walk(root):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not d.startswith(".git")]
+        if base == root:
+            dirs[:] = [d for d in dirs if d not in skip_at_root]
         for name in sorted(files):
             if name.endswith(".md"):
                 yield os.path.join(base, name)
+
+
+def iter_backlog_markdown(root: str):
+    for name in sorted(os.listdir(root)):
+        path = os.path.join(root, name)
+        if name.endswith(".md") and os.path.isfile(path):
+            yield path
+    # History may still contain old paths. Active links to history are checked.
+    yield from iter_markdown(os.path.join(root, BACKLOG_DIR), ("archive", "completed"))
+
+
+def local_link_targets(text: str):
+    for wrapped, bare in LINK_RE.findall(text):
+        target = wrapped or bare
+        if EXTERNAL_LINK_RE.match(target):
+            continue
+        path = re.split(r"[?#]", target, maxsplit=1)[0]
+        if path and not os.path.isabs(path):
+            yield unquote(path)
 
 
 def front_matter(text: str):
@@ -86,12 +117,12 @@ def registered_ids(text: str) -> set[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Check project task register and document lifecycle"
+        description="Check Markdown links (Backlog) or task register and docs (legacy)"
     )
     parser.add_argument("--root", default=".", help="project root (default: .)")
     parser.add_argument(
         "--max-age", type=int, default=DEFAULT_MAX_AGE,
-        help="days an active document may go unrefreshed (default: 14)",
+        help="legacy mode: days an active document may go unrefreshed (default: 14)",
     )
     parser.add_argument("--verbose", action="store_true", help="print passing items")
     args = parser.parse_args()
@@ -101,32 +132,33 @@ def main() -> int:
     warnings: list[str] = []
     today = datetime.date.today()
 
-    register_path = os.path.join(root, REGISTER)
-    if not os.path.isfile(register_path):
-        print(f"FAIL missing task register: {REGISTER}")
-        print("     Create it from .project/INDEX.md.example before starting work.")
-        return 1
-    register_text = open(register_path, encoding="utf-8").read()
-
-    ids = registered_ids(register_text)
-    all_md = list(iter_markdown(root))
-    body_docs = [p for p in all_md if rel(root, p).startswith(DOC_ROOTS)]
+    backlog_mode = os.path.isfile(os.path.join(root, BACKLOG_DIR, "config.yml"))
+    ids: set[str] = set()
+    if backlog_mode:
+        print("Mode: Backlog (local Markdown links)")
+        all_md = list(iter_backlog_markdown(root))
+    else:
+        register_path = os.path.join(root, REGISTER)
+        if not os.path.isfile(register_path):
+            print(f"FAIL missing task register: {REGISTER}")
+            print("     Create it from .project/INDEX.md.example before starting work.")
+            return 1
+        with open(register_path, encoding="utf-8") as register:
+            ids = registered_ids(register.read())
+        all_md = list(iter_markdown(root))
 
     for path in all_md:
         name = rel(root, path)
         text = open(path, encoding="utf-8", errors="ignore").read()
 
-        for link in LINK_RE.findall(text):
-            target = link.split("#", 1)[0].strip()
-            if not target or target.startswith(("http://", "https://", "mailto:")):
-                continue
+        for target in local_link_targets(text):
             resolved = os.path.normpath(os.path.join(os.path.dirname(path), target))
             if not os.path.exists(resolved):
                 failures.append(f"broken link: {name} -> {target}")
             elif args.verbose:
                 print(f"  OK   link {name} -> {target}")
 
-        if path not in body_docs:
+        if backlog_mode or not name.startswith(DOC_ROOTS):
             continue
 
         fm = front_matter(text)
@@ -170,7 +202,7 @@ def main() -> int:
         if args.verbose:
             print(f"  OK   front matter {name} (status={status})")
 
-    for fact, defining in KEY_FACTS.items():
+    for fact, defining in (() if backlog_mode else KEY_FACTS.items()):
         owner_path = os.path.abspath(os.path.join(root, defining))
         for path in all_md:
             if os.path.abspath(path) == owner_path:

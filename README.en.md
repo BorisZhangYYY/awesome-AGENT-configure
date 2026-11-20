@@ -12,9 +12,8 @@ Four template categories cover AI project conventions, agent identity, scheduled
 
 Align project conventions, task tracking, and documentation for AI-assisted development.
 
-- **Single repository**: project conventions, agent guidance, and README, task index, and changelog scaffolds for standalone projects.
-- **Multi-repository workspace**: shared collaboration rules and an environment index for microservices and other multi-repo projects.
-- **Task and documentation layers**: separate task indexes from detailed notes, and user guides from development rules and environment configuration, keeping context lean.
+- **Backlog.md**: one template for single- and multi-repository projects, with CLI-managed tasks, shared docs, and milestones.
+- **Legacy templates**: separate single- and multi-repository variants that track work in `.project/` and keep shared docs in `.docs/` without requiring Backlog.md.
 
 See [AI-ProjConf](AI-ProjConf/README.en.md).
 
@@ -46,6 +45,15 @@ Inject roles and rules through OpenClaw's session-start hook so new sessions rec
 - **Startup loading**: read and inject content on `agent:bootstrap`, reducing repeated instructions.
 
 See [OpenClaw context injection templates](OpenClaw/README.en.md#context-injection-templates).
+
+## Acknowledgments
+
+Thanks to these projects and their maintainers for the tools and ideas behind these templates:
+
+- [Backlog.md](https://backlog.md/): task, documentation, and milestone management for the AI project template. [CLI reference](https://github.com/MrLesk/Backlog.md/blob/main/CLI-INSTRUCTIONS.md)
+- [OpenClaw](https://openclaw.ai/): the framework behind the workspace, scheduled task, and context injection templates. [Official docs](https://docs.openclaw.ai/)
+- [Claude Code](https://claude.com/product/claude-code): the source of the project-level `CLAUDE.md` convention. [Official docs](https://code.claude.com/docs/en/overview)
+- [Hermes Agent](https://hermes-agent.nousresearch.com/): the framework behind the workspace identity, user profile, and memory templates. [Official docs](https://hermes-agent.nousresearch.com/docs)
 
 ---
 

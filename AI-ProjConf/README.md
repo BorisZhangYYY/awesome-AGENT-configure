@@ -4,7 +4,28 @@
 
 简体中文 | [English](README.en.md)
 
-## 两类模板
+## Backlog.md 模板：单仓、多仓共用
+
+新项目如果用 [Backlog.md](https://backlog.md/) 管理协作，选 [中文版](zh_CN/backlog/CLAUDE.md.example) 或 [英文版](en_US/backlog/CLAUDE.md.example)。`backlog/` 统一管理任务、共用文档与可选的里程碑；是否有子模块只影响代码在哪个仓库提交，不改变任务结构。
+
+1. 确认 `backlog --version` 可用（未安装可用 `npm install -g backlog.md`）。将对应语言的 `AGENTS.md.example` 和 `CLAUDE.md.example` 去掉后缀放入协作根目录，填写 `{{PROJECT_SUMMARY}}` 和 `{{CODE_LAYOUT}}`；已有入口文件时合并规则，不覆盖。
+2. 在协作根目录初始化，再导入[操作手册正文](zh_CN/backlog/workflow.md.example)。以下假定 `TEMPLATE_DIR` 是所选模板的绝对路径，且目标尚未初始化；若已使用 Backlog，跳过初始化，更新已有手册，不重复建档。
+
+```sh
+backlog init "项目名" --defaults --integration-mode none --backlog-dir backlog --config-location folder --include-remote false
+backlog doc create "工作流程" -t guide -p guides --plain
+# 将 DOC_ID 设置为上一条命令返回的文档 ID，再运行下列命令
+backlog doc update "$DOC_ID" --content "$(< "$TEMPLATE_DIR/workflow.md.example")"
+backlog doc view "$DOC_ID" --plain
+```
+
+上面的正文读取语法适用于 Bash/Zsh。协作根不受 Git 管理时，在同一条初始化命令末尾加 `--no-git`，不用改动任何子仓。多人共享时，将 `backlog/` 纳入协作仓版本控制，或明确一个所有成员可访问的共享位置。
+
+可将 [共享校验脚本](scripts/check-project.py) 复制到项目的 `scripts/`，在协作根运行 `python3 scripts/check-project.py`。检测到本模板生成的 `backlog/config.yml` 时，脚本只检查根目录和现行 Backlog 文档里的本地相对链接，不要求 `.project/INDEX.md`，也不检查任务元数据。任务一致性另用 `backlog doctor` 检查（如 CLI 支持）。
+
+从旧模板迁移时，先核对旧任务的归属、未完成条件和证据：一个可验收的交付物对应一张卡，细步骤留在卡里，共用资料迁入 `backlog/docs/`。核验后停止维护旧索引；旧记录只读归档。
+
+## `.project` / `.docs` 传统模板
 
 | 目录 | 适用场景 | 特征 |
 |------|----------|------|
@@ -23,7 +44,7 @@
 | `CHANGELOG.md.example` | 变更日志骨架，遵循 Keep a Changelog（single-repo） |
 | `.project/INDEX.md.example` | 任务注册表：唯一状态源，含稳定 ID、执行者、关闭条件、证据路径与正文生命周期 |
 | `.project/rules/workflow.md.example` | 工作流程操作手册：新任务／干一半／插队／隔天恢复四种场景，含多人协作约定与开场白 |
-| `scripts/check-project.py` | 四套模板共用的状态校验脚本（非 `.example`，随模板一并复制到项目） |
+| `scripts/check-project.py` | 共用校验脚本（非 `.example`）；传统版还校验任务注册表和文档状态 |
 | `.docs/` | 共用资料：跨任务复用的环境说明、功能清单、上报/接口说明、资源清单、验收报告 |
 | `.docs/README.md.example` | 共用资料索引入口：编号约定与类别登记表 |
 | `.docs/01-环境说明/` | 固定编号槽位，存 `test.md` / `uat.md` / `prd.md`，只为真实存在的环境建文件 |
@@ -54,7 +75,7 @@
 
 ## 使用方式
 
-将对应目录下的 `*.example` 去掉 `.example` 后缀，放入项目根目录，替换 `{{占位符}}` 后使用。校验脚本为四套模板共用，需单独复制到项目 `scripts/` 目录。
+将对应目录下的 `*.example` 去掉 `.example` 后缀，放入项目根目录，替换 `{{占位符}}` 后使用。校验脚本需单独复制到项目 `scripts/` 目录。
 
 ```bash
 cp AI-ProjConf/zh_CN/single-repo/CLAUDE.md.example /path/to/project/CLAUDE.md

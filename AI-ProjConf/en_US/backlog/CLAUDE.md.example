@@ -1,0 +1,35 @@
+# CLAUDE.md
+
+> Default language: English.
+
+## Project Overview
+
+{{PROJECT_SUMMARY}}
+
+## Collaboration Root and Code Ownership
+
+- Keep `backlog/` at the collaboration root. Record the actual code locations: {{CODE_LAYOUT}}.
+- In a single repository, maintain code in that repository. For Git submodules, edit, review, and commit in the child repository; update the root gitlink as needed. For sibling repositories, work in each repository without changing the Git topology.
+- Creating a task or checking off acceptance criteria does not authorize commits, pushes, merges, or deployments.
+
+## Backlog Is the Only Source of Task Status
+
+| Location | What it holds |
+|----------|---------------|
+| `backlog/tasks/` | Status, assignees, dependencies, acceptance criteria, and task-specific records |
+| `backlog/docs/` | Stable material a second task can reuse, such as environment notes, API contracts, and workflows |
+| `backlog/milestones/` | Optional stage or release groupings, not a parallel progress table |
+| `backlog/archive/` | History archived through the CLI, not authorization to start work |
+
+- Maintain managed records through `backlog task`, `backlog doc`, and `backlog milestone` instead of editing their Markdown or metadata directly. Store attachments next to the relevant docs and reference them from the document body.
+- Start with `backlog task view <ID> --plain` for each task in scope. If no IDs were given, use `backlog task list --plain` to locate the work and confirm scope. Do not claim work based on archives, shared references, or session memory.
+- **One card per independently verifiable deliverable.** Keep small steps in a plan or checklist. Split out work if it has a separate deliverable or needs to be tracked as a prerequisite for other tasks. Use `--dep` for prerequisites and `--parent` for hierarchy.
+- The default statuses are `To Do` / `In Progress` / `Done`. Record blockers and next steps in Notes or comments. Waiting, deferral, and cancellation are not `Done`. Close only when acceptance is met and evidence is recorded; archive canceled or duplicate work with a reason.
+- Use Description for context, scope, and outcome; Acceptance Criteria for verifiable results; Notes for findings, evidence paths, and handoff checkpoints. Update the assignees on the original task as needed at handoff instead of opening a duplicate.
+- The user sets the scope for the current session. Do not maintain `.project/INDEX.md`, `TODO.md`, or a parallel task ledger.
+
+## Shared Documentation
+
+- Give each fact one home: define versions, environments, quotas, and stable conclusions once. Reference them elsewhere by document ID or link. Update the owning text in place; separate observations, targets, and inferences.
+- Document only real environments and never include plaintext secrets. Shared tasks and docs must be accessible to teammates; do not point evidence only at a local trash folder or uncommitted file.
+- Use `backlog doc list --plain` to find shared material and the workflow guide. For CLI usage, run `backlog instructions overview` or the command's `--help`.

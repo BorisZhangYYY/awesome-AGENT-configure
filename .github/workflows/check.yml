@@ -21,3 +21,6 @@ jobs:
 
       - name: Run repository checks
         run: python3 scripts/check.py --verbose
+
+      - name: Test AI project checker
+        run: python3 -m unittest discover -s tests/ai_projconf -v
